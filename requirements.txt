@@ -1,0 +1,4 @@
+tqdm
+scipy
+torchsr
+pytorch_lightning
