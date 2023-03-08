@@ -1,5 +1,81 @@
 # Sunglasses or Not?
 
+<style>
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  transform: translateX(0);
+  /* clip-path: polygon(0% 0%, 95% 0%, 95% 100%, 0% 100%); */
+}
+
+.banner img {
+  position: relative;
+  width: 28%;
+  height: 100%;
+  margin-right: -4%;
+  transform: translateX(-7%);
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 10% 100%);
+}
+
+.banner img:first-of-type {
+  border-radius: 10px 0px 0px 10px;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.banner img:last-of-type {
+  border-radius: 0 10px 10px 0;
+}
+
+.overlay {
+  position: absolute;
+  width: 500%;
+  height: 100%;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0) 100%);
+  animation: moveGradient 4s cubic-bezier(0,1.16,.73,1.66) infinite;
+}
+
+@keyframes moveGradient {
+  0% {
+    left: -500%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: -500%;
+  }
+}
+</style>
+
+
+<div class="banner">
+  <img src="data/demo/example1.jpg" alt="Example 1"/>
+  <img src="data/demo/example2.jpg" alt="Image 2">
+  <img src="data/demo/example3.jpg" alt="Image 3">
+  <img src="data/demo/example4.jpg" alt="Image 4">
+  <div class="overlay"></div>
+</div>
+
+<p align="center">
+  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
+    <figcaption align="center">Wears sunglasses</figcaption>
+  </figure>
+  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
+    <figcaption align="center">No sunglasses</figcaption>
+  </figure>
+  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
+    <figcaption align="center">No sunglasses</figcaption>
+  </figure>
+  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
+    <figcaption align="center">Wears sunglasses</figcaption>
+  </figure>
+</p>
+
+
 ## About
 
 A small side project which builds a classifier to detect if a person is wearing sunglasses.
@@ -53,18 +129,18 @@ Once all the datasets are downloaded and preprocessed, the data structure should
 <details><summary><h3>CMU Face Images</h3></summary>
 
 1. Download the data form the official **[UCI Machine Learning Repository](http://archive.ics.uci.edu/ml/datasets/cmu+face+images)** website:
-    * Download image archive from [here](http://archive.ics.uci.edu/ml/machine-learning-databases/faces-mld/faces.tar.gz) and place under `./data/cmu-faces-images/faces.tar.gz`
+    * Download image archive from [here](http://archive.ics.uci.edu/ml/machine-learning-databases/faces-mld/faces.tar.gz) and place under `data/cmu-faces-images/faces.tar.gz`
 2. Extract the data:
     ```bash
-    tar zxvf ./data/cmu-face-images/faces.tar.gz -C ./data/cmu-face-images/
+    tar zxvf data/cmu-face-images/faces.tar.gz -C data/cmu-face-images/
     ```
 3. Preprocess the data:
     ```bash
-    python ./scripts/split.py --data-dir data/cmu-face-images --criteria file/sunglasses --filter _2 _4 .anonr .tar --val-size 0.15 --test-size 0.15 --sr-scale 4 --resize 256 256 --seed 0
+    python scripts/preprocess.py --data-dir data/cmu-face-images --criteria file/sunglasses --filter _2 _4 .anonr .tar --val-size 0.15 --test-size 0.15 --sr-scale 4 --resize 256 256 --seed 0
     ```
 4. Clean up:
     ```bash
-    rm -rf ./data/cmu-face-images/faces ./data/cmu-face-images/faces.tar.gz
+    rm -rf data/cmu-face-images/faces data/cmu-face-images/faces.tar.gz
     ```
 
 </details>
@@ -79,7 +155,7 @@ Once all the datasets are downloaded and preprocessed, the data structure should
     ```
 3. Preprocess the data:
     ```bash
-    python scripts/split.py --data-dir data/glasses-and-coverings --criteria dir/sunglasses --filter .zip --val-size 0.15 --test-size 0.15 --seed 0
+    python scripts/preprocess.py --data-dir data/glasses-and-coverings --criteria dir/sunglasses --filter .zip --val-size 0.15 --test-size 0.15 --seed 0
     ```
 4. Clean up:
     ```bash
@@ -100,7 +176,7 @@ Once all the datasets are downloaded and preprocessed, the data structure should
     ```
 3. Preprocess the data:
     ```bash
-    python scripts/split.py --data-dir data/specs-on-faces --criteria data/specs-on-faces/metadata/metadata.mat --filter .mat .rar _.jpg _Gn _Gs _Ps _en _em --val-size 0.15 --test-size 0.15 --sr-scale 4 --resize 256 256 --seed 0
+    python scripts/preprocess.py --data-dir data/specs-on-faces --criteria data/specs-on-faces/metadata/metadata.mat --filter .mat .rar _.jpg _Gn _Gs _Ps _en _em --val-size 0.15 --test-size 0.15 --sr-scale 4 --resize 256 256 --seed 0
     ```
 4. Clean up:
     ```bash

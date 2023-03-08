@@ -138,10 +138,10 @@ def on_file(root: str,
     
     if dim_mismatch == "ignore":
         pass
-    elif image.size[0] != image.size[1] and dim_mismatch == "crop":
-        new_size = min(width, height)
-        left, right = (width - new_size) // 2, (width + new_size) // 2
-        top, bottom = (height - new_size) // 2, (height + new_size) // 2
+    elif (h := image.size[0]) != (w:= image.size[1]) and dim_mismatch == "crop":
+        new_size = min(w, h)
+        left, right = (w - new_size) // 2, (w + new_size) // 2
+        top, bottom = (h - new_size) // 2, (h + new_size) // 2
         image = image.crop((left, top, right, bottom))
     
     if width is not None or height is not None:
@@ -252,11 +252,11 @@ def main():
     kwargs = parse_args()
     [width, height] = kwargs.pop("resize")
     dim_mismatch = kwargs.pop("dim_mismatch")
+    model_fn = getattr(torchsr.models, kwargs.pop("sr_model"))
     landmark_fn, sr_model = None, None
 
     if (sr_scale := kwargs.pop("sr_scale")) > 1:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model_fn = getattr(torchsr.models, kwargs.pop("sr_model"))
         sr_model = model_fn(scale=sr_scale, pretrained=True).to(device).eval()
 
         for param in sr_model.parameters():

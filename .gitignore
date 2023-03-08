@@ -1,2 +1,5 @@
 data
+!data/demo
+checkpoints
+lightning_logs
 __pycache__
