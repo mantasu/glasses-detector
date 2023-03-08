@@ -13,9 +13,9 @@ from data import SunglassesOrNotModule
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--data-dir", type=str, default="data/",
-        help="Path to the dataset directory. Defaults to data/.")
-    parser.add_argument("--num-epochs", type=int, default=30,
+    parser.add_argument("-d", "--data-dir", type=str, default="data",
+        help="Path to the dataset directory. Defaults to data.")
+    parser.add_argument("-n", "--num-epochs", type=int, default=30,
         help="The number of training epochs. Defaults to 30.")
 
     return parser.parse_args()

@@ -1,84 +1,22 @@
 # Sunglasses or Not?
 
-<style>
-.banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  overflow: hidden;
-  border-radius: 10px;
-  transform: translateX(0);
-  /* clip-path: polygon(0% 0%, 95% 0%, 95% 100%, 0% 100%); */
-}
-
-.banner img {
-  position: relative;
-  width: 28%;
-  height: 100%;
-  margin-right: -4%;
-  transform: translateX(-7%);
-  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 10% 100%);
-}
-
-.banner img:first-of-type {
-  border-radius: 10px 0px 0px 10px;
-  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
-}
-
-.banner img:last-of-type {
-  border-radius: 0 10px 10px 0;
-}
-
-.overlay {
-  position: absolute;
-  width: 500%;
-  height: 100%;
-  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0) 100%);
-  animation: moveGradient 4s cubic-bezier(0,1.16,.73,1.66) infinite;
-}
-
-@keyframes moveGradient {
-  0% {
-    left: -500%;
-  }
-  50% {
-    left: 100%;
-  }
-  100% {
-    left: -500%;
-  }
-}
-</style>
-
-
-<div class="banner">
-  <img src="data/demo/example1.jpg" alt="Example 1"/>
-  <img src="data/demo/example2.jpg" alt="Image 2">
-  <img src="data/demo/example3.jpg" alt="Image 3">
-  <img src="data/demo/example4.jpg" alt="Image 4">
-  <div class="overlay"></div>
-</div>
-
-<p align="center">
-  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
-    <figcaption align="center">Wears sunglasses</figcaption>
-  </figure>
-  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
-    <figcaption align="center">No sunglasses</figcaption>
-  </figure>
-  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
-    <figcaption align="center">No sunglasses</figcaption>
-  </figure>
-  <figure align="center" style="display: inline-block; margin: 0; width: 24%; transform: translateX(5%);">
-    <figcaption align="center">Wears sunglasses</figcaption>
-  </figure>
-</p>
-
+|                                      |                                      |                                      |                                      |
+| :----------------------------------: | :----------------------------------: | :----------------------------------: | :----------------------------------: |
+| ![Example 1](data/demo/example1.jpg) | ![Example 2](data/demo/example2.jpg) | ![Example 3](data/demo/example3.jpg) | ![Example 4](data/demo/example4.jpg) |
+| Wears sunglasses                     | No sunglasses                        | No sunglasses                        | Wears sunglasses                     |
 
 ## About
 
-A small side project which builds a classifier to detect if a person is wearing sunglasses.
+A small side project for building a classifier to detect if a person is wearing sunglasses. 4 datasets were used to train [ShuffleNet V2](https://arxiv.org/abs/1807.11164) model (only 1.4M parameters) for binary classification. The final test results:
+
+<center>
+
+| Test metric | Joint Dataset |
+| ----------- | ------------- |
+| F1 Score    | 0.9658        |
+| BCE Loss    | 0.1022        |
+
+</center>
 
 ## Setup
 
@@ -204,3 +142,28 @@ Once all the datasets are downloaded and preprocessed, the data structure should
     ```
 
 </details>
+
+## Running the Code
+
+To train and evaluate the best model checkpoint after training:
+```bash
+python scripts/train.py -d path/to/data -n <NUM_EPOCHS>
+```
+
+To predict whether a person is wearing glasses:
+```bash
+python scripts/predict.py -i path/to/image -m path/to/my_model.pth
+```
+
+> My trained model is available [here](https://drive.google.com/file/d/1_1xq2X9VoezMkW8pgo3Kl-O4rmy_cLc1/view?usp=sharing). If you download it and place it under `checkpoints/sunglasses-classifier-best.pth`, you can try the demo pictures immediatelly:
+
+```bash
+python scripts/predict.py -i data/demo/example1.jpg # wears sunglasses [99.99%]
+python scripts/predict.py -i data/demo/example2.jpg # no sunglasses [83.72%]
+```
+
+## References
+1. Mitchell, Tom. "Cmu face images data set." _Data School of Computer Science_. 1999.
+2. Afifi, Mahmoud, and Abdelrahman Abdelhamed. "Afif4: Deep gender classification based on adaboost-based fusion of isolated facial features and foggy faces." _Journal of Visual Communication and Image Representation 62_ (2019): 77-86.
+3. Ma, Ningning, et al. "Shufflenet v2: Practical guidelines for efficient cnn architecture design." _Proceedings of the European Conference on Computer Vision (ECCV)._ 2018.
+4. Paszke, Adam, et al. "Pytorch: An imperative style, high-performance deep learning library." _Advances in Neural Information Processing Systems 32_ (2019).
