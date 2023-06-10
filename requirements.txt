@@ -1,5 +1,7 @@
 tqdm
 scipy
-torchsr
+# sudo apt-get install unrar
+rarfile
 tensorboard
+face-crop-plus
 pytorch_lightning

@@ -1,279 +1,508 @@
 import os
-import re
-import tqdm
-import torch
 import random
-import argparse
+import shutil
+import zipfile
+import tarfile
+import rarfile
+import warnings
 import numpy as np
-import torchsr.models
 
 from PIL import Image
-from typing import Iterable
+from tqdm import tqdm
 from scipy.io import loadmat
-from torchvision.transforms.functional import to_pil_image, to_tensor
+from functools import partial
+from face_crop_plus import Cropper
+from multiprocessing import cpu_count
+from multiprocessing.pool import ThreadPool
 
-def parse_args() -> dict[str, int | float | str | list[str | int] | None]:
-    parser = argparse.ArgumentParser()
+random.seed(0)
 
-    parser.add_argument("--data-dir", type=str, required=True,
-        help="Path to the dataset directory")
-    parser.add_argument("--criteria", type=str, required=True,
-        help=f"Criteria based on which each file will be distinguished "
-             f"(sunglasses or no sunglasses). If it is a string of the form "
-             f"[dir|file]/keyword (e.g., 'dir/sunglasses'), it will be "
-             f"checked if it is contained in the filename or directory the "
-             f"file is in. If it is a csv/txt/mat/etc file, the line which "
-             f"contains image name will be queried for a label as the loop "
-             f"goes through image files at the image name entry")
-    parser.add_argument("--filter", nargs='+', type=str, default=[],
-        help=f"Ignore filenames which contain provided strings (use --filter "
-             f"'substr1' 'substr2' ...). Defaults to [].")
-    parser.add_argument("--val-size", type=float, default=None,
-        help="Validation size (if needed). Defaults to None.")
-    parser.add_argument("--test-size", type=float, default=None,
-        help="Test size (if needed). Defaults to None.")
-    parser.add_argument("--sr-scale", type=int, default=1, choices=[1, 2, 3, 4, 8],
-        help=f"By how much to increase the image quality (super resolution "
-             f"fraction). Defaults to 1.")
-    parser.add_argument("--resize", nargs=2, type=int, default=[None, None],
-        help=f"The width and the height to resize the image to. Defaults to "
-             f"[None, None].")
-    parser.add_argument("--dim-mismatch", type=str, default="crop", choices=["crop", "ignore"],
-        help=f"How to deal with image dimension mismatch. If 'crop', then the "
-             f"larger dimension will be cropped from both sides (e.g., if "
-             f"width is 6 and height is 4, width will be cropped to 4). "
-             f"Defaults to 'crop'.")
-    parser.add_argument("--seed", type=int, default=None,
-        help=f"The seed for the randomizer to shuffle the lists (determines "
-             f"the order of train/val/test split). Defaults to None (random "
-             f"every time).")
-    parser.add_argument("--sr-model", type=str, default="ninasr_b2",
-        help=f"The super resolution model to use. For available options, see "
-             f"https://pypi.org/project/torchsr/. Defaults to 'ninasr_b0'.")
+VALID_EXTENSIONS = {
+    ".rgb", ".gif", ".pbm", ".pgm", ".ppm", ".tiff", ".rast", 
+    ".xbm", ".jpeg", ".jpg", ".bmp", ".png", ".webp", ".exr",
+}
 
-    return vars(parser.parse_args())
+CATEGORY_NAMES = ["sunglasses", "no_sunglasses"]
+OUTPUT_SIZE = (256, 256)
+DEVICE = "cuda:0"
+ROOT = "data"
+VAL_SIZE = 0.15
+TEST_SIZE = 0.15
 
-def read_sof_mat(path: str) -> tuple[callable, callable]:    
-    def get_item(filename, samples):
-        for key in samples.keys():
-            if re.match(key, filename):
-                return samples[key]
+def generate_title(title, pad=5):
+    # Generate title with borders and print it
+    midline = '#' * pad + ' ' + title + ' ' + '#' * pad
+    top_bot = '#' * len(midline)
+    print('\n'.join(['\n' + top_bot, midline, top_bot]))
 
-    metadata, samples = loadmat(path)["metadata"][0], {}
-
-    for sample in metadata:
-        name = f"^{sample[-1][0][0][0][:-1]}.*"
-        is_sunglasses = sample[10][0][0] in [2, 3]
-        landmarks = np.array(sample[12][0]).reshape(-1, 2)
-        samples[name] = {"is_sunglasses": is_sunglasses, "landmarks": landmarks}
+def unpack(filename, root='.', members=set()):
+    if not os.path.exists(file_path := os.path.join(root, filename)):
+        warnings.warn(f"Please ensure {file_path} is a valid path.")
+        return []
     
-    criteria_fn = lambda _, x: get_item(x, samples)["is_sunglasses"]
-    landmark_fn = lambda _, x: get_item(x, samples)["landmarks"]
+    # Check the contents before extracting
+    contents = set(os.listdir(root))
     
-    return criteria_fn, landmark_fn
-
-
-def align_and_crop_face(image: Image.Image, face_landmarks: np.ndarray, left_eye_index: int = 3, right_eye_index: int = 0, face_factor: float = 0.25) -> Image.Image:
-    """
-    Aligns and center-crops a face from a PIL image using the provided face alignment points and eye indices.
-
-    Args:
-        image: A PIL image.
-        face_landmarks: A numpy array of shape (N, 2) representing the face alignment points.
-        left_eye_index: The index of the left eye landmark in the face_landmarks array.
-        right_eye_index: The index of the right eye landmark in the face_landmarks array.
-        face_factor: The factor of the face area relative to the output image.
-
-    Returns:
-        A PIL image of the aligned and cropped face.
-    """
-
-    # Calculate the center point between the left and right eyes
-    left_eye = face_landmarks[left_eye_index]
-    right_eye = face_landmarks[right_eye_index]
-    center = ((left_eye[0] + right_eye[0]) // 2, (left_eye[1] + right_eye[1]) // 2)
-
-    # Calculate the angle between the line connecting the eyes and the horizontal axis
-    dy = right_eye[1] - left_eye[1]
-    dx = right_eye[0] - left_eye[0]
-    angle = np.degrees(np.arctan2(dy, dx))
-
-    # Rotate the image around the center point
-    rotated_image = image.rotate(-angle, center=center)
-
-    # Calculate the dimensions of the output image based on the face_factor
-    face_width = np.linalg.norm(right_eye - left_eye)
-    output_width = int(face_width / face_factor)
-    output_height = output_width
-
-    # Calculate the coordinates of the top-left corner of the output image
-    x = center[0] - output_width // 2
-    y = center[1] - output_height // 2
-
-    # Crop the rotated image to the desired size and return it
-    output_image = rotated_image.crop((x, y, x + output_width, y + output_height))
-
-    return output_image
-
-def on_file(root: str,
-            name: str,
-            criteria_fn: callable,
-            landmark_fn: callable = None,
-            sr_model: torch.nn.Module | None = None,
-            width: int | None = None,
-            height: int | None = None,
-            dim_mismatch: str = "crop") -> tuple[Image.Image, bool]:
-    image = Image.open(os.path.join(root, name))
-    is_sunglasses = criteria_fn(root, name)
-    mode = image.mode
-
-    if landmark_fn is not None:
-        landmarks = landmark_fn(root, name)
-        image = align_and_crop_face(image, landmarks)
+    # Choose a correct unpacking interface
+    if file_path.endswith(".zip"):
+        open_file = zipfile.ZipFile
+    elif file_path.endswith(".rar"):
+        open_file = rarfile.RarFile
+    elif file_path.endswith(".tar.gz"):
+        open_file = tarfile.open
     
-    if sr_model is not None:
-        image = to_tensor(image).to(next(sr_model.parameters()).device)
-        image = sr_model(image.unsqueeze(0)).clip(0, 1)
-        image = to_pil_image(image.squeeze(0)).convert(mode)
-    
-    if dim_mismatch == "ignore":
-        pass
-    elif (h := image.size[0]) != (w:= image.size[1]) and dim_mismatch == "crop":
-        new_size = min(w, h)
-        left, right = (w - new_size) // 2, (w + new_size) // 2
-        top, bottom = (h - new_size) // 2, (h + new_size) // 2
-        image = image.crop((left, top, right, bottom))
-    
-    if width is not None or height is not None:
-        new_width = image.size[0] if width is None else width
-        new_height = image.size[1] if height is None else height
-        image = image.resize((new_width, new_height))
-    
-    return image, is_sunglasses
+    with open_file(file_path) as file:
+        # Choose a correct method to list files inside pack
+        if isinstance(file, (zipfile.ZipFile, rarfile.RarFile)):
+            iterable = file.namelist()
+        elif isinstance(file, tarfile.TarFile):
+            iterable = file.getnames()
 
-def save_images_to_dir(name_image_pairs: list[tuple[str, Image.Image]], dir_path: str):
-    if len(name_image_pairs) == 0:
-        return
-    
-    os.makedirs(dir_path, exist_ok=True)
-    
-    for name, image in name_image_pairs:
-        name = os.path.splitext(name)[0] + ".jpg"
-        save_path = os.path.join(dir_path, name)
-        image.save(save_path)
+        for member in tqdm(iterable, desc=f"    * Extracting '{filename}'"):
+            if len(members) > 0 and not any(member.startswith(m) for m in members):
+                # Skip if not needed to extract
+                continue
 
-def process_dir(data_dir: str, on_file: callable, filter: Iterable = [],
-                val_size: float | None = None, test_size: float | None = None,
-                seed: int = None):
-    sunglasses, no_sunglasses = [], []
+            if os.path.exists(os.path.join(root, member)):
+                # Not extracting if it is already extracted
+                continue
+
+            try:
+                # Extract and print error is failed
+                file.extract(member=member, path=root)
+            except zipfile.error | rarfile.Error | tarfile.TarError as e:
+                print(e)
+
+    return list(set(os.listdir(root)) - contents) + [filename]
+
+def categorize(**kwargs):
+    # Retreive items from kwargs
+    data_dir = kwargs["inp_dir"]
+    criteria_fn = kwargs["criteria_fn"]
+    categories = kwargs["categories"]
+
+    # Create positive and negative dirs (for sunglasses/no sunglasses)
+    pos_dir = os.path.join(os.path.dirname(data_dir), categories[0] + '/')
+    neg_dir = os.path.join(os.path.dirname(data_dir), categories[1] + '/')
+
+    # Make the actual directories
+    os.makedirs(pos_dir, exist_ok=True)
+    os.makedirs(neg_dir, exist_ok=True)
 
     # Count the total number of files in the directory tree, init tqdm
-    total = sum(len(files) for _, _, files in os.walk(data_dir)) + 3
-    pbar = tqdm.tqdm(desc="Processing data", total=total)
+    basedir = os.path.basename(data_dir)
+    total = sum(len(files) for _, _, files in os.walk(data_dir))
+    pbar = tqdm(desc=f"    * Grouping images in '{basedir}'", total=total)
 
-    for root, _, files in os.walk(data_dir):
-        for name in files:
-            if any(x in name for x in filter):
+    for root, _, filenames in os.walk(data_dir):
+        for filename in filenames:
+            if os.path.splitext(filename)[1] not in VALID_EXTENSIONS:
+                # Skip non-image files
                 pbar.update(1)
                 continue
             
-            image, is_sunglasses = on_file(root, name)
+            # Choose correct target directory
+            filepath = os.path.join(root, filename)
+            target_dir = pos_dir if criteria_fn(filepath) else neg_dir
 
-            if is_sunglasses:
-                sunglasses.append((name, image))
-            else:
-                no_sunglasses.append((name, image))
-            
+            try:
+                # Move to target dir, ignore duplicates
+                shutil.move(filepath, target_dir)
+            except shutil.Error:
+                pass
+
+            # Update pbar
             pbar.update(1)
-    
-    pbar.update(1)
-    pbar.set_description("Shuffling and splitting data")
 
-    sunglasses = sorted(sunglasses, key=lambda x: x[0])
-    no_sunglasses = sorted(no_sunglasses, key=lambda x: x[0])
-    
-    if seed is not None:
-        random.seed(seed)
-    
-    random.shuffle(sunglasses)
-    random.shuffle(no_sunglasses)
+def gen_splits(**kwargs):
+    # Retrieve kwarg vals
+    root = kwargs["root"]
+    dirs = kwargs["categories"]
+    out_dir = kwargs["out_dir"]
 
-    num_train_sunglasses = len(sunglasses)
-    num_train_no_sunglasses = len(no_sunglasses)
-    num_val_sunglasses, num_val_no_sunglasses = 0, 0
-    num_test_sunglasses, num_test_no_sunglasses = 0, 0
+    # Calculate total number of file and initialize progress bar
+    total = sum(len(os.listdir(os.path.join(root, x))) for x in dirs)
+    pbar = tqdm(desc=f"    * Creating data splits", total=total)
 
-    if val_size is not None:
-        assert 0 < val_size < 1, "Provide valid val fraction"
-        num_val_sunglasses = round(len(sunglasses) * val_size)
-        num_val_no_sunglasses = round(len(no_sunglasses) * val_size)
-        num_train_sunglasses -= num_val_sunglasses
-        num_train_no_sunglasses -= num_val_no_sunglasses
+    for dir in dirs:
+        # List the files in the directory that has to be split and shuffle
+        filenames = list(os.listdir(os.path.join(root, dir)))
+        random.shuffle(filenames)
+
+        # Compute the number of val and test files
+        num_val = int(len(filenames) * kwargs["val_size"])
+        num_test = int(len(filenames) * kwargs["test_size"])
+
+        # Split filenames to 3 group types
+        splits = {
+            "train/": filenames[num_test+num_val:],
+            "val/": filenames[num_test:num_test+num_val],
+            "test/": filenames[:num_test]
+        }
+
+        for splitname, files in splits.items():
+            # Create a split directory for the dir to split
+            split_dir = os.path.join(out_dir, splitname, dir)
+            os.makedirs(split_dir, exist_ok=True)
+
+            for file in files:
+                # Move all the files in this split to the created directory
+                shutil.move(os.path.join(root, dir, file), split_dir)
+                pbar.update(1)
+
+def crop_align(**kwargs):
+    # A temporary new function to process dir that replaces the original one
+    def temp_process_dir(cropper, input_dir, desc):
+        # Create batches of image file names in input dir
+        files, bs = os.listdir(input_dir), cropper.batch_size
+        file_batches = [files[i:i+bs] for i in range(0, len(files), bs)]
+
+        if len(file_batches) == 0:
+            # Empty
+            return
+        
+        # Define worker function and its additional arguments
+        kwargs = {"input_dir": input_dir, "output_dir": input_dir + "_faces"}
+        worker = partial(cropper.process_batch, **kwargs)
+        
+        with ThreadPool(cropper.num_processes, cropper._init_models) as pool:
+            # Create imap object and apply workers to it
+            imap = pool.imap_unordered(worker, file_batches)
+            list(tqdm(imap, total=len(file_batches), desc=desc))
     
-    if test_size is not None:
-        assert 0 < test_size < 1, "Provide valid test fraction"
-        num_test_sunglasses = round(len(sunglasses) * test_size)
-        num_test_no_sunglasses = round(len(no_sunglasses) * test_size)
-        num_train_sunglasses -= num_test_sunglasses
-        num_train_no_sunglasses -= num_test_no_sunglasses
+    # Initialize cropper
+    cropper = Cropper(
+        output_size=kwargs.get("size", (256, 256)),
+        landmarks=kwargs.get("landmarks", None),
+        output_format="jpg",
+        padding="replicate",
+        enh_threshold=None,
+        device=kwargs.get("device", "cpu"),
+        num_processes=kwargs.get("num_processes", 1),
+    )
+
+    for category in kwargs["categories"]:
+        # Process directory (crop and align faces inside it)
+        input_dir = os.path.join(kwargs["root"], category)
+        pbar_desc = f"    * Cropping faces for {category}"
+        temp_process_dir(cropper, input_dir, desc=pbar_desc)
+
+        # Remove the original dir
+        shutil.rmtree(input_dir)
+        os.rename(input_dir + "_faces", input_dir)
+
+def resize_all(**kwargs):
+    # Retrieve kwarg vals
+    size = kwargs["size"]
+    root = kwargs["root"]
+    dirs = kwargs["categories"]
+
+    # Calculate total number of file and initialize progress bar
+    total = sum(len(os.listdir(os.path.join(root, dir))) for dir in dirs)
+    pbar = tqdm(desc=f"    * Resizing images", total=total)
+
+    for dir in dirs:
+        for filename in os.listdir(os.path.join(root, dir)):
+            # Generate filepath and open the image
+            filepath = os.path.join(root, dir, filename)
+            image = Image.open(filepath)
+
+            if image.size != size:
+                # Resize if needed
+                image = image.resize(size)
+            
+            # Save under same path
+            image.save(filepath)
+            pbar.update(1)
+
+def clean(contents, root='.'):
+    for file_or_dir in contents:
+        # Create full path to the file or dir
+        path = os.path.join(root, file_or_dir)
+
+        if not os.path.exists(path):
+            # Skip if not exists
+            continue
+        
+        # Remove either file or dir
+        if os.path.isfile(path):
+            os.remove(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
+
+def clear_keys(**kwargs):
+    # Get key set and deletables
+    key_set = set(kwargs.keys())
+    to_del = ["inp_dir", "outp_dir", "criteria_fn", "landmarks", "num_processes"]
+
+    for key in to_del:
+        if key in key_set:
+            # Del added key
+            del kwargs[key]
+
+def prepare_specs_on_faces(**kwargs):
+    # Generate title to show in terminal
+    generate_title("Specs on Faces")
+
+    # Get root, update kwargs
+    root = kwargs["root"]
+    kwargs["inp_dir"] = os.path.join(root, "whole images")
+    kwargs["out_dir"] = os.path.join(root, "specs-on-faces")
     
-    def split_list(lst: list, index: int):
-        return lst[:index], lst[index:]
+    # Unpack contents that later will be removed
+    contents = unpack("whole images.rar", root)
+    contents += unpack("metadata.rar", root)
+    contents += kwargs["categories"]
     
-    sunglasses_train, remainder = split_list(sunglasses, num_train_sunglasses)
-    sunglasses_val, sunglasses_test = split_list(remainder, num_val_sunglasses)
+    # Init landmarks, is_sunglasses set, metadata path and get_name fn
+    names, coords, landmarks, is_sunglasses_set = [], [], {}, set()
+    get_name = lambda path: '_'.join(os.path.basename(path).split('_')[:4])
+    mat_path = os.path.join(root, "metadata", "metadata.mat")
+
+    for sample in loadmat(mat_path)["metadata"][0]:
+        # Add landmarks to the dictionary
+        name = sample[-1][0][0][0][:-2]
+        landmarks[name] = np.array(sample[12][0]).reshape(-1, 2)
+
+        if sample[10][0][0] in [2, 3]:
+            # If sunglasses exist, add
+            is_sunglasses_set.add(name)
+
+    for filename in os.listdir(kwargs["inp_dir"]):
+        # Append filenames and landms
+        names.append(filename)
+        coords.append(landmarks[get_name(filename)])
     
-    no_sunglasses_train, remainder = split_list(no_sunglasses, num_train_no_sunglasses)
-    no_sunglasses_val, no_sunglasses_test = split_list(remainder, num_val_no_sunglasses)
+    # Create landmarks required to align and center-crop images
+    kwargs["landmarks"] = np.stack(coords)[:, [3, 0, 14, 7, 6]], np.array(names)
+    kwargs["criteria_fn"] = lambda path: get_name(path) in is_sunglasses_set
+    kwargs["num_processes"] = cpu_count()
 
-    sunglasses_train_dir = os.path.join(data_dir, "train/sunglasses")
-    no_sunglasses_train_dir = os.path.join(data_dir, "train/no_sunglasses")
-    sunglasses_val_dir = os.path.join(data_dir, "val/sunglasses")
-    no_sunglasses_val_dir = os.path.join(data_dir, "val/no_sunglasses")
-    sunglasses_test_dir = os.path.join(data_dir, "test/sunglasses")
-    no_sunglasses_test_dir = os.path.join(data_dir, "test/no_sunglasses")
-
-    pbar.update(1)
-    pbar.set_description("Saving results")
-
-    save_images_to_dir(sunglasses_train, sunglasses_train_dir)
-    save_images_to_dir(sunglasses_val, sunglasses_val_dir)
-    save_images_to_dir(sunglasses_test, sunglasses_test_dir)
-    save_images_to_dir(no_sunglasses_train, no_sunglasses_train_dir)
-    save_images_to_dir(no_sunglasses_val, no_sunglasses_val_dir)
-    save_images_to_dir(no_sunglasses_test, no_sunglasses_test_dir)
-
-    pbar.update(1)
-    pbar.set_description("Done")
-    pbar.close()
+    # Sequential operations
+    categorize(**kwargs)
+    crop_align(**kwargs)
+    gen_splits(**kwargs)
+    clear_keys(**kwargs)
+    clean(contents, root)   
     
+def prepare_cmu_face_images(**kwargs):
+    # Generate title to show in terminal
+    generate_title("CMU Face Images")
 
-def main():
-    kwargs = parse_args()
-    [width, height] = kwargs.pop("resize")
-    dim_mismatch = kwargs.pop("dim_mismatch")
-    model_fn = getattr(torchsr.models, kwargs.pop("sr_model"))
-    landmark_fn, sr_model = None, None
+    # Get root, update kwargs
+    root = kwargs["root"]
+    kwargs["inp_dir"] = os.path.join(root, "faces")
+    kwargs["out_dir"] = os.path.join(root, "cmu-face-images")
+    kwargs["criteria_fn"] = lambda path: "sunglasses" in os.path.basename(path)
 
-    if (sr_scale := kwargs.pop("sr_scale")) > 1:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        sr_model = model_fn(scale=sr_scale, pretrained=True).to(device).eval()
+    # Unpack the contents from faces.tar.gz that's insde a zip file
+    contents = unpack("cmu+face+images.zip", root, {"faces.tar.gz"})
+    contents += unpack("faces.tar.gz", root)
+    contents += kwargs["categories"]
 
-        for param in sr_model.parameters():
-            param.requires_grad = False
+    # Sequential operations
+    categorize(**kwargs)
+    crop_align(**kwargs)
+    gen_splits(**kwargs)
+    clear_keys(**kwargs)
+    clean(contents, root)
+
+def prepare_sunglasses_no_sunglasses(**kwargs):
+    # Generate title to show in terminal
+    generate_title("Sunglasses/No Sunglasses")
+
+    # Get root, update kwargs
+    root = kwargs["root"]
+    kwargs["inp_dir"] = os.path.join(root, "glasses_noGlasses")
+    kwargs["out_dir"] = os.path.join(root, "sunglasses-no-sunglasses")
+    kwargs["criteria_fn"] = lambda filepath: "with_glasses" in filepath
+
+    # Unpack the contents from the zip directory
+    contents = unpack("sunglasses-no-sunglasses.zip", root)
+    contents += kwargs["categories"]
+
+    # Sequential operations
+    categorize(**kwargs)
+    resize_all(**kwargs)
+    gen_splits(**kwargs)
+    clear_keys(**kwargs)
+    clean(contents, root)
+
+def prepare_glasses_and_coverings(**kwargs):
+    # Generate title to show in terminal
+    generate_title("Glasses and Coverings")
+
+    # Get root, update kwargs
+    root = kwargs["root"]
+    kwargs["inp_dir"] = os.path.join(root, "glasses-and-coverings")
+    kwargs["out_dir"] = os.path.join(root, "glasses-and-coverings-done")
+    kwargs["criteria_fn"] = lambda filepath: "sunglasses" in filepath
+
+    # Unpack the contents from the zip directory
+    contents = unpack("glasses-and-coverings.zip", root)
+    contents += kwargs["categories"]
     
-    if "dir/" in (criteria := kwargs.pop("criteria")):
-        criteria_fn = lambda x, _: criteria[4:] in os.path.basename(x)
-    elif "file/" in criteria:
-        criteria_fn = lambda _, x: criteria[5:] in x
-    elif ".mat" in criteria:
-        criteria_fn, landmark_fn = read_sof_mat(criteria)
-    
-    on_file_fn = lambda x, y: on_file(x, y, criteria_fn, landmark_fn, sr_model,
-                                      width, height, dim_mismatch)
-    
-    process_dir(kwargs.pop("data_dir"), on_file_fn, **kwargs)
+    # Sequential operations
+    categorize(**kwargs)
+    resize_all(**kwargs)
+    gen_splits(**kwargs)
+    clear_keys(**kwargs)
+    clean(contents, root)
 
+    # Rename the output directory to more exact name
+    os.rename(kwargs["out_dir"], kwargs["inp_dir"])
+
+def prepare_face_attributes_grouped(**kwargs):
+    # Generate title to show in terminal, define 2 dirs
+    generate_title("Face Attributes Grouped")
+    inp1 = "face-attributes-grouped"
+    inp2 = "face-attributes-extra"
+
+    # Get root, update kwargs
+    root = kwargs["root"]
+    kwargs["inp_dir"] = os.path.join(root, inp1)
+    kwargs["out_dir"] = os.path.join(root, inp1 + "-done")
+    kwargs["criteria_fn"] = lambda filepath: "sunglasses" in filepath
+
+    # Define members to extract from both of the zip files
+    mem1 = [f"{inp1}/{x}/eyewear" for x in ["train", "val", "test"]]
+    mem2 = [f"{inp2}/{x}" for x in ["eyeglasses", "sunglasses", "no_eyewear"]]
+
+    # Extract the specified members from both of the zip files
+    contents = unpack("face-attributes-grouped.zip", root, mem1)
+    contents += unpack("face-attributes-extra.zip", root, mem2)
+    contents += kwargs["categories"]
+
+    # Sequential operations with additional categorization of inp2
+    categorize(**{**kwargs, "inp_dir": os.path.join(root, inp2)})
+    categorize(**kwargs)
+    resize_all(**kwargs)
+    gen_splits(**kwargs)
+    clear_keys(**kwargs)
+    clean(contents, root)
+
+    # Rename the output directory to more exact name
+    os.rename(kwargs["out_dir"], kwargs["inp_dir"])
+
+def generate_split_paths(split_info_file_paths, celeba_mapping_file_path, save_dir):
+    for split_info_path in split_info_file_paths:
+        # Read the first column of the the data split info file (filenames)
+        file_names = np.genfromtxt(split_info_path, dtype=str, usecols=0)
+
+        # Determine the type of split
+        if "train" in split_info_path:
+            train_set = {*file_names}
+            subdir = "train"
+        elif "val" in split_info_path:
+            val_set = {*file_names}
+            subdir = "val"
+        elif "test" in split_info_path:
+            test_set = {*file_names}
+            subdir = "test"
+
+        # Create image and mask directories as well while looping
+        os.makedirs(os.path.join(save_dir, subdir, "images"), exist_ok=True)
+        os.makedirs(os.path.join(save_dir, subdir, "masks"), exist_ok=True)
+    
+    # Init split info
+    split_info = {}
+    
+    with open(celeba_mapping_file_path, 'r') as f:
+        for line in f.readlines()[1:]:
+            # Read Celeba Mask HQ index and CelebA file name
+            [idx, _, orig_file] = line.split()
+
+            if orig_file in train_set:
+                # If CelebA file name belongs to train dataset
+                split_info[int(idx)] = os.path.join(save_dir, "train")
+            elif orig_file in val_set:
+                # If CelebA file name belongs to val dataset
+                split_info[int(idx)] = os.path.join(save_dir, "val")
+            elif orig_file in test_set:
+                # If CelebA file name belongs to test dataset
+                split_info[int(idx)] = os.path.join(save_dir, "test")
+
+    return split_info
+
+def walk_through_masks(mask_dir, img_dir, split_info, resize):
+    # Count the total number of files in the directory tree, init tqdm
+    total = sum(len(files) for _, _, files in os.walk(mask_dir))
+    pbar = tqdm(desc="    * Selecting masks with glasses", total=total)
+
+    for root, _, files in os.walk(mask_dir):
+        for file in files:
+            # Update pbar
+            pbar.update(1)
+
+            if "eye_g" not in file:
+                # Ignore no-glasses
+                continue
+            
+            # Get the train/val/test type
+            idx = int(file.split('_')[0])
+            parent_path = split_info[idx]
+
+            # Create the full path to original files
+            mask_path = os.path.join(root, file)
+            image_path = os.path.join(img_dir, str(idx) + ".jpg")
+
+            # Create a save path of original files to train/val/test location
+            image_save_path = os.path.join(parent_path, "images", str(idx) + ".jpg")
+            mask_save_path = os.path.join(parent_path, "masks", file.replace(".png", ".jpg"))
+            
+            # Open the image, convert mask to black/white
+            image = Image.open(image_path).resize(resize)
+            mask = Image.open(mask_path).resize(resize)
+            mask = Image.fromarray((np.array(mask) > 0).astype(np.uint8) * 255)
+
+            # Save the mask and the image
+            image.save(image_save_path)
+            mask.save(mask_save_path)
+
+def prepare_celeba_mask_hq(**kwargs):
+    # Generate title to show in terminal
+    generate_title("Celeba Mask HQ")
+
+    # Get root, update kwargs
+    root = kwargs["root"]
+    size = kwargs["size"]
+
+    contents = unpack("CelebAMask-HQ.zip", root)
+    contents += unpack("annotations.zip", root)
+    contents += kwargs["categories"]
+
+    # Create train/val/test split info
+    split_info = generate_split_paths(
+        [os.path.join(root, f"{x}_label.txt") for x in ["train", "val", "test"]],
+        os.path.join(root, "CelebAMask-HQ/CelebA-HQ-to-CelebA-mapping.txt"),
+        os.path.join(root, "celeba-mask-hq")
+    )
+
+    # Walk through samples and process
+    walk_through_masks(
+        os.path.join(root, "CelebAMask-HQ/CelebAMask-HQ-mask-anno"),
+        os.path.join(root, "CelebAMask-HQ/CelebA-HQ-img"),
+        split_info,
+        size
+    )
+
+    # Clean up data dir
+    clean(contents, root)
 
 if __name__ == "__main__":
-    main()
+    kwargs = {
+        "categories": CATEGORY_NAMES,
+        "size": OUTPUT_SIZE,
+        "root": ROOT,
+        "val_size": VAL_SIZE,
+        "test_size": TEST_SIZE,
+        "device": DEVICE,
+    }
+
+    prepare_specs_on_faces(**kwargs)
+    prepare_cmu_face_images(**kwargs)
+    prepare_glasses_and_coverings(**kwargs)
+    prepare_face_attributes_grouped(**kwargs)
+    prepare_sunglasses_no_sunglasses(**kwargs)
+    prepare_celeba_mask_hq(**kwargs)
+    print()
