@@ -83,7 +83,7 @@ class DataLoaderMixin():
             "batch_size": 64,
             "num_workers": 12,
             "pin_memory": True,
-            "shuffle": set_kwargs.get("data_split", "train") == "train"
+            "shuffle": set_kwargs.get("split_type", "train") == "train"
         }
 
         # Update default loader kwargs with custom

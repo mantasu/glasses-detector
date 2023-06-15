@@ -3,3 +3,4 @@ data/*
 checkpoints
 lightning_logs
 __pycache__
+.vscode

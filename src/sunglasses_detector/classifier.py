@@ -5,7 +5,7 @@ import torch.nn as nn
 import PIL.Image as Image
 
 from typing import Any
-from _data import ImageLoaderMixin
+from ._data import ImageLoaderMixin
 from torchvision.models import (
     shufflenet_v2_x0_5,
     mobilenet_v3_small,
@@ -23,22 +23,32 @@ class SunglassesClassifier(nn.Module, ImageLoaderMixin):
         :header-rows: 1
 
         * - Backbone name
-          - Num parameters
-          - Model size (Mb)
-          - F1 accuracy
+          - Num parameters ↓
+          - Model size ↓
+          - BCE loss ↓
+          - F1 score ↑
+          - ROC-AUC score ↑
         * - TinySungNet (tiny)
-          - TODO
-          - TODO
-          - TODO
+          - **27.5 K**
+          - **0.110 Mb**
+          - 0.1878
+          - 0.8461
+          - 0.9930
         * - ShuffleNet (small)
+          - 342 K
+          - TODO
           - TODO
           - TODO
           - TODO
         * - MobileNet (medium)
+          - 1.5 M
+          - TODO
           - TODO
           - TODO
           - TODO
         * - EfficientNet (large)
+          - 4.0 M
+          - TODO
           - TODO
           - TODO
           - TODO
@@ -60,9 +70,9 @@ class SunglassesClassifier(nn.Module, ImageLoaderMixin):
                 from torchvision package. For more information, see 
                 :func:`~torchvision.models.efficientnet_b0`.
 
-            Defaults to "shufflenet".
+            Defaults to "mobilenet".
     """
-    def __init__(self, base_model: str = "shufflenet"):
+    def __init__(self, base_model: str = "mobilenet"):
         super().__init__()
         self.base_model = self._load_base_model(base_model)
 
@@ -88,7 +98,7 @@ class SunglassesClassifier(nn.Module, ImageLoaderMixin):
         """Performs forward pass.
 
         Predicts raw scores for the given batch of inputs. Scores are 
-        unbounded, anything that's less than 0 means, sunglasses are 
+        unbounded - anything that's less than 0 means sunglasses are 
         unlikely and anything that's above 0 indicates that sunglasses 
         are likely.
 
@@ -154,7 +164,7 @@ class SunglassesClassifier(nn.Module, ImageLoaderMixin):
 
             my_image.jpg,1
 
-        ..warning:
+        .. warning::
             Please ensure the directory contains valid images and only 
             image files, otherwise errors may occur.
 
@@ -221,7 +231,7 @@ class TinySunglassesClassifier(nn.Module):
             nn.MaxPool2d(2, 2),
         )
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Performs forward pass.
 
         Predicts raw scores for the given batch of inputs. Scores are 

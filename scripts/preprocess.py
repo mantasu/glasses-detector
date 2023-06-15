@@ -499,10 +499,10 @@ if __name__ == "__main__":
         "device": DEVICE,
     }
 
-    prepare_specs_on_faces(**kwargs)
+    # prepare_specs_on_faces(**kwargs)
     prepare_cmu_face_images(**kwargs)
-    prepare_glasses_and_coverings(**kwargs)
-    prepare_face_attributes_grouped(**kwargs)
-    prepare_sunglasses_no_sunglasses(**kwargs)
-    prepare_celeba_mask_hq(**kwargs)
+    # prepare_glasses_and_coverings(**kwargs)
+    # prepare_face_attributes_grouped(**kwargs)
+    # prepare_sunglasses_no_sunglasses(**kwargs)
+    # prepare_celeba_mask_hq(**kwargs)
     print()

@@ -27,7 +27,7 @@ sys.path.append("src")
 # from data.sunglasses_segmentation_data import SunglassesSegmentationDataModule
 
 
-class GlassesSegmenter(pl.LightningModule):
+class BinarySegmenter(pl.LightningModule):
     def __init__(
         self,
         base_model: str = "deeplab",        
