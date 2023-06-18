@@ -7,13 +7,6 @@ from collections import defaultdict
 from torch.utils.data import Dataset
 from .mixins import ImageLoaderMixin, DataLoaderMixin
 
-AVAILABLE_CLASSIFICATION_DIRS = [
-    "cmu-face-images",
-    "specs-on-faces",
-    "sunglasses-no-sunglasses",
-    "glasses-and-coverings",
-    "face-attributes-grouped",
-]
 
 class ImageClassificationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
     def __init__(
@@ -54,16 +47,16 @@ class ImageClassificationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
         random.shuffle(self.data)
 
         # Create image augmentation pipeline based on split type
-        self.transform = self.create_transform(split_type)
+        self.transform = self.create_transform(split_type=="train")
     
     @property
-    def name2label(self, name):
-        return [k for k, v in self.label2name.items() if v == name][0]
+    def name2label(self):
+        return dict(zip(self.label2name.values(), self.label2name.keys()))
 
     def __getitem__(self, index):
         # Get the data and tensorize
         img_path, label = self.data[index]
-        x = self.load_image(img_path, self.transform)
+        x = self.load_image(img_path, transform=self.transform)
         y = torch.tensor([label], dtype=torch.float32)
 
         return x, y

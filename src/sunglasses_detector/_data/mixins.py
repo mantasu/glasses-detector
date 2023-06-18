@@ -42,7 +42,7 @@ class ImageLoaderMixin():
 
         if not is_train:
             # Only keep the last two
-            transofrm = transofrm[:-2]
+            transform = transform[-2:]
         
         return A.Compose(transform)
 
@@ -50,30 +50,49 @@ class ImageLoaderMixin():
     def load_image(
         cls, 
         image: str | Image.Image | numpy.ndarray,
+        masks: list[str | Image.Image | numpy.ndarray] = [],
         transform: A.Compose | bool = False,
     ) -> torch.Tensor:
-        if isinstance(transform, bool):
-            # Load transform (only normalize)
-            transform = cls.create_transform(transform)
+        def open_image_file(image_file, is_mask=False):
+            if isinstance(image_file, str):
+                # If the image is provided as a path
+                image_file = Image.open(image_file)
+                image_file = image_file.convert('L' if is_mask else "RGB")
         
-        if isinstance(image, str):
-            # If the image is provided as a path to it
-            image = Image.open(image).convert("RGB")
-        
-        if isinstance(image, Image.Image):
-            # If the image is not ndarray
-            image = numpy.array(image)
-        
-        # Apply augmentation to the image
-        image = transform(image=image)["image"]
+            if isinstance(image_file, Image.Image):
+                # If the image is not a numpy array
+                image_file = numpy.array(image_file)
+            
+            if is_mask and image_file.ndim > 2:
+                # Convert the image black & white, ensure a single chan
+                image_file = (image_file > 127).any(axis=2).astype(numpy.uint8)
+            elif is_mask:
+                image_file = (image_file > 127).astype(numpy.uint8)
+            
+            return image_file
 
-        return image
+        if isinstance(transform, bool):
+            # Load transform (train/test is based on bool)
+            transform = cls.create_transform(transform)
+
+        # Load image and mask files
+        image = open_image_file(image)
+        masks = [open_image_file(m, True) for m in masks]
+
+        if masks == []:
+            return transform(image=image)["image"]
+
+        # Transform the image and masks
+        transformed = transform(image=image, masks=masks)
+        image, masks = transformed["image"], transformed["masks"]
+
+        return image, masks
 
 class DataLoaderMixin():
     @classmethod
-    def create_loader(cls, **kwargs):
+    def create_loader(cls, **kwargs) -> DataLoader:
         # Split all the given kwargs to dataset (cls) and loader kwargs
-        cls_kwargs_set = {"root", "dirs", "split_type", "label_type", "seed"}
+        cls_kwargs_set = {"root", "dirs", "split_type", "label_type", "img_dirname", "name_map_fn", "seed"}
         set_kwargs = {k: v for k, v in kwargs.items() if k in cls_kwargs_set} 
         ldr_kwargs = {k: v for k, v in kwargs.items() if k not in cls_kwargs_set}
 
@@ -92,7 +111,7 @@ class DataLoaderMixin():
         return DataLoader(**default_loader_kwargs)
 
     @classmethod
-    def create_loaders(cls, **kwargs):
+    def create_loaders(cls, **kwargs) -> tuple[DataLoader, DataLoader, DataLoader]:
         # Create train, validationa and test loaders
         train_loader = cls.create_loader(split_type="train", **kwargs)
         val_loader = cls.create_loader(split_type="val", **kwargs)

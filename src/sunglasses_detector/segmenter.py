@@ -28,15 +28,18 @@ class GlassesSegmenter(nn.Module, ImageLoaderMixin):
         * - Backbone name
           - Num parameters
           - Model size
+          - BCE loss
           - F1 score
           - Dice score
         * - TinyGlassNet (tiny)
           - 926 K
-          - TODO
-          - TODO
-          - TODO
+          - 3.704 (MB)
+          - 0.0584
+          - 0.9031
+          - 0.9201
         * - LR-ASPP (small)
           - 3.2 M
+          - TODO
           - TODO
           - TODO
           - TODO
@@ -45,8 +48,10 @@ class GlassesSegmenter(nn.Module, ImageLoaderMixin):
           - TODO
           - TODO
           - TODO
+          - TODO
         * - DeepLab (large)
           - 61.0 M
+          - TODO
           - TODO
           - TODO
           - TODO
@@ -143,6 +148,7 @@ class GlassesSegmenter(nn.Module, ImageLoaderMixin):
         """
         # Loads the image properly and predict
         x = self.load_image(image)[None, ...]
+        print(x)
         mask = ((self(x) > 0)[0, 0] * 255).numpy().astype(numpy.uint8)
 
         return mask
@@ -174,7 +180,10 @@ class GlassesSegmenter(nn.Module, ImageLoaderMixin):
         """
         if output_dir is None:
             # Define default out-dir
-            output_dir += "_masks"
+            output_dir = input_dir + "_masks"
+        
+        # Create the possibly non-existing dirs
+        os.makedirs(output_dir, exist_ok=True)
         
         for file in os.scandir(input_dir):
             # Predict and save mask as gray

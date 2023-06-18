@@ -1,10 +1,12 @@
 import os
+import torch
 import random
 
 from typing import Iterable
 from collections import defaultdict
 from torch.utils.data import Dataset
 from .mixins import ImageLoaderMixin, DataLoaderMixin
+
 
 class ImageSegmentationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
     def __init__(
@@ -60,4 +62,25 @@ class ImageSegmentationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
         random.shuffle(self.data)
 
         # Create image augmentation pipeline based on split type
-        self.transform = self.create_transform(split_type)
+        self.transform = self.create_transform(split_type=="train")
+    
+    @property
+    def name2idx(self):
+        return dict(zip(self.data[0].keys()), range(len(self.data[0])))
+    
+    @property
+    def idx2name(self):
+        return dict(zip(range(len(self.data[0]), self.data[0].keys())))
+        
+    
+    def __getitem__(self, index):
+        # Load the image and the masks
+        image = self.data[index]["image"]
+        masks = list(self.data[index].values())[1:]
+        image, masks = self.load_image(image, masks, self.transform)
+
+        return image, torch.stack(masks, dim=0).to(torch.float32)
+
+
+    def __len__(self):
+        return len(self.data)

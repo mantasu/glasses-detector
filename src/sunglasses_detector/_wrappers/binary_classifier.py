@@ -7,6 +7,7 @@ import pytorch_lightning as pl
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
+
 class BinaryClassifier(pl.LightningModule):
     def __init__(self, model, train_loader, val_loader, test_loader):
         super().__init__()

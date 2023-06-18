@@ -33,11 +33,11 @@ def parse_arguments():
         help="Path to the dataset directory. Defaults to data.")
     parser.add_argument("-n", "--num-epochs", type=int, default=300,
         help="The number of training epochs. Defaults to 300.")
-    parser.add_argument("-m", "--model-type", type=str, default="classifier", 
-        choices=["classifier", "segmenter"],
-        help="The type of the model to train. Can be either 'classifier' or" +\
-             "'segmenter'. Defaults to 'classifier'.")
-    parser.add_argument("-s", "--model-size", type=str, default="medium",
+    parser.add_argument("-t", "--task", type=str, default="classification", 
+        choices=["classification", "segmentation"],
+        help="The type of the model to train. Can be either 'classification'" +\
+             "or 'segmentation'. Defaults to 'classification'.")
+    parser.add_argument("-m", "--model-size", type=str, default="medium",
         choices=["tiny", "small", "medium", "large"],
         help="The size of the model to train. One of 'tiny', 'small', " +\
              "'medium', 'large'. Defaults to 'medium'.")
@@ -98,13 +98,14 @@ def train_sunglasses_classifier(**kwargs):
     classifier = BinaryClassifier(model, *loaders)
     train(classifier, model_name, kwargs["num_epochs"], kwargs["accelerator"])
 
-def train_glasses_segmenter():
+def train_glasses_segmenter(**kwargs):
     # Create base model and the data loaders
     model = GlassesSegmenter(kwargs["model_size"])
     loaders = ImageSegmentationDataset.create_loaders(
         root=kwargs["data_dir"],
         dirs=kwargs["dirs"],
         img_dirname="images",
+        name_map_fn={"masks": lambda x: f"{int(x[:5])}.jpg"},
         batch_size=kwargs["batch_size"],
         num_workers=kwargs["num_workers"],
     )
@@ -118,10 +119,10 @@ if __name__ == "__main__":
     # Get arguments, convert to kwargs
     kwargs = vars(parse_arguments())
 
-    match kwargs.pop("model_type"):
-        case "classifier":
+    match kwargs.pop("task"):
+        case "classification":
             kwargs["dirs"] = CLASSIFICATION_DATA_DIRS
             train_sunglasses_classifier(**kwargs)
-        case "segmenter":
+        case "segmentation":
             kwargs["dirs"] = SEGMENTATION_DATA_DIRS
             train_glasses_segmenter(**kwargs)
