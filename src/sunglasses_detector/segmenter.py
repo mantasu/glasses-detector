@@ -33,28 +33,28 @@ class GlassesSegmenter(nn.Module, ImageLoaderMixin):
           - Dice score
         * - TinyGlassNet (tiny)
           - 926 K
-          - 3.704 (MB)
+          - 3.704 MB (estimated)
           - 0.0584
           - 0.9031
           - 0.9201
         * - LR-ASPP (small)
           - 3.2 M
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+          - 12.873 MB (estimated)
+          - 0.0595
+          - 0.9034
+          - 0.9169
         * - FCN (medium)
-          - 35.3 M
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+          - 32.9 M
+          - 131.787 MB (estimated)
+          - 0.0515
+          - 0.9167
+          - 0.9292
         * - DeepLab (large)
-          - 61.0 M
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+          - 58.6 M
+          - 234.503 MB (estimated)
+          - 0.0510
+          - 0.9150
+          - 0.9275
 
     Args:
         base_model (str): The name of the base model to use for 
