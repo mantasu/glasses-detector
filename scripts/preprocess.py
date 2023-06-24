@@ -1,19 +1,19 @@
 import os
+import torch
 import random
 import shutil
 import zipfile
 import tarfile
 import rarfile
 import warnings
+import argparse
 import numpy as np
 
 from PIL import Image
 from tqdm import tqdm
 from scipy.io import loadmat
-from functools import partial
 from face_crop_plus import Cropper
 from multiprocessing import cpu_count
-from multiprocessing.pool import ThreadPool
 
 random.seed(0)
 
@@ -22,18 +22,14 @@ VALID_EXTENSIONS = {
     ".xbm", ".jpeg", ".jpg", ".bmp", ".png", ".webp", ".exr",
 }
 
-CATEGORY_NAMES = ["sunglasses", "no_sunglasses"]
-OUTPUT_SIZE = (256, 256)
-DEVICE = "cuda:0"
-ROOT = "data"
-VAL_SIZE = 0.15
-TEST_SIZE = 0.15
-
 def generate_title(title, pad=5):
     # Generate title with borders and print it
     midline = '#' * pad + ' ' + title + ' ' + '#' * pad
     top_bot = '#' * len(midline)
     print('\n'.join(['\n' + top_bot, midline, top_bot]))
+
+def folder_name(filepath):
+    return os.path.basename(os.path.dirname(filepath))
 
 def unpack(filename, root='.', members=set()):
     if not os.path.exists(file_path := os.path.join(root, filename)):
@@ -152,23 +148,23 @@ def gen_splits(**kwargs):
 
 def crop_align(**kwargs):
     # A temporary new function to process dir that replaces the original one
-    def temp_process_dir(cropper, input_dir, desc):
-        # Create batches of image file names in input dir
-        files, bs = os.listdir(input_dir), cropper.batch_size
-        file_batches = [files[i:i+bs] for i in range(0, len(files), bs)]
+    # def temp_process_dir(cropper, input_dir, desc):
+    #     # Create batches of image file names in input dir
+    #     files, bs = os.listdir(input_dir), cropper.batch_size
+    #     file_batches = [files[i:i+bs] for i in range(0, len(files), bs)]
 
-        if len(file_batches) == 0:
-            # Empty
-            return
+    #     if len(file_batches) == 0:
+    #         # Empty
+    #         return
         
-        # Define worker function and its additional arguments
-        kwargs = {"input_dir": input_dir, "output_dir": input_dir + "_faces"}
-        worker = partial(cropper.process_batch, **kwargs)
+    #     # Define worker function and its additional arguments
+    #     kwargs = {"input_dir": input_dir, "output_dir": input_dir + "_faces"}
+    #     worker = partial(cropper.process_batch, **kwargs)
         
-        with ThreadPool(cropper.num_processes, cropper._init_models) as pool:
-            # Create imap object and apply workers to it
-            imap = pool.imap_unordered(worker, file_batches)
-            list(tqdm(imap, total=len(file_batches), desc=desc))
+    #     with ThreadPool(cropper.num_processes, cropper._init_models) as pool:
+    #         # Create imap object and apply workers to it
+    #         imap = pool.imap_unordered(worker, file_batches)
+    #         list(tqdm(imap, total=len(file_batches), desc=desc))
     
     # Initialize cropper
     cropper = Cropper(
@@ -185,7 +181,7 @@ def crop_align(**kwargs):
         # Process directory (crop and align faces inside it)
         input_dir = os.path.join(kwargs["root"], category)
         pbar_desc = f"    * Cropping faces for {category}"
-        temp_process_dir(cropper, input_dir, desc=pbar_desc)
+        cropper.process_dir(input_dir, desc=pbar_desc)
 
         # Remove the original dir
         shutil.rmtree(input_dir)
@@ -336,7 +332,7 @@ def prepare_glasses_and_coverings(**kwargs):
     root = kwargs["root"]
     kwargs["inp_dir"] = os.path.join(root, "glasses-and-coverings")
     kwargs["out_dir"] = os.path.join(root, "glasses-and-coverings-done")
-    kwargs["criteria_fn"] = lambda filepath: "sunglasses" in filepath
+    kwargs["criteria_fn"] = lambda path: "sunglasses" in folder_name(path)
 
     # Unpack the contents from the zip directory
     contents = unpack("glasses-and-coverings.zip", root)
@@ -362,7 +358,7 @@ def prepare_face_attributes_grouped(**kwargs):
     root = kwargs["root"]
     kwargs["inp_dir"] = os.path.join(root, inp1)
     kwargs["out_dir"] = os.path.join(root, inp1 + "-done")
-    kwargs["criteria_fn"] = lambda filepath: "sunglasses" in filepath
+    kwargs["criteria_fn"] = lambda path: "sunglasses" in folder_name(path)
 
     # Define members to extract from both of the zip files
     mem1 = [f"{inp1}/{x}/eyewear" for x in ["train", "val", "test"]]
@@ -469,7 +465,6 @@ def prepare_celeba_mask_hq(**kwargs):
 
     contents = unpack("CelebAMask-HQ.zip", root)
     contents += unpack("annotations.zip", root)
-    contents += kwargs["categories"]
 
     # Create train/val/test split info
     split_info = generate_split_paths(
@@ -489,20 +484,75 @@ def prepare_celeba_mask_hq(**kwargs):
     # Clean up data dir
     clean(contents, root)
 
-if __name__ == "__main__":
-    kwargs = {
-        "categories": CATEGORY_NAMES,
-        "size": OUTPUT_SIZE,
-        "root": ROOT,
-        "val_size": VAL_SIZE,
-        "test_size": TEST_SIZE,
-        "device": DEVICE,
-    }
+def parse_kwargs():
+    # Init parser for command-line interface
+    parser = argparse.ArgumentParser()
 
-    # prepare_specs_on_faces(**kwargs)
-    prepare_cmu_face_images(**kwargs)
-    # prepare_glasses_and_coverings(**kwargs)
-    # prepare_face_attributes_grouped(**kwargs)
-    # prepare_sunglasses_no_sunglasses(**kwargs)
-    # prepare_celeba_mask_hq(**kwargs)
+    # Add the possible arguments
+    parser.add_argument(
+        "-t", "--task", required=True, 
+        choices=["eyeglasses-classification", "sunglasses-classification",
+                 "full-glasses-segmentation", "glass-frames-segmentation"],
+        help="The type of task to generate data splits for."
+    )
+    parser.add_argument(
+        "-r", "--root", required=True,
+        help="The path to the directory with all the unzipped data files."
+    ),
+    parser.add_argument(
+        "-s", "--size", type=int, nargs='+', default=[256, 256], 
+        help=f"The desired size (width, height) of cropped image faces. If "
+             f"provided as a single number, the same value is used for both "
+             f"width and height. Defaults to [256, 256].")
+    parser.add_argument(
+        "-vs", "--val-size", type=float, default=0.15,
+        help=f"The fraction of images to use for validation set. Note that "
+             f"for some datasets this is ignored as default splits are known."
+    )
+    parser.add_argument(
+        "-ts", "--test-size", type=float, default=0.15,
+        help=f"The fraction of images to use for test set. Note that for some "
+             f"datasets this is ignored because default splits are known."
+    )
+    parser.add_argument(
+        "-d", "--device", type=str, default="auto",
+        help=f"The device on which to perform preprocessing. Can be, for "
+             f"example, 'cpu', 'cuda'. If not specified the device is chosen "
+             f"CUDA, if it is available. Defaults to 'auto'."
+    )
+
+    # Parse the acquired args as kwargs
+    kwargs = vars(parser.parse_args())
+
+    # Add custom arguments
+    match kwargs["task"]:
+        case "eyeglasses-classification":
+            kwargs["categories"] = ["eyeglasses", "no_eyeglasses"]
+        case "sunglasses-classification":
+            kwargs["categories"] = ["sunglasses", "no_sunglasses"]
+    
+    if kwargs["device"] == "auto":
+        # If device is set to auto, use CUDA if it is available
+        kwargs["device"] = "cuda" if torch.cuda.is_available() else "cpu"
+
+    return kwargs
+
+if __name__ == "__main__":
+    # Get command-line args
+    kwargs = parse_kwargs()
+
+    match kwargs.pop("task"):
+        case "eyeglasses-classification":
+            raise NotImplementedError("Sorry, not implemented yet!")
+        case "sunglasses-classification":
+            prepare_specs_on_faces(**kwargs)
+            prepare_cmu_face_images(**kwargs)
+            prepare_glasses_and_coverings(**kwargs)
+            prepare_face_attributes_grouped(**kwargs)
+            prepare_sunglasses_no_sunglasses(**kwargs)
+        case "full-glasses-segmentation":
+            prepare_celeba_mask_hq(**kwargs)
+        case "glass-frames-segmentation":
+            raise NotImplementedError("Sorry, not implemented yet!")
+
     print()

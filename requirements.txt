@@ -1,8 +1,8 @@
 tqdm
+torch
 scipy
-# sudo apt-get install unrar
 rarfile
-
+torchvision
 tensorboard
 albumentations
 face-crop-plus

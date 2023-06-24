@@ -1,169 +1,330 @@
-# Sunglasses or Not?
+# Glasses Detector
 
-|                                      |                                      |                                      |                                      |
-| :----------------------------------: | :----------------------------------: | :----------------------------------: | :----------------------------------: |
-| ![Example 1](data/demo/example1.jpg) | ![Example 2](data/demo/example2.jpg) | ![Example 3](data/demo/example3.jpg) | ![Example 4](data/demo/example4.jpg) |
-| Wears sunglasses                     | No sunglasses                        | No sunglasses                        | Wears sunglasses                     |
+**Eyeglasses** and **sunglasses** _classifier_ + **glasses** and their **frames** _segmenter_. This project provides scripts to download the corresponding datasets, train the corresponding models and by itself is a PyPi project that provides a quick way to use the trained models via python script or terminal.
 
-## About
+> **Note**: the project is BETA stage. Currently, only full-glasses base segmentation models are provided.
 
-A small side project for building a classifier to detect if a person is wearing sunglasses. 4 datasets were used to train [ShuffleNet V2](https://arxiv.org/abs/1807.11164) model (only 1.4M parameters) for binary classification. The final test results:
+## Installation
 
-<center>
+Minimum version of [Python 3.10](https://www.python.org/downloads/release/python-3100/) is required. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) in advance for your device to enable GPU support. Note that _CUDA_ is backwards compatible, thus even if you have the newest version of [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit), _Pytorch_ should work just fine.
 
-| Test metric | Joint Dataset |
-| ----------- | ------------- |
-| F1 Score    | 0.9658        |
-| BCE Loss    | 0.1022        |
+### Pip Package
 
-</center>
+If you only need the interface, just install the pip package and see _Examples_ section or read the [documentation page](mantasu.github.io/glasses-segmenter/) of how to use it:
 
-## Setup
-
-The code was built and tested using [Python 3.10.9](https://www.python.org/downloads/release/python-3109/) It is recommended to setup [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) environment:
 ```bash
-conda create -n sunglasses-or-not python=3.10
-conda activate sunglasses-or-not
+pip install glasses-detector
 ```
 
-The environment uses [Pytorch 1.13](https://pytorch.org/blog/PyTorch-1.13-release/) with [CUDA 11.7](https://developer.nvidia.com/cuda-11-7-0-download-archive). Please, also install the required packages (may take some time):
+You can also install it from source:
+
 ```bash
-conda install pytorch torchvision pytorch-cuda=11.7 -c pytorch -c nvidia
-pip install -r requirements.txt
+git clone https://github.com/mantasu/glasses-segmenter
+cd glasses-segmenter && pip install .
 ```
 
-## Datasets
+### Local Project
 
-The instructions are provided for Linux users. Please enable executive privilages for python scripts. Also, you may want to install the unzipping packages, e.g., for Ubuntu:
+If you want to train your own models on the given datasets (or on some other datasets), just clone the project and install training requirements, then see _Running_ section to see how to run training and testing.
+
 ```bash
-chmod +x ./scripts/*.py
-sudo apt-get install unrar unzip
+git clone https://github.com/mantasu/glasses-segmenter
+cd glasses-segmenter && pip install -r requirements.txt
 ```
 
-Once all the datasets are downloaded and preprocessed, the data structure should look as follows:
-```
-├── data                            <- The data directory under project
-│   ├── cmu-face-images
-│   │   └── test
-│   │   |   └── no_sunglasses       <- 256x256 images of poeple without sunglasses
-│   │   |   └── sunglasses          <- 256x256 images of poeple with sunglasses
-│   │   |
-|   |   └── train
-│   │   |   └── no_sunglasses       <- 256x256 images of poeple without sunglasses
-│   │   |   └── sunglasses          <- 256x256 images of poeple with sunglasses
-│   │   |
-|   |   └── val
-│   │   |   └── no_sunglasses       <- 256x256 images of poeple without sunglasses
-│   │   |   └── sunglasses          <- 256x256 images of poeple with sunglasses
-│   │
-│   ├── glasses-and-coverings       <- Same directory tree as cmu-face-images
-│   ├── specs-on-faces              <- Same directory tree as cmu-face-images
-│   └── sunglasses-no-sunglasses    <- Same directory tree as cmu-face-images
+You can create a virtual environment for your packages via [venv](https://docs.python.org/3/library/venv.html), however, if you have conda, then you can simply use it to create a new environment, for example:
 
+```bash
+conda create -n glasses-detector python=3.11
+conda activate glasses-detector 
 ```
 
-> **Note**: if it takes very long to preprocess the datasets, feel free to change the super resolution model to a smaller one by specifying it with an additional command line argument `--sr-model`, e.g., `--sr-model ninasr_b0`. For avalable models, see [torchsr](https://pypi.org/project/torchsr/) package.
+To set-up the datasets for the 4 tasks (2 classification and 2 segmentation tasks), refer to _Data_ section.
 
-<details><summary><h3>CMU Face Images</h3></summary>
+## Features
 
-1. Download the data form the official **[UCI Machine Learning Repository](http://archive.ics.uci.edu/ml/datasets/cmu+face+images)** website:
-    * Download image archive from [here](http://archive.ics.uci.edu/ml/machine-learning-databases/faces-mld/faces.tar.gz) and place under `data/cmu-faces-images/faces.tar.gz`
-2. Extract the data:
-    ```bash
-    tar zxvf data/cmu-face-images/faces.tar.gz -C data/cmu-face-images/
-    ```
-3. Preprocess the data:
-    ```bash
-    python scripts/preprocess.py --data-dir data/cmu-face-images --criteria file/sunglasses --filter _2 _4 .anonr .tar --val-size 0.15 --test-size 0.15 --sr-scale 4 --resize 256 256 --seed 0
-    ```
-4. Clean up:
-    ```bash
-    rm -rf data/cmu-face-images/faces data/cmu-face-images/faces.tar.gz
-    ```
+There are 3 categories of classifiers and segmenters (terminology is a bit off but easier to handle with unique names):
+* **Eyeglasses** - identifies and segments only transparent glasses, i.e., prescription spectacles.
+* **Sunglasses** - identifies and segments only occluded glasses, i.e., sunglasses.
+* **Glasses** - identifies and segments all types of glasses.
+
+There are the 3 available model groups (1 classification and 2 segmentation groups).
+
+### Classification
+
+A classifier only identifies whether a person is wearing a corresponding category of glasses:
+  
+| Models / Input images | \<image with eyeglasses\> | \<image with sunglasses\> | \<image without glasses\> |
+| --------------------- | ------------------------- | ------------------------- | ------------------------- |
+| Eyeglasses classifier | yes                       | no                        | no                        |
+| Sunglasses classifier | no                        | yes                       | no                        |
+| Glasses classifier    | yes                       | yes                       | no                        |
+
+These are the performances of _eyeglasses_ and _sunglasses_ model performances and their sizes. Note that the joint _glasses_ classifier would have an average accuracy and a combined model size of both _eyeglasses_ and _sunglasses_ models.
+
+| Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | ROC-AUC score $\uparrow$ | Num params $\downarrow$ | Model size $\downarrow$ |
+| ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
+| Eyeglasses classifier tiny   | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Eyeglasses classifier small  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Eyeglasses classifier medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Eyeglasses classifier large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+
+| Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | ROC-AUC score $\uparrow$ | Num params $\downarrow$ | Model size $\downarrow$ |
+| ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
+| Sunglasses classifier tiny   | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Sunglasses classifier small  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Sunglasses classifier medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Sunglasses classifier large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+
+### Full-glasses segmentation
+
+A segmenter generates masks of people wearing corresponding categories of glasses and their frames:
+
+| Models / Input images | \<image with eyeglasses\> | \<image with sunglasses\> | \<image without glasses\> |
+| --------------------- | ------------------------- | ------------------------- | ------------------------- |
+| Eyeglasses segmenter  | \<mask with eyeglasses\>  | \<black image\>           | \<black image\>           |
+| Sunglasses segmenter  | \<black image\>           | \<mask with sunglasses\>  | \<black image\>           |
+| Glasses segmenter     | \<mask with eyeglasses\>  | \<mask with sunglasses\>  | \<black image\>           |
+
+There is only one glasses _segmentation_ model group which is trained for both _eyeglasses_ and _sunglasses_. Although you can use it as is, it is only one part of the final _segmentation_ model - the other part is a specific _classifier_, therefore, the accuracy and the model size would be a combination of the generic (base) _segmenter_ and a _classifier_ of a specific glasses category.
+
+| Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | Dice score $\uparrow$    | Num params $\downarrow$ | Model size $\downarrow$ |
+| ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
+| Base segmenter tiny          | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Base segmenter small         | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Base segmenter medium        | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Base segmenter large         | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+
+### Frames-only segmentation
+
+A frames segmenter generates masks of only the glasses frames for the corresponding categories of glasses that people wear:
+
+| Models / Input images        | \<image with eyeglasses\>        | \<image with sunglasses\>        | \<image without glasses\> |
+| ---------------------------- | -------------------------------- | -------------------------------- | ------------------------- |
+| Eyeglasses frames segmenter  | \<mask with eyeglasses frames\>  | \<black image\>                  | \<black image\>           |
+| Sunglasses frames segmenter  | \<black image\>                  | \<mask with sunglasses frames\>  | \<black image\>           |
+| Glasses frames segmenter     | \<mask with eyeglasses frames\>  | \<mask with sunglasses frames\>  | \<black image\>           |
+
+Similarly to the _glasses & frames segmentation_ model group, there is only one _frames-only segmentation_ model group which is trained for both _eyeglasses_ and _sunglasses_. Although you can use it as is, it is only one part of the final _frames segmentation_ model - the other part is a specific _classifier_, therefore, the accuracy and the model size would be a combination of the generic (base) _frames segmenter_ and a _classifier_ of a specific glasses category.
+
+| Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | Dice score $\uparrow$    | Num params $\downarrow$ | Model size $\downarrow$ |
+| ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
+| Base frames segmenter tiny   | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Base frames segmenter small  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Base frames segmenter medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Base frames segmenter large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+
+## Examples
+
+### Command Line
+
+The installed pip package can be can run via the command line. For example, classification of a single or multiple images, can be performed via
+
+```bash
+glasses-detector -i path/to/img --task glasses-classification # Prints True/False
+glasses-detector -i path/to/dir --task glasses-classification # Generates CSV
+```
+
+Running segmentation is similar, just change the task argument:
+
+```bash
+glasses-detector -i path/to/img -t glasses-segmentation # Generates img_mask file
+glasses-detector -i path/to/dir -t glasses-segmentation # Generates dir with masks
+```
+
+> **Note**: you can also specify things like `--output-path`, `--label-type`, `--model`, `--device` etc. Use `--glasses-detector -h` for more details or check the [documentation page]().
+
+### Python Script
+
+You can import the package and its models via the python script for more flexibility. Here is an example of how to classify people wearing sunglasses (will generate an output file where each line will contain the name of the image and the predicted label, e.g., `some_image.jpg,1`):
+
+```python
+from glasses_detector import SunglassesClassifier
+
+classifier = SunglassesClassifier(model_type="small", pretrained=True).eval()
+
+classifier.predict(
+    input_path="path/to/dir", 
+    output_path="path/to/output.csv",
+    label_type="int",
+)
+```
+
+Using a segmenter is similar, here is an example of using a frames segmentation model for only transparent eyeglasses:
+
+```python
+from glasses_detector import EyeglassesSegmenter
+
+segmenter = EyeglassesSegmenter(model_type="small", pretrained=True).eval()
+
+segmenter.predict(
+    input_path="path/to/dir",
+    output_path="path/to/dir_masks",
+    mask_type="img",
+)
+```
+
+> **Note**: there is much more flexibility that you can do with the given models, for instance, you can use only base segmenters without accompanying classifiers, or you can define your own prediction methods without resizing images to `256x256` (as what is done in the background). For more details refer to the [documentation page](), for instance at how segmenter [prediction method]() works.
+
+## Data
+
+Before downloading the datasets, please install `unrar` package, for example if you're using Ubuntu (if you're using Windows, just install WinRAR):
+
+```bash
+sudo apt-get install unrar
+```
+
+Also, ensure the scripts are executable:
+
+```bash
+chmod +x scripts/*
+```
+
+Once you download a specific dataset (instructions given below), run `preprocess.py` script and specify the corresponding task name and the directory with the dataset(-s) for that task. Note that after running the script, the original raw data will be extracted and deleted, thus make backups if needed. E.g., for sunglasses classification, run:
+
+```bash
+python scripts/preprocess.py --task sunglasses-classification --root data/classification/sunglasses
+```
+
+After processing every dataset group, your `data` directory should have the following structure:
+
+```
+└── data                    <- The data directory under project
+    ├── classification
+    │   ├── eyeglasses      <- Contains sub-folders with eyeglasses images
+    |   └── sunglasses      <- Contains sub-folders with sunglasses images
+    │
+    └── segmentation
+        ├── full-glasses    <- Contains sub-folders with full-glasses images/masks
+        └── glass-frames    <- Contains sub-folders with glass-frames images/masks
+```
+
+
+### Classification
+
+<details>
+
+<summary><b>Eyeglasses</b></summary>
+
+Coming soon!
 
 </details>
 
-<details><summary><h3>Glasses and Coverings</h3></summary>
+<details>
 
-1. Download the data from **[Kaggle](https://www.kaggle.com/datasets/mantasu/glasses-and-coverings?resource=download)** website (you have to create a free account):
-    * Download image archive from [here](https://www.kaggle.com/datasets/mantasu/glasses-and-coverings) and place under `data/glasses-and-sunglasses/archive.zip`
-2. Extract the data:
-    ```bash
-    unzip data/glasses-and-coverings/archive.zip -d data/glasses-and-coverings
-    ```
-3. Preprocess the data:
-    ```bash
-    python scripts/preprocess.py --data-dir data/glasses-and-coverings --criteria dir/sunglasses --filter .zip --val-size 0.15 --test-size 0.15 --seed 0
-    ```
-4. Clean up:
-    ```bash
-    rm -rf data/glasses-and-coverings/glasses-and-coverings data/glasses-and-coverings/archive.zip
-    ```
+<summary><b>Sunglasses</b></summary>
+
+Download the following files and _place them all under directory_ `data/classification/sunglasses` (please note for some datasets you need to have created a free [Kaggle](https://www.kaggle.com/) account):
+
+* From [CMU Face Images](http://archive.ics.uci.edu/dataset/124/cmu+face+images) download `cmu+face+images.zip`
+* From [Face Attributes Grouped](https://www.kaggle.com/datasets/mantasu/face-attributes-grouped) download `archive.zip` and _rename_ to `face-attributes-grouped.zip`
+* From [Face Attributes Extra](https://www.kaggle.com/datasets/mantasu/face-attributes-extra) download `archive.zip` and _rename_ to `face-attributes-extra.zip`
+* From [Glasses and Coverings](https://www.kaggle.com/datasets/mantasu/glasses-and-coverings) download `archive.zip` and _rename_ to `glasses-and-coverings.zip`
+* From [Specs on Faces](https://sites.google.com/view/sof-dataset) download `whole images.rar` and `metadata.rar`
+* From [Sunglasses / No Sunglasses](https://www.kaggle.com/datasets/amol07/sunglasses-no-sunglasses) download `archive.zip` and _rename_ to `sunglasses-no-sunglasses.zip`
+
+After downloading all the datasests and putting them under the specified directory, run the script to extract the data and create splits:
+
+```bash
+python scripts/preprocess.py --task sunglasses-classification --root data/classification/sunglasses
+```
+
+After running `preprocess.py`, the following subdirectories should be created inside root:
+
+```
+└── data/classification/sunglasses
+    ├── cmu-face-images 
+    |   ├── test
+    |   |   ├── no_sunglasses       <- 256x256 images of people without sunglasses
+    │   |   └── sunglasses          <- 256x256 images of people with sunglasses
+    │   |
+    |   ├── train
+    │   |   ├── no_sunglasses       <- 256x256 images of people without sunglasses
+    │   |   └── sunglasses          <- 256x256 images of people with sunglasses
+    │   |
+    |   └── val
+    │       ├── no_sunglasses       <- 256x256 images of people without sunglasses
+    │       └── sunglasses          <- 256x256 images of people with sunglasses
+    |
+    ├── face-attributes-grouped     <- Same directory tree as for cmu-face-images
+    ├── glasses-and-coverings       <- Same directory tree as for cmu-face-images
+    ├── specs-on-faces              <- Same directory tree as for cmu-face-images
+    └── sunglasses-no-sunglasses    <- Same directory tree as for cmu-face-images
+```
 
 </details>
 
-<details><summary><h3>Specs on Faces</h3></summary>
+### Segmentation
 
-1. Download the data form the official **[Specs on Faces (SoF) Dataset](https://sites.google.com/view/sof-dataset)** website:
-    * Download image archive from [here](https://drive.google.com/file/d/14ZEyWfinmlOw0kaHXIBXXlzkMY0Ds87Z/view) and place under `data/specs-on-faces/whole images.rar`
-    * Download metadata from [here](https://drive.google.com/file/d/0BwO0RMrZJCioaTVURnZoZG5jUVE/view?resourcekey=0-F8-ejyF8NX4GC129ustqLg) and place under `data/specs-on-faces/metadata.rar`
-2. Extract the data:
-    ```bash
-    unrar x data/specs-on-faces/whole\ images.rar data/specs-on-faces
-    unrar x data/specs-on-faces/metadata.rar data/specs-on-faces
-    ```
-3. Preprocess the data:
-    ```bash
-    python scripts/preprocess.py --data-dir data/specs-on-faces --criteria data/specs-on-faces/metadata/metadata.mat --filter .mat .rar _.jpg _Gn _Gs _Ps _en _em --val-size 0.15 --test-size 0.15 --sr-scale 4 --resize 256 256 --seed 0
-    ```
-4. Clean up:
-    ```bash
-    rm -rf data/specs-on-faces/whole\ images data/specs-on-faces/metadata
-    rm data/specs-on-faces/whole\ images.rar data/specs-on-faces/metadata.rar
-    ```
+<details>
+
+<summary><b>Full Glasses</b></summary>
+
+Download the following files and _place them all under directory_ `data/segmentation/full-glasses`:
+
+* From [CelebA Mask HQ](https://drive.google.com/file/d/1badu11NqxGf6qM3PTTooQDJvQbejgbTv/view) download `CelebAMask-HQ.zip`
+* From [CelebA Annotations](https://drive.google.com/file/d/1xd-d1WRnbt3yJnwh5ORGZI3g-YS-fKM9/view) download `annotations.zip`
+
+After downloading the files and putting them under the specified directory, run the script to extract the data and create splits:
+
+```bash
+python scripts/preprocess.py --task full-glasses-segmentation --root data/segmentation/full-glasses
+```
+
+After running `preprocess.py`, the following subdirectories should be created inside root:
+
+```
+└── data/segmentation/full-glasses
+    └── celeba-mask-hq
+        ├── test
+        |   ├── images              <- 256x256 images of people with glasses
+        |   └── masks               <- 256x256 images of corresponding masks
+        |
+        ├── train
+        |   ├── images              <- 256x256 images of people with glasses
+        |   └── masks               <- 256x256 images of corresponding masks
+        |
+        └── val
+            ├── images              <- 256x256 images of people with glasses
+            └── masks               <- 256x256 images of corresponding masks
+```
 
 </details>
 
-<details><summary><h3>Sunglasses / No Sunglasses</h3></summary>
+<details>
 
-1. Download the data from **[Kaggle](https://www.kaggle.com/datasets/amol07/sunglasses-no-sunglasses?resource=download)** website (you have to create a free account):
-    * Download image archive from [here](https://www.kaggle.com/datasets/amol07/sunglasses-no-sunglasses/download?datasetVersionNumber=2) and place under `data/sunglasses-no-sunglasses/archive.zip`
-2. Extract the data:
-    ```bash
-    unzip data/sunglasses-no-sunglasses/archive.zip -d data/sunglasses-no-sunglasses
-    ```
-3. Preprocess the data:
-    ```bash
-    python scripts/split.py --data-dir data/sunglasses-no-sunglasses --criteria dir/with_glasses --filter .zip --val-size 0.15 --test-size 0.15 --sr-scale 4 --resize 256 256 --seed 0
-    ```
-4. Clean up:
-    ```bash
-    rm -rf data/sunglasses-no-sunglasses/glasses_noGlasses data/sunglasses-no-sunglasses/archive.zip
-    ```
+<summary><b>Glass Frames</b></summary>
+
+Coming soon!
 
 </details>
 
-## Running the Code
+## Running
 
-To train and evaluate the best model checkpoint after training:
-```bash
-python scripts/train.py -d path/to/data -n <NUM_EPOCHS>
-```
 
-To predict whether a person is wearing glasses:
-```bash
-python scripts/predict.py -i path/to/image -m path/to/my_model.pth
-```
-
-> My trained model is available [here](https://drive.google.com/file/d/1_1xq2X9VoezMkW8pgo3Kl-O4rmy_cLc1/view?usp=sharing). If you download it and place it under `checkpoints/sunglasses-classifier-best.pth`, you can try the demo pictures immediatelly:
-
-```bash
-python scripts/predict.py -i data/demo/example1.jpg # wears sunglasses [99.99%]
-python scripts/predict.py -i data/demo/example2.jpg # no sunglasses [83.72%]
-```
 
 ## References
-1. Mitchell, Tom. "Cmu face images data set." _Data School of Computer Science_. 1999.
-2. Afifi, Mahmoud, and Abdelrahman Abdelhamed. "Afif4: Deep gender classification based on adaboost-based fusion of isolated facial features and foggy faces." _Journal of Visual Communication and Image Representation 62_ (2019): 77-86.
-3. Ma, Ningning, et al. "Shufflenet v2: Practical guidelines for efficient cnn architecture design." _Proceedings of the European Conference on Computer Vision (ECCV)._ 2018.
-4. Paszke, Adam, et al. "Pytorch: An imperative style, high-performance deep learning library." _Advances in Neural Information Processing Systems 32_ (2019).
+
+The following model architectures were used from [Torchvision](https://pytorch.org/vision/stable/index.html) library:
+* **Classifier small** - [ShuffleNet V2 (x0.5)](https://pytorch.org/vision/stable/models/generated/torchvision.models.shufflenet_v2_x0_5.html#torchvision.models.shufflenet_v2_x0_5) based on [ShuffleNet V2: Practical Guidelines for Efficient CNN Architecture Design](https://arxiv.org/abs/1807.11164) paper
+* **Classifier medium** - [MobileNet V3 (small)](https://pytorch.org/vision/stable/models/generated/torchvision.models.mobilenet_v3_small.html#torchvision.models.mobilenet_v3_small) based on [Searching for MobileNetV3](https://arxiv.org/abs/1905.02244) paper
+* **Classifier large** - [EfficientNet B0](https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_b0.html#torchvision.models.efficientnet_b0) based on [EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks](https://arxiv.org/abs/1905.11946) paper
+* **Segmenter small** - [LRASPP](https://pytorch.org/vision/stable/models/generated/torchvision.models.segmentation.lraspp_mobilenet_v3_large.html#torchvision.models.segmentation.lraspp_mobilenet_v3_large) based on [Searching for MobileNetV3](https://arxiv.org/abs/1905.02244) paper
+* **Segmenter medium** - [FCN (ResNet-50)](https://pytorch.org/vision/stable/models/generated/torchvision.models.segmentation.fcn_resnet50.html#torchvision.models.segmentation.fcn_resnet50) based on [Fully Convolutional Networks for Semantic Segmentation](https://arxiv.org/abs/1411.4038) paper
+* **Segmenter large** - [DeepLab V3 (ResNet-101)](https://pytorch.org/vision/stable/models/generated/torchvision.models.segmentation.deeplabv3_resnet101.html#torchvision.models.segmentation.deeplabv3_resnet101) based on [Rethinking Atrous Convolution for Semantic Image Segmentation](https://arxiv.org/abs/1706.05587) paper
+
+**Tiny classifiers** and **tiny segmenters** are the custom models created by me with the aim to have as few parameters as possible while still maintaining a reasonable accuracy.
+
+## Citation
+
+```bibtex
+@misc{glasses-detector,
+  author = {Mantas Birškus},
+  title = {Glasses Detector},
+  year = {2023},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/mantasu/glasses-detector}},
+  doi = {TBA}
+}
+```
