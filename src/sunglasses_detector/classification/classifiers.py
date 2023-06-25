@@ -1,18 +1,12 @@
 import torch
 import torch.nn as nn
-from .base_classifier_mixin import BaseClassifierMixin
+from .base_classifier import BaseClassifier
 
-class EyeglassesClassifier(nn.Module, BaseClassifierMixin):
+class EyeglassesClassifier(BaseClassifier):
     def __init__(self, base_model: str = "medium", pretrained: bool = False):
-        super().__init__()
-        self.base_model = self.load_base_model(base_model)
-        self.base_model = self.load_weights_from_url(self.base_model)
-    
-    def forward():
-        # TODO
-        pass
+        super().__init__(base_model, pretrained)
 
-class SunglassesClassifier(nn.Module, BaseClassifierMixin):
+class SunglassesClassifier(BaseClassifier):
     """Classifier to determine if the person is wearing sunglasses.
 
     A binary classifier that tells whether a person in the image is
@@ -72,47 +66,22 @@ class SunglassesClassifier(nn.Module, BaseClassifierMixin):
 
             Defaults to "mobilenet".
     """
-    def __init__(self, base_model: str = "mobilenet", pretrained: bool = False):
-        super().__init__()
-        self.base_model = self.load_base_model(base_model)
-    
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Performs forward pass.
+    def __init__(self, base_model: str = "medium", pretrained: bool = False):
+        super().__init__(base_model, pretrained)
 
-        Predicts raw scores for the given batch of inputs. Scores are 
-        unbounded - anything that's less than 0 means sunglasses are 
-        unlikely and anything that's above 0 indicates that sunglasses 
-        are likely.
-
-        Args:
-            x (torch.Tensor): Image batch of shape (N, C, H, W). Note 
-                that pixel values are normalized and squeezed between 
-                0 and 1.
-
-        Returns:
-            torch.Tensor: An output tensor of shape (N,) indicating 
-                whether a person in each nth image is wearing sunglasses 
-                or not. The scores are unbounded, thus, to convert to a 
-                probability, sigmoid function must be used.
-        """
-        return self.base_model(x)
-
-
-class GlassesClassifier(nn.Module, BaseClassifierMixin):
+class GlassesClassifier(BaseClassifier):
     def __init__(
         self, 
-        base_model: str | tuple[str, str] = "medium", pretrained: bool = False):
+        base_model: str | tuple[str, str] = "medium",
+        pretrained: bool = False
+    ):
         super().__init__()
 
         if isinstance(base_model, str):
             base_model = (base_model, base_model)
         
-        self.eyeglasses_classifier = self.load_base_model(base_model[0])
-        self.sunglasses_classifier = self.load_base_model(base_model[1])
-
-        if pretrained:
-            self.load_weights_from_url(self.eyeglasses_classifier)
-            self.load_weights_from_url(self.sunglasses_classifier)
+        self.eyeglasses_classifier = EyeglassesClassifier(base_model[0], pretrained)
+        self.sunglasses_classifier = SunglassesClassifier(base_model[1], pretrained)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y_hat_eyeg = self.eyeglasses_classifier(x)

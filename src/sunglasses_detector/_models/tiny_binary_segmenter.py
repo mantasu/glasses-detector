@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torchvision.ops import Conv2dNormActivation
 
+custom_var = "123"
 
 class TinyBinarySegmenter(nn.Module):
     """Tiny binary segmenter.
@@ -11,7 +12,7 @@ class TinyBinarySegmenter(nn.Module):
     several sequential up-convolution and down-convolution layers with 
     residual connections and is very similar to U-Net.
 
-    .. note::
+    Note:
         You can read more about U-Net architecture in the following 
         paper by O. Ronneberger et al.:
         `U-Net: Convolutional Networks for Biomedical Image Segmentation <https://arxiv.org/abs/1505.04597>`_
@@ -72,6 +73,9 @@ class TinyBinarySegmenter(nn.Module):
 
         # Pixel-wise classification layer
         self.last = nn.Conv2d(16, 1, 1)
+    
+    def hi_there(self):
+        return None
 
     def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Performs forward pass.

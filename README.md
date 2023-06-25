@@ -52,7 +52,7 @@ There are the 3 available model groups (1 classification and 2 segmentation grou
 
 ### Classification
 
-A classifier only identifies whether a person is wearing a corresponding category of glasses:
+A classifier only identifies whether a person is wearing a corresponding category of glasses (transparent eyeglasses or occluded sunglasses):
   
 | Models / Input images | \<image with eyeglasses\> | \<image with sunglasses\> | \<image without glasses\> |
 | --------------------- | ------------------------- | ------------------------- | ------------------------- |
@@ -62,12 +62,22 @@ A classifier only identifies whether a person is wearing a corresponding categor
 
 These are the performances of _eyeglasses_ and _sunglasses_ model performances and their sizes. Note that the joint _glasses_ classifier would have an average accuracy and a combined model size of both _eyeglasses_ and _sunglasses_ models.
 
+<details>
+
+<summary><b>Eyeglasses classification models (performance & weights)</b></summary>
+
 | Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | ROC-AUC score $\uparrow$ | Num params $\downarrow$ | Model size $\downarrow$ |
 | ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
 | Eyeglasses classifier tiny   | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
 | Eyeglasses classifier small  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
 | Eyeglasses classifier medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
 | Eyeglasses classifier large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+
+</details>
+
+<details>
+
+<summary><b>Sunglasses classification models (performance & weights)</b></summary>
 
 | Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | ROC-AUC score $\uparrow$ | Num params $\downarrow$ | Model size $\downarrow$ |
 | ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
@@ -76,43 +86,45 @@ These are the performances of _eyeglasses_ and _sunglasses_ model performances a
 | Sunglasses classifier medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
 | Sunglasses classifier large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
 
-### Full-glasses segmentation
+</details>
 
-A segmenter generates masks of people wearing corresponding categories of glasses and their frames:
+### Segmentation
 
-| Models / Input images | \<image with eyeglasses\> | \<image with sunglasses\> | \<image without glasses\> |
-| --------------------- | ------------------------- | ------------------------- | ------------------------- |
-| Eyeglasses segmenter  | \<mask with eyeglasses\>  | \<black image\>           | \<black image\>           |
-| Sunglasses segmenter  | \<black image\>           | \<mask with sunglasses\>  | \<black image\>           |
-| Glasses segmenter     | \<mask with eyeglasses\>  | \<mask with sunglasses\>  | \<black image\>           |
+A full-glasses segmenter generates masks of people wearing corresponding categories of glasses and their frames and a frames-only segmenter generates corresponding masks but only for glasses frames:
 
-There is only one glasses _segmentation_ model group which is trained for both _eyeglasses_ and _sunglasses_. Although you can use it as is, it is only one part of the final _segmentation_ model - the other part is a specific _classifier_, therefore, the accuracy and the model size would be a combination of the generic (base) _segmenter_ and a _classifier_ of a specific glasses category.
+| Models / Input images             | \<image with eyeglasses\>                | \<image with sunglasses\>                | \<image without glasses\> |
+| --------------------------------- | ---------------------------------------- | ---------------------------------------- | ------------------------- |
+| Eyeglasses full/frames segmenter  | \<mask with full \| frames eyeglasses\>  | \<black image\>                          | \<black image\>           |
+| Sunglasses full/frames segmenter  | \<black image\>                          | \<mask with full \| frames sunglasses\>  | \<black image\>           |
+| Glasses full/frames segmenter     | \<mask with full \| frames eyeglasses\>  | \<mask with full \| frames sunglasses\>  | \<black image\>           |
 
-| Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | Dice score $\uparrow$    | Num params $\downarrow$ | Model size $\downarrow$ |
-| ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
-| Base segmenter tiny          | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
-| Base segmenter small         | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
-| Base segmenter medium        | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
-| Base segmenter large         | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+There is only one model group for each _full-glasses_ and _frames-only_ _segmentation_ tasks. Each group is trained for both _eyeglasses_ and _sunglasses_. Although you can use it as is, it is only one part of the final _full-glasses_ or _frames-only_ _segmentation_ model - the other part is a specific _classifier_, therefore, the accuracy and the model size would be a combination of the generic (base) _segmenter_ and a _classifier_ of a specific glasses category.
 
-### Frames-only segmentation
+<details>
 
-A frames segmenter generates masks of only the glasses frames for the corresponding categories of glasses that people wear:
+<summary><b>Full glasses (base) segmentation models (performance & weights)</b></summary>
 
-| Models / Input images        | \<image with eyeglasses\>        | \<image with sunglasses\>        | \<image without glasses\> |
-| ---------------------------- | -------------------------------- | -------------------------------- | ------------------------- |
-| Eyeglasses frames segmenter  | \<mask with eyeglasses frames\>  | \<black image\>                  | \<black image\>           |
-| Sunglasses frames segmenter  | \<black image\>                  | \<mask with sunglasses frames\>  | \<black image\>           |
-| Glasses frames segmenter     | \<mask with eyeglasses frames\>  | \<mask with sunglasses frames\>  | \<black image\>           |
+| Model type / Test metric      | BCE loss $\downarrow$ | F1 score $\uparrow$ | Dice score $\uparrow$    | Num params $\downarrow$ | Model size $\downarrow$ |
+| ----------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
+| Full glasses segmenter tiny   | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Full glasses segmenter small  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Full glasses segmenter medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Full glasses segmenter large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
 
-Similarly to the _glasses & frames segmentation_ model group, there is only one _frames-only segmentation_ model group which is trained for both _eyeglasses_ and _sunglasses_. Although you can use it as is, it is only one part of the final _frames segmentation_ model - the other part is a specific _classifier_, therefore, the accuracy and the model size would be a combination of the generic (base) _frames segmenter_ and a _classifier_ of a specific glasses category.
+</details>
 
-| Model type / Test metric     | BCE loss $\downarrow$ | F1 score $\uparrow$ | Dice score $\uparrow$    | Num params $\downarrow$ | Model size $\downarrow$ |
-| ---------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
-| Base frames segmenter tiny   | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
-| Base frames segmenter small  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
-| Base frames segmenter medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
-| Base frames segmenter large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+<details>
+
+<summary><b>Glasses frames (base) segmentation models (performance & weights)</b></summary>
+
+| Model type / Test metric        | BCE loss $\downarrow$ | F1 score $\uparrow$ | Dice score $\uparrow$    | Num params $\downarrow$ | Model size $\downarrow$ |
+| ------------------------------- | --------------------- | ------------------- | ------------------------ | ----------------------- | ----------------------- |
+| Glasses frames segmenter tiny   | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Glasses frames segmenter small  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Glasses frames segmenter medium | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+| Glasses frames segmenter large  | TBA                   | TBA                 | TBA                      | TBA                     | TBA                     |
+
+</details>
 
 ## Examples
 
@@ -293,7 +305,7 @@ After running `preprocess.py`, the following subdirectories should be created in
 
 <details>
 
-<summary><b>Glass Frames</b></summary>
+<summary><b>Glasses Frames</b></summary>
 
 Coming soon!
 
