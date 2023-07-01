@@ -4,12 +4,53 @@ import torch
 
 from PIL import Image
 from typing import Any
-from .._models import BaseModel
-from .._data import ImageLoaderMixin
 from collections.abc import Callable
+
+from .base_model import BaseModel
+from .._data import ImageLoaderMixin
 
 
 class BaseClassifier(BaseModel, ImageLoaderMixin):
+    """Base model class for classification.
+
+    This is a base classifier class that should be used to instantiate 
+    any type of classifier. The working principle is the same as for 
+    the parent class :class:`.BaseModel`, however this one provides a 
+    couple of methods for processing actual input files and predicting 
+    outputs. If used with ``base_model`` parameter as a string for 
+    pre-defined architectures, this class provides some constants to 
+    specifically refer to those model architectures, e.g., if 
+    ``base_model`` is specified as some abbreviation, like "tiny". You 
+    do not need to worry about those constants.
+
+    Note:
+        As noted in the parent model, if ``kind`` argument is not 
+        provided, it will be automatically inferred from the class name, 
+        in this case, it would be "base_classifier", thus if some class
+        extends this, the *kind* attribute would be inferred 
+        correspondingly.
+
+    Attributes:
+        ABBREV_MAP (dict[str, str]): A dictionary mapping the 
+            abbreviation, i.e., names "tiny", "small", "medium", 
+            "large", "huge", to corresponding base model names, e.g., 
+            "small" is mapped to "shufflenet_v2_x0_5". This is the 
+            default abbreviation map, based on which pretrained weights 
+            for some kinds of classification models can be downloaded.
+            To specify a custom abbreviation map, use ``abbrev_map`` 
+            argument when instantiating an object and either provide an 
+            empty dictionary or a custom one.
+        VERSION_MAP (dict[str, str]): A dictionary mapping from the 
+            possible pretrained classification model kinds, e.g., 
+            "eyeglasses", "sunglasses", to their corresponding GitHub 
+            release versions, e.g., "v1.0.0" (where the newest weights 
+            are stored). This can be customized via ``version_map`` 
+            argument as well, e.g., if other versions can be chosen.
+
+    Args:
+        *args: Same arguments as for :class:`.BaseModel`.
+        **kwargs: Same keyword arguments as for :class:`.BaseModel`.
+    """
     ABBREV_MAP = {
         "tiny": "tinyclsnet_v1",
         "small": "shufflenet_v2_x0_5",
@@ -19,8 +60,8 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
     }
 
     VERSION_MAP = {
-        "eyeglasses": None,
-        "sunglasses": None,
+        "eyeglasses_classifier": None,
+        "sunglasses_classifier": None,
     }
 
     def __init__(self, *args, **kwargs):
@@ -34,11 +75,11 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
         image: str | Image.Image | numpy.ndarray,
         label_type: str | Callable[[torch.Tensor], Any] | dict[bool, Any] = "int",
     ) -> Any:
-        """Predicts whether some type of glasses are present.
+        """Predicts whether the positive class is present.
 
         Takes an image or a path to the image and outputs a boolean 
-        value indicating whether the person in the image is wearing 
-        that specific type of glasses or not.
+        value indicating whether the image belongs to a positive class 
+        or not.
 
         Args:
             image (str | Image.Image | numpy.ndarray): The path to the 
@@ -74,8 +115,8 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
                 to "int". 
 
         Returns:
-            bool: ``True`` if the person in the image is likely to wear 
-                that specific type of glasses and ``False`` otherwise.
+            bool: ``True`` if the label is likely to be positive and 
+                ``False`` otherwise.
 
         Raises:
             ValueError: If the specified ``label_type`` as a string is 
@@ -101,7 +142,7 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
             # If the label type was specified as dict
             label_type = lambda x: map[(x > 0).data]
         
-        # Loads the image properly and predict
+        # Load the image properly and predict
         x = self.load_image(image)[None, ...]
         prediction = label_type(self(x))
 
@@ -116,10 +157,10 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
     ):
         """Generates a prediction for each image in the directory.
 
-        Goes though all images in the directory and generates a 
-        prediction of whether the person in the image is wearing some
-        specific type of glasses or not. Each prediction is then written 
-        to an output file line by line, i.e., Each line is of the form::
+        Goes through all images in the directory and generates a 
+        prediction of whether each image falls under the positive class 
+        or not. Each prediction is then written to an output file line 
+        by line, i.e., Each line is of the form::
 
             <image_name.ext><separator><prediction>
         

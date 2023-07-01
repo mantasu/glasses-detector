@@ -3,21 +3,73 @@ import numpy
 import torch
 import pickle
 import warnings
-import PIL.Image as Image
 
+
+from PIL import Image
 from typing import Any
-from .._models import BaseModel
+from copy import deepcopy
 from collections import defaultdict
 from collections.abc import Callable
+
+from .base_model import BaseModel
 from .._data import ImageLoaderMixin
-from ..classification import BaseClassifier
 
 VALID_EXTENSIONS = {
     ".rgb", ".gif", ".pbm", ".pgm", ".ppm", ".tiff", ".rast", 
     ".xbm", ".jpeg", ".jpg", ".bmp", ".png", ".webp", ".exr",
 }
 
+
 class BaseSegmenter(BaseModel, ImageLoaderMixin):
+    """Base model class for segmentation.
+
+    This is a base segmenter class that should be used to instantiate 
+    any type of segmenter. The working principle is the same as for 
+    the parent class :class:`.BaseModel`, however this one provides a 
+    couple of methods for processing actual input files and predicting 
+    outputs. If used with ``base_model`` parameter as a string for 
+    pre-defined architectures, this class provides some constants to 
+    specifically refer to those model architectures, e.g., if 
+    ``base_model`` is specified as some abbreviation, like "tiny". You 
+    do not need to worry about those constants.
+    
+    Note:
+        As noted in the parent model, if ``kind`` argument is not 
+        provided, it will be automatically inferred from the class name, 
+        in this case, it would be "base_segmenter", thus if some class
+        extends this, the *kind* attribute would be inferred 
+        correspondingly.
+    
+    .. warn::
+        A base model is expected to produce a dictionary of outputs from 
+        its ``forward`` method and this class will automatically select 
+        *"out"* entry. If you pass a custom model as ``base_model``, and 
+        it simply returns :class:`torch.Tensor`, please ensure to 
+        modify it so it returns a dummy dictionary 
+        ``{"out": actual_output}``.
+
+    Attributes:
+        ABBREV_MAP (dict[str, str]): A dictionary mapping the 
+            abbreviation, i.e., names "tiny", "small", "medium", 
+            "large", "huge", to corresponding base model names, e.g., 
+            "small" is mapped to "lraspp_mobilenet_v3_large". This is 
+            the default abbreviation map, based on which pretrained 
+            weights for some kinds of segmentation models can be 
+            downloaded. To specify a custom abbreviation map, use 
+            ``abbrev_map`` argument when instantiating an object and 
+            either provide an empty dictionary or a custom one.
+        VERSION_MAP (dict[str, str]): A dictionary mapping from the 
+            possible pretrained segmentation model kinds, e.g., 
+            "full glasses", "glass frames", to their corresponding 
+            GitHub release versions, e.g., "v1.0.0" (where the newest 
+            weights are stored). This can be customized via 
+            ``version_map`` argument as well, e.g., if other versions 
+            can be chosen.
+
+    Args:
+        *args: Same arguments as for :class:`.BaseModel`.
+        **kwargs: Same keyword arguments as for :class:`.BaseModel`.
+    """
     ABBREV_MAP = {
         "tiny": "tinysegnet_v1",
         "small": "lraspp_mobilenet_v3_large",
@@ -27,8 +79,8 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
     }
 
     VERSION_MAP = {
-        "full_glasses": None,
-        "glass_frames": None,
+        "full_glasses_segmenter": None,
+        "glass_frames_segmenter": None,
     }
 
     def __init__(self, *args, **kwargs):
@@ -36,9 +88,28 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
         kwargs["version_map"] = kwargs.get("version_map", self.VERSION_MAP)
         super().__init__(*args, **kwargs)
 
-    def forward(self, x):
-        return self.base_forward(x)["out"]
-    
+    def forward(self, *args, **kwargs) -> torch.Tensor:
+        """Forward function of the model.
+
+        This is an updated function of the parent class. By default, 
+        when base models are created (from which the layers and 
+        functions are copied), their forward functions return a 
+        dictionary of outputs - one actual and one auxiliary. We only 
+        care about the actual output *"out"*, thus we take ``["out"]``
+        entry from an output produced by ``base_forward``, which is the 
+        original ``forward`` function of the base model.
+
+        Args:
+            *args: Any input arguments accepted by original ``forward`` 
+                that belongs to base model.
+            **kwargs: Additional keyword arguments accepted by original 
+                ``forward`` that belongs to base model.
+
+        Returns:
+            torch.Tensor: A model output after inference.
+        """
+        return self.base_forward(*args, **kwargs)["out"]
+
     @torch.no_grad()
     def predict(
         self,
@@ -166,7 +237,7 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
                 overwrite the extension of ``output_path`` (if it is not 
                 ``None`` and is a path to a file). These are the 
                 possible options:
-                
+
                 * "npy" - saves mask using :func:`numpy.save`
                 * "npz" - saves mask using :func:`numpy.savez_compressed`
                 * "txt" - saves mask using :func:`numpy.savetxt` with 
@@ -179,7 +250,7 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
                   extension, e.g., "jpg", "png", "bmp" and the mask is 
                   saved as a grayscale image, i.e., with a single 
                   channel.
-                
+
                 If not specified, then extension will be taken from 
                 ``output_file``, or if it is not specified or is a path 
                 to directory, ``ext`` will be based on ``mask_type``, 
@@ -244,27 +315,29 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
                 on_file(mask, mask_path)
 
 
-class BaseConditionalSegmenter(BaseSegmenter):
-    def __init__(
-        self, 
-        classifier_cls: BaseClassifier, 
-        segmenter_cls: BaseSegmenter, 
-        base_model: str | tuple[str, str] = "medium", 
-        pretrained: bool = False
-    ):
-        super().__init__(base_model, pretrained)
+class _BaseConditionalSegmenter(BaseSegmenter):
+    def __init__(self, classifier_cls, segmenter_cls, base_model, pretrained):
+        super().__init__()
 
         if isinstance(base_model, str):
+            # Both base model abbrevs are the same
             base_model = (base_model, base_model)
         
-        self.classifier = classifier_cls(base_model[0], pretrained)
-        self.segmenter = segmenter_cls(base_model[1], pretrained)
+        if isinstance(pretrained, bool):
+            # Same bool value for both models
+            pretrained = (pretrained, pretrained)
+        
+        # Create a classifier and a segmenter inner models
+        self.classifier = classifier_cls(base_model[0], pretrained[0])
+        self.segmenter = segmenter_cls(base_model[1], pretrained[1])
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        selection_mask = self.classifier(x)
+    def forward(self, x):
+        # Check which inputs to segment
+        is_positive = self.classifier(x)
         masks = torch.zeros_like(x)
 
-        if selection_mask.any():
-            masks[selection_mask] = self.segmenter(x)
+        if is_positive.any():
+            # Segment only the inputs which are identified pos
+            masks[is_positive] = self.segmenter(x[is_positive])
         
         return masks

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from torchvision.ops import Conv2dNormActivation
 
-custom_var = "123"
 
 class TinyBinarySegmenter(nn.Module):
     """Tiny binary segmenter.

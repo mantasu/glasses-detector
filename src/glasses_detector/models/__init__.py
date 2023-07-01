@@ -1,3 +1,2 @@
-from .base_model import BaseModel
 from .tiny_binary_classifier import TinyBinaryClassifier
 from .tiny_binary_segmenter import TinyBinarySegmenter

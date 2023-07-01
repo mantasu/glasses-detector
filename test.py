@@ -2,7 +2,7 @@ import sys
 sys.path.append("src")
 
 import torch
-from sunglasses_detector.segmentation import FullGlassesSegmenter
+from glasses_detector.segmenters import FullGlassesSegmenter
 
 model = FullGlassesSegmenter("tiny", pretrained=True)
 
