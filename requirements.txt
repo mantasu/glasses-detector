@@ -7,3 +7,4 @@ tensorboard
 albumentations
 face-crop-plus
 pytorch_lightning
+jsonargparse[signatures]

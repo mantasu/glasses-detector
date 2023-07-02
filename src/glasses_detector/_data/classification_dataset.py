@@ -2,7 +2,7 @@ import os
 import torch
 import random
 
-from typing import Iterable, Any
+from typing import Any
 from collections import defaultdict
 from torch.utils.data import Dataset
 from .mixins import ImageLoaderMixin, DataLoaderMixin
@@ -12,7 +12,6 @@ class ImageClassificationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
     def __init__(
         self, 
         root: str = '.',
-        dirs: Iterable[str] = [''],
         split_type: str = "train",
         label_type: str | dict[str, Any] = "onehot", # enum, onehot, {} !vals must be immutable objects
         seed: int = 0,
@@ -23,7 +22,7 @@ class ImageClassificationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
         self.data, self.label2name = [], {}
         cat2paths = defaultdict(lambda: [])
         
-        for dir in dirs:
+        for dir in os.listdir(root):
             for cat in os.scandir(os.path.join(root, dir, split_type)):
                 # Add path to the image under category of the dir's name
                 cat2paths[cat.name].extend([f.path for f in os.scandir(cat.path)])

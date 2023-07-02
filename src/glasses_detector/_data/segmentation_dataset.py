@@ -12,7 +12,6 @@ class ImageSegmentationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
     def __init__(
         self, 
         root: str = '.',
-        dirs: Iterable[str] = [''],
         split_type: str = "train",
         img_dirname: str = "images",
         name_map_fn: dict[str, callable] = {}, # maps mask name to image name
@@ -23,7 +22,7 @@ class ImageSegmentationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
         self.data = []
         cat2paths = defaultdict(lambda: {"names": [], "paths": []})
 
-        for dir in dirs:
+        for dir in os.listdir(root):
             for cat in os.scandir(os.path.join(root, dir, split_type)):
                 # Read the list of names and paths to images/masks
                 name_fn = name_map_fn.get(cat.name, lambda x: x)

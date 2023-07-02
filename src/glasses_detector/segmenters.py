@@ -1,6 +1,6 @@
 import torch
 from .bases import BaseSegmenter, _BaseConditionalSegmenter
-from .segmenters import EyeglassesClassifier, SunglassesClassifier, GlassesClassifier
+from .classifiers import EyeglassesClassifier, SunglassesClassifier, GlassesClassifier
 
 class FullGlassesSegmenter(BaseSegmenter):
     """Segmenter to mark the pixels of the glasses.
