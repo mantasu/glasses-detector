@@ -131,19 +131,20 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
                     label_type = {True: 1, False: 0}
                 case "str":
                     label_type = {True: "present", False: "not_present"}
-                case "logits":
-                    label_type = lambda x: x.data
-                case "probas":
-                    label_type = lambda x: x.sigmoid().data
+                case "logit":
+                    label_type = lambda x: x.item()
+                case "proba":
+                    label_type = lambda x: x.sigmoid().item()
                 case _:
                     raise ValueError(f"Invalid label map type: {label_type}")
             
         if isinstance(map := label_type, dict):
             # If the label type was specified as dict
-            label_type = lambda x: map[(x > 0).data]
+            label_type = lambda x: map[(x > 0).item()]
         
         # Load the image properly and predict
-        x = self.load_image(image)[None, ...]
+        device = next(iter(self.parameters())).device
+        x = self.load_image(image)[None, ...].to(device)
         prediction = label_type(self(x))
 
         return prediction
@@ -206,7 +207,8 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
         else:
             if output_path is None:
                 # Create a default file at the same root as input dir
-                output_path = input_path + "_label_preds.csv"
+                ext = ".csv" if sep == ',' else ".txt"
+                output_path = input_path + "_label_preds" + ext
             
             with open(output_path, 'w') as f:
                 for file in os.scandir(input_path):

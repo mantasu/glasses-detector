@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 
 class BinaryClassifier(pl.LightningModule):
-    def __init__(self, model, train_loader, val_loader, test_loader):
+    def __init__(self, model, train_loader=None, val_loader=None, test_loader=None):
         super().__init__()
 
         # Assign attributes
@@ -29,6 +29,10 @@ class BinaryClassifier(pl.LightningModule):
     
     @property
     def pos_weight(self):
+        if self.train_loader is None:
+            # Not known
+            return None
+        
         # Calculate the positive weight to account for class imbalance
         targets = np.array([y for _, y in iter(self.train_loader.dataset.data)])
         pos_count = targets.sum()

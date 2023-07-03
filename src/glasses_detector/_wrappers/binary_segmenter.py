@@ -6,7 +6,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 class BinarySegmenter(pl.LightningModule):
-    def __init__(self, model, train_loader, val_loader, test_loader):
+    def __init__(self, model, train_loader=None, val_loader=None, test_loader=None):
         super().__init__()
 
         # Assign attributes
@@ -26,6 +26,10 @@ class BinarySegmenter(pl.LightningModule):
 
     @property
     def pos_weight(self):
+        if self.train_loader is None:
+            # Not known
+            return None
+        
         # Init counts
         pos, neg = 0, 0
 

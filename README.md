@@ -52,13 +52,13 @@ There are the 3 available model groups (1 classification and 2 segmentation grou
 
 ### Classification
 
-A classifier only identifies whether a person is wearing a corresponding category of glasses (transparent eyeglasses or occluded sunglasses):
+A classifier only identifies whether ng a corresponding category of glasses (transparent eyeglasses or occluded sunglasses):
   
-| Models / Input images | \<image with eyeglasses\> | \<image with sunglasses\> | \<image without glasses\> |
-| --------------------- | ------------------------- | ------------------------- | ------------------------- |
-| Eyeglasses classifier | yes                       | no                        | no                        |
-| Sunglasses classifier | no                        | yes                       | no                        |
-| Glasses classifier    | yes                       | yes                       | no                        |
+| Models / Input images | ![eyeglasses](assets/eyeglasses.jpg) | ![sunglasses](assets/sunglasses.jpg) | ![no_glasses](assets/no_glasses.jpg) |
+| --------------------- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
+| Eyeglasses classifier | wears                                | doesn't wear                         | doesn't wear                         |
+| Sunglasses classifier | doesn't wear                         | wears                                | doesn't wear                         |
+| Glasses classifier    | wears                                | wears                                | doesn't wear                         |
 
 These are the performances of _eyeglasses_ and _sunglasses_ model performances and their sizes. Note that the joint _glasses_ classifier would have an average accuracy and a combined model size of both _eyeglasses_ and _sunglasses_ models.
 
@@ -92,11 +92,11 @@ These are the performances of _eyeglasses_ and _sunglasses_ model performances a
 
 A full-glasses segmenter generates masks of people wearing corresponding categories of glasses and their frames and a frames-only segmenter generates corresponding masks but only for glasses frames:
 
-| Models / Input images             | \<image with eyeglasses\>                | \<image with sunglasses\>                | \<image without glasses\> |
-| --------------------------------- | ---------------------------------------- | ---------------------------------------- | ------------------------- |
-| Eyeglasses full/frames segmenter  | \<mask with full \| frames eyeglasses\>  | \<black image\>                          | \<black image\>           |
-| Sunglasses full/frames segmenter  | \<black image\>                          | \<mask with full \| frames sunglasses\>  | \<black image\>           |
-| Glasses full/frames segmenter     | \<mask with full \| frames eyeglasses\>  | \<mask with full \| frames sunglasses\>  | \<black image\>           |
+| Models / Input images             | ![eyeglasses](assets/eyeglasses.jpg)                       | ![sunglasses](assets/sunglasses.jpg)                        | ![no_glasses](assets/no_glasses.jpg)       |
+| --------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------ |
+| Full/frames eyeglasses segmenter  | ![full/frames eyeglasses mask](assets/eyeglasses_mask.jpg) | ![black image](assets/no_glasses_mask.jpg)                  | ![black image](assets/no_glasses_mask.jpg) |
+| Full/frames sunglasses segmenter  | ![black image](assets/no_glasses_mask.jpg)                 | ![full/frames sunglasses mask](assets/sunglasses_mask.jpg)  | ![black image](assets/no_glasses_mask.jpg) |
+| Full/frames any glasses segmenter | ![full/frames eyeglasses mask](assets/eyeglasses_mask.jpg) | ![full/frames sunglasses mask](assets/sunglasses_mask.jpg)  | ![black image](assets/no_glasses_mask.jpg) |
 
 There is only one model group for each _full-glasses_ and _frames-only_ _segmentation_ tasks. Each group is trained for both _eyeglasses_ and _sunglasses_. Although you can use it as is, it is only one part of the final _full-glasses_ or _frames-only_ _segmentation_ model - the other part is a specific _classifier_, therefore, the accuracy and the model size would be a combination of the generic (base) _segmenter_ and a _classifier_ of a specific glasses category.
 
@@ -180,7 +180,7 @@ segmenter.predict(
 
 ## Data
 
-Before downloading the datasets, please install `unrar` package, for example if you're using Ubuntu (if you're using Windows, just install WinRAR):
+Before downloading the datasets, please install `unrar` package, for example if you're using Ubuntu (if you're using Windows, just install [WinRAR](https://www.win-rar.com/start.html?&L=0)):
 
 ```bash
 sudo apt-get install unrar
@@ -313,7 +313,35 @@ Coming soon!
 
 ## Running
 
+To run custom training and testing, it is first advised to familiarize with how [Pytorch Lightning](https://lightning.ai/docs/pytorch/stable/) works and briefly check its [CLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html#lightning-cli). In particular, take into account what arguments are accepted by the [Trainer class](https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.trainer.trainer.Trainer.html#trainer) and how to customize your own [optimizer](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli_intermediate_2.html#multiple-optimizers) and [scheduler](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli_intermediate_2.html#multiple-schedulers) via command line. **Prerequisites**:
 
+1. Clone the repository
+2. Install the requirements
+3. Download and preprocess the data
+
+### Training
+
+You can run simple training as follows (which is the the default):
+```bash
+python scripts/run.py fit --task sunglasses-classification --size medium 
+```
+
+You can customize things like `batch-size`, `num-workers`, as well as `trainer` and `checkpoint` arguments:
+```bash
+python scripts/run.py fit --batch-size 64 --trainer.max_epochs 300 --checkpoint.dirname ckpt
+```
+
+It is also possible to overwrite default optimizer and scheduler:
+```bash
+python scripts/run.py fit --optimizer Adam --optimizer.lr 1e-3 --lr_scheduler CosineAnnealingLR
+```
+
+### Testing
+
+To run testing, specify the trained model and the checkpoint to it:
+```bash
+python scripts/run.py test -t sunglasses-classification -s small --ckpt_path path/to/model.ckpt
+```
 
 ## References
 

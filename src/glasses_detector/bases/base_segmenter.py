@@ -180,9 +180,9 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
                     mask_type = {True: 1, False: 0}
                 case "img":
                     mask_type = lambda x: ((x > 0) * 255).to(torch.uint8)
-                case "logits":
+                case "logit":
                     mask_type = lambda x: x
-                case "probas":
+                case "proba":
                     mask_type = lambda x: x.sigmoid()
                 case _:
                     raise ValueError(f"Invalid mask map type: {mask_type}")
@@ -191,11 +191,9 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
             # If mask type was specified as dict
             mask_type = lambda x: torch.where((x > 0), map[True], map[False])
         
-
         # Loads the image properly and predict
         device = next(iter(self.parameters())).device
         x = self.load_image(image)[None, ...].to(device)
-        print(self(x))
         mask = mask_type(self(x)[0, 0]).numpy(force=True)
 
         return mask
