@@ -27,6 +27,7 @@ from glasses_detector import (
     GlassFramesSegmenter,
 )
 
+
 class RunCLI(LightningCLI):
     def add_arguments_to_parser(self, parser):
         # Add args for wrapper creation
@@ -43,7 +44,7 @@ class RunCLI(LightningCLI):
             type=str,
             default="sunglasses-classification",
             choices=["eyeglasses-classification", "sunglasses-classification", "full-glasses-segmentation", "glass-frames-segmentation"],
-            help="The kind of task to train the model for. Defaults to 'sunglasses-classification'."
+            help="The kind of task to train/test the model for. One of 'eyeglasses-classification', 'sunglasses-classification', 'full-glasses-segmentation', 'glass-frames-segmentation'. Defaults to 'sunglasses-classification'."
         )
         parser.add_argument(
             "-s", "--size",
@@ -51,21 +52,28 @@ class RunCLI(LightningCLI):
             type=str,
             default="medium",
             choices=["tiny", "small", "medium", "large", "huge"],
-            help="The model architecture name (model size). Defaults to 'medium'."
+            help="The model architecture name (model size). One of 'tiny', 'small', 'medium', 'large', 'huge'. Defaults to 'medium'."
         )
         parser.add_argument(
             "-b", "--batch-size",
             metavar="<int>",
             type=int,
-            default=16,
-            help="The batch size used for training. Defaults to 32."
+            default=64,
+            help="The batch size used for training. Defaults to 64."
         )
         parser.add_argument(
-            "-w", "--num-workers",
+            "-n", "--num-workers",
             metavar="<int>",
             type=int,
             default=8,
             help="The number of workers for the data loader. Defaults to 8."
+        )
+        parser.add_argument(
+            "-w", "--weights-path",
+            metavar="path/to/weights",
+            type=str | None,
+            default=None,
+            help="Path to weights to load into the model. Defaults to None."
         )
         parser.add_lightning_class_args(ModelCheckpoint, "checkpoint")
 
@@ -84,6 +92,7 @@ class RunCLI(LightningCLI):
         parser.link_arguments("size", "model.size", apply_on="parse")
         parser.link_arguments("batch_size", "model.batch_size", apply_on="parse")
         parser.link_arguments("num_workers", "model.num_workers", apply_on="parse")
+        parser.link_arguments("weights_path", "model.weights_path", apply_on="parse")
     
     def before_fit(self):
         if self.config.fit.checkpoint.filename is None:
@@ -106,8 +115,9 @@ def create_wrapper_callback(
     root: str = "data", 
     task: str = "sunglasses-classification",
     size: str = "medium",
-    batch_size: int = 32,
+    batch_size: int = 64,
     num_workers: int = 8,
+    weights_path: str | None = None,
 ) -> pl.LightningModule:
     
     # Get model and dataset classes
@@ -135,8 +145,15 @@ def create_wrapper_callback(
         kwargs["img_dirname"] = "images"
         kwargs["name_map_fn"] = {"masks": lambda x: f"{int(x[:5])}.jpg"}
         wrapper_cls = BinarySegmenter
+    
+    # Initialize model arch
+    model = model_cls(size)
+    
+    if weights_path is not None:
+        # Load weights if the path is specified to them
+        model.load_state_dict(torch.load(weights_path))
 
-    return wrapper_cls(model_cls(size), *data_cls.create_loaders(**kwargs))
+    return wrapper_cls(model, *data_cls.create_loaders(**kwargs))
 
 def cli_main():
     cli = RunCLI(create_wrapper_callback, seed_everything_default=0)

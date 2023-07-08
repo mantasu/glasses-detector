@@ -146,26 +146,7 @@ def gen_splits(**kwargs):
                 shutil.move(os.path.join(root, dir, file), split_dir)
                 pbar.update(1)
 
-def crop_align(**kwargs):
-    # A temporary new function to process dir that replaces the original one
-    # def temp_process_dir(cropper, input_dir, desc):
-    #     # Create batches of image file names in input dir
-    #     files, bs = os.listdir(input_dir), cropper.batch_size
-    #     file_batches = [files[i:i+bs] for i in range(0, len(files), bs)]
-
-    #     if len(file_batches) == 0:
-    #         # Empty
-    #         return
-        
-    #     # Define worker function and its additional arguments
-    #     kwargs = {"input_dir": input_dir, "output_dir": input_dir + "_faces"}
-    #     worker = partial(cropper.process_batch, **kwargs)
-        
-    #     with ThreadPool(cropper.num_processes, cropper._init_models) as pool:
-    #         # Create imap object and apply workers to it
-    #         imap = pool.imap_unordered(worker, file_batches)
-    #         list(tqdm(imap, total=len(file_batches), desc=desc))
-    
+def crop_align(**kwargs):    
     # Initialize cropper
     cropper = Cropper(
         output_size=kwargs.get("size", (256, 256)),

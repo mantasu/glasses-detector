@@ -51,8 +51,8 @@ class TinyBinaryClassifier(nn.Module):
 
         Returns:
             torch.Tensor: An output tensor of shape (N,) indicating 
-                whether each nth image falls under the positive class
-                or not. The scores are unbounded, thus, to convert to a 
-                probability, sigmoid function must be used.
+            whether each nth image falls under the positive class or 
+            not. The scores are unbounded, thus, to convert to a 
+            probability, sigmoid function must be used.
         """
         return self.fc(self.features(x))

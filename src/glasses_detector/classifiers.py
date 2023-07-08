@@ -2,6 +2,7 @@ import torch
 from copy import deepcopy
 from .bases import BaseClassifier
 
+
 class EyeglassesClassifier(BaseClassifier):
     """Classifier to determine if the person is wearing eyeglasses.
 
@@ -14,32 +15,32 @@ class EyeglassesClassifier(BaseClassifier):
         :header-rows: 1
 
         * - Backbone name
-          - Num parameters ↓
           - Model size ↓
+          - Num parameters ↓
           - BCE loss ↓
           - F1 score ↑
           - ROC-AUC score ↑
-        * - TinyBinNet (tiny)
-          - TODO
-          - TODO
+        * - TinyClsNet (tiny)
+          - 0.11 Mb
+          - 27.53 k
           - TODO
           - TODO
           - TODO
         * - ShuffleNet (small)
-          - 342 K
-          - TODO
+          - 1.34 Mb
+          - 342.82 k
           - TODO
           - TODO
           - TODO
         * - MobileNet (medium)
-          - 1.5 M
-          - TODO
+          - 5.84 Mb
+          - 1.52 M
           - TODO
           - TODO
           - TODO
         * - EfficientNet (large)
+          - 15.45 Mb
           - 4.0 M
-          - TODO
           - TODO
           - TODO
           - TODO
@@ -56,7 +57,7 @@ class EyeglassesClassifier(BaseClassifier):
             "small", "medium", "large", "huge". It can also be the name 
             of the model architecture - for available classification 
             architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. Finally, it can 
+            :meth:`~.create_base_model`. Finally, it can 
             also be custom torch model, e.g., personally trained on some 
             other data. Defaults to "medium".
         pretrained (bool, optional): Whether to load the pretrained 
@@ -82,35 +83,35 @@ class SunglassesClassifier(BaseClassifier):
         :header-rows: 1
 
         * - Backbone name
-          - Num parameters ↓
           - Model size ↓
+          - Num parameters ↓
           - BCE loss ↓
           - F1 score ↑
           - ROC-AUC score ↑
-        * - TinyBinNet (tiny)
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+        * - TinyClsNet (tiny)
+          - **0.11 Mb**
+          - **27.53 k**
+          - 0.1149
+          - 0.9137
+          - 0.9967
         * - ShuffleNet (small)
-          - 342 K
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+          - 1.34 Mb
+          - 342.82 k
+          - 0.0645
+          - 0.9434
+          - 0.9987
         * - MobileNet (medium)
-          - 1.5 M
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+          - 5.84 Mb
+          - 1.52 M
+          - **0.0491**
+          - 0.9651
+          - **0.9992**
         * - EfficientNet (large)
+          - 15.45 Mb
           - 4.0 M
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+          - 0.0532
+          - **0.9685**
+          - 0.9990
         * - TBA (huge)
           - TODO
           - TODO
@@ -124,7 +125,7 @@ class SunglassesClassifier(BaseClassifier):
             "small", "medium", "large", "huge". It can also be the name 
             of the model architecture - for available classification 
             architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. Finally, it can 
+            :meth:`~.create_base_model`. Finally, it can 
             also be custom torch model, e.g., personally trained on some 
             other data. Defaults to "medium".
         pretrained (bool, optional): Whether to load the pretrained 
@@ -139,7 +140,7 @@ class SunglassesClassifier(BaseClassifier):
     ):
         super().__init__(base_model, pretrained)
 
-class GlassesClassifier(BaseClassifier):
+class AnyglassesClassifier(BaseClassifier):
     """Classifier to determine if the person is wearing glasses.
 
     A binary classifier that tells whether a person in the image is
@@ -151,26 +152,25 @@ class GlassesClassifier(BaseClassifier):
     :class:`.EyeglassesClassifier` and :class:`.SunglassesClassifier`.
 
     Args:
-        base_model (str | torch.nn.Module | tuple[str | torch.nn.Module, 
-            str | torch.nn.Module]): The abbreviation of the base model 
-            to use for classification. One of "tiny", "small", "medium", 
-            "large", "huge". It can also be the name of the model 
-            architecture - for available classification architecture 
-            names, check :meth:`~.BaseClassifier.create_base_model`. 
-            Finally, it can also be custom torch model, e.g., 
-            personally trained on some other data. If provided as a 
-            tuple of 2 base models, the first one will be used for 
-            eyeglasses classifier and the second will be used to 
-            construct a sunglasses classifier. So if it is not a tuple, 
-            but a single value, the same value will be used for both 
-            models. Defaults to "medium".
-        pretrained (bool, optional): Whether to load the pretrained 
-            weights for the chosen base model(-1). Check the note inside 
-            the documentation of :class:`.BaseModel` to see how the 
-            weights are automatically downloaded and loaded. If provided 
-            as a tuple, then the first value will be used for eyeglasses 
-            model and the second value for sunglasses model. Defaults to 
-            False.
+        base_model (str | torch.nn.Module | tuple[str | torch.nn.Module, str | torch.nn.Module], optional): 
+            The abbreviation of the base model to use for 
+            classification. One of "tiny", "small", "medium", "large", 
+            "huge". It can also be the name of the model architecture - 
+            for available classification architecture names, check 
+            :meth:`~.create_base_model`. Finally, it can 
+            also be custom torch model, e.g., personally trained on some 
+            other data. If provided as a tuple of 2 base models, the 
+            first one will be used for eyeglasses classifier and the 
+            second will be used to construct a sunglasses classifier. 
+            So if it is not a tuple, but a single value, the same value 
+            will be used for both models. Defaults to "medium".
+        pretrained (bool | tuple[bool, bool], optional): Whether to load 
+            the pretrained weights for the chosen base model(-s). Check 
+            the note inside the documentation of :class:`.BaseModel` to 
+            see how the weights are automatically downloaded and loaded. 
+            If provided as a tuple, then the first value will be used 
+            for eyeglasses model and the second value for sunglasses 
+            model. Defaults to False.
     """
     def __init__(
         self, 
@@ -213,7 +213,7 @@ class GlassesClassifier(BaseClassifier):
 
         Returns:
             torch.Tensor: The output batch of scores (logits) of shape 
-                (N,).
+            (N,).
         """
         # Retrieve the scores from both classifiers
         y_hat_eyeg = self.eyeg_classifier(x)

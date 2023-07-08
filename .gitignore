@@ -1,6 +1,19 @@
+# Data
 data/*
 !data/demo
+
+# Training
 checkpoints
 lightning_logs
-__pycache__
+
+# IDE
 .vscode
+
+# Build
+dist
+build
+_build
+_static
+_templates
+__pycache__
+*.egg-info

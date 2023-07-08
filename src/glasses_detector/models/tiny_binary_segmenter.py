@@ -91,11 +91,10 @@ class TinyBinarySegmenter(nn.Module):
 
         Returns:
             dict[str, torch.Tensor]: A dictionary with a single "out" 
-                entry (for compatibility). The value is an output tensor 
-                of shape (N, 1, H, W) indicating which pixels in the 
-                image fall under positive category. The scores are 
-                unbounded, thus, to convert to probabilities, sigmoid 
-                function must be used.
+            entry (for compatibility). The value is an output tensor of 
+            shape (N, 1, H, W) indicating which pixels in the image fall 
+            under positive category. The scores are unbounded, thus, to 
+            convert to probabilities, sigmoid function must be used.
         """
         # Extract primary features
         x1 = self.first(x)

@@ -24,7 +24,7 @@ from ..models import TinyBinaryClassifier
 
 
 class BaseModel(nn.Module):
-    """Base Model used any task.
+    """Base Model used for any kind of task.
 
     This model by itself does not serve any real purpose, however it 
     helps to keep the code DRY as the parent class. Here are the main 
@@ -86,8 +86,8 @@ class BaseModel(nn.Module):
             * If ``base_model`` is :class:`str`, then it will also be 
               ``name``. However, if it is an abbreviation then the name 
               will be taken from ``abbrev_map``
-            * If ``base_model`` is :class:`torch.Module`, then the name 
-              will be based on the class' name, subject to 
+            * If ``base_model`` is :class:`torch.nn.Module`, then the 
+              name will be based on the class' name, subject to 
               :meth:`split_at_capitals`.
 
             Defaults to None.
@@ -170,32 +170,32 @@ class BaseModel(nn.Module):
                 classification/segmentation. These are the available 
                 options for classification:
 
-                * "tinyclsnet_v1" - The smallest model that is uniquely 
-                  part of this package. For more information, see 
-                  :class:`.._models.TinyBinaryClassifier`.
-                * "shufflenet_v2_x0_5" - ShuffleNet V2 model taken from 
-                  torchvision package. For more information, see 
+                * ``"tinyclsnet_v1"`` - The smallest model that is 
+                  uniquely part of this package. For more information, 
+                  see :class:`.TinyBinaryClassifier`.
+                * ``"shufflenet_v2_x0_5"`` - ShuffleNet V2 model taken 
+                  from torchvision package. For more information, see 
                   :func:`~torchvision.models.shufflenet_v2_x0_5`.
-                * "mobilenet_v3_small" - MobileNet V3 model taken from 
-                  torchvision package. For more information, see 
+                * ``"mobilenet_v3_small"`` - MobileNet V3 model taken 
+                  from torchvision package. For more information, see 
                   :func:`~torchvision.models.mobilenet_v3_small`.
-                * "efficientnet_b0" - EfficientNet B0 model taken from 
-                  torchvision package. For more information, see 
+                * ``"efficientnet_b0"`` - EfficientNet B0 model taken 
+                  from torchvision package. For more information, see 
                   :func:`~torchvision.models.efficientnet_b0`.
             
                 And these are the available options for segmentation:
 
-                * "tinysegnet_v1" - The smallest model that is uniquely 
-                  part of this package. For more information, see 
-                  :class:`.TinyBinarySegmenter`.
-                * "lraspp_mobilenet_v3_large" - LR-ASPP model taken from 
-                  torchvision package. For more information, see 
+                * ``"tinysegnet_v1"`` - The smallest model that is 
+                  uniquely part of this package. For more information, 
+                  see :class:`.TinyBinarySegmenter`.
+                * ``"lraspp_mobilenet_v3_large"`` - LR-ASPP model taken 
+                  from torchvision package. For more information, see 
                   :func:`~torchvision.models.segmentation.lraspp_mobilenet_v3_large`.
-                * "fcn_resnet50" - FCN model taken from torchvision 
+                * ``"fcn_resnet50"`` - FCN model taken from torchvision 
                   package. For more information, see 
                   :func:`~torchvision.models.segmentation.fcn_resnet50`.
-                * "deeplabv3_resnet101" - DeepLab V3 model taken from 
-                  torchvision package. For more information, see 
+                * ``"deeplabv3_resnet101"`` - DeepLab V3 model taken 
+                  from torchvision package. For more information, see 
                   :func:`~torchvision.models.segmentation.deeplabv3_resnet101`.
 
         Raises:
@@ -203,7 +203,7 @@ class BaseModel(nn.Module):
 
         Returns:
             torch.nn.Module: A new instance of torch model based on the 
-                specified model type.
+            specified model type.
         """
         # Match and init correct model type
         match model_name:

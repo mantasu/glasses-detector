@@ -1,3 +1,6 @@
+import setuptools
+
+DESCRIPTION = r"""
 # Glasses Detector
 
 [![PyPI](https://img.shields.io/pypi/v/glasses-detector?color=orange)](https://pypi.org/project/glasses-detector/)
@@ -7,17 +10,15 @@
 [![DOI](https://zenodo.org/badge/TODO.svg)](https://zenodo.org/badge/latestdoi/TODO)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
-**Eyeglasses** and **sunglasses** _classifier_ + **glasses** and their **frames** _segmenter_. This project provides scripts to download the corresponding datasets, train the corresponding models and by itself is a PyPi project that provides a quick way to use the trained models via python script or terminal.
+**Eyeglasses** and **sunglasses** _classifier_ + **glasses** and their **frames** _segmenter_. This project provides a quick way to use the pre-trained models via python script or terminal. Based on selected task, an image or a directory of images will be processed and corresponding labels or masks will be generated.
 
-> **Note**: the project is BETA stage. Currently, only full-glasses base segmentation models are provided.
+> **Note**: the project is BETA stage. Currently, only sunglasses classification models (except _huge_) and full glasses segmentation models (except _medium_) are available.
 
 ## Installation
 
 Minimum version of [Python 3.10](https://www.python.org/downloads/release/python-3100/) is required. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) in advance for your device to enable GPU support. Note that _CUDA_ is backwards compatible, thus even if you have the newest version of [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit), _Pytorch_ should work just fine.
 
-### Pip Package
-
-If you only need the interface, just install the pip package and see _Examples_ section or read the [documentation page](https://mantasu.github.io/glasses-detector/) of how to use it:
+To install the package, simply run:
 
 ```bash
 pip install glasses-detector
@@ -30,23 +31,7 @@ git clone https://github.com/mantasu/glasses-detector
 cd glasses-detector && pip install .
 ```
 
-### Local Project
-
-If you want to train your own models on the given datasets (or on some other datasets), just clone the project and install training requirements, then see _Running_ section to see how to run training and testing.
-
-```bash
-git clone https://github.com/mantasu/glasses-detector
-cd glasses-detector && pip install -r requirements.txt
-```
-
-You can create a virtual environment for your packages via [venv](https://docs.python.org/3/library/venv.html), however, if you have conda, then you can simply use it to create a new environment, for example:
-
-```bash
-conda create -n glasses-detector python=3.11
-conda activate glasses-detector 
-```
-
-To set-up the datasets for the 4 tasks (2 classification and 2 segmentation tasks), refer to _Data_ section.
+If you want to train your own models on the same datasets (or your custom ones), check the [GitHub repository](https://github.com/mantasu/glasses-detector).
 
 ## Features
 
@@ -60,9 +45,9 @@ Each kind has 5 different model architectures with naming conventions set from *
 
 ### Classification
 
-A classifier only identifies whether a corresponding category of glasses (transparent eyeglasses or occluded sunglasses):
+A classifier only identifies whether a corresponding category of glasses (transparent eyeglasses or occluded sunglasses)  is present:
 
-| Model type             | ![eyeglasses](assets/eyeglasses.jpg) | ![sunglasses](assets/sunglasses.jpg) | ![no_glasses](assets/no_glasses.jpg) |
+| Model type             | ![eyeglasses](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/eyeglasses.jpg) | ![sunglasses](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/sunglasses.jpg) | ![no_glasses](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/no_glasses.jpg) |
 | ---------------------- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
 | Eyeglasses classifier  | wears                                | doesn't wear                         | doesn't wear                         |
 | Sunglasses classifier  | doesn't wear                         | wears                                | doesn't wear                         |
@@ -102,11 +87,11 @@ These are the performances of _eyeglasses_ and _sunglasses_ models and their siz
 
 A full-glasses segmenter generates masks of people wearing corresponding categories of glasses and their frames, whereas frames-only segmenter generates corresponding masks but only for glasses frames:
 
-| Model type                        | ![eyeglasses](assets/eyeglasses.jpg)                       | ![sunglasses](assets/sunglasses.jpg)                        | ![no_glasses](assets/no_glasses.jpg)       |
+| Model type                        | ![eyeglasses](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/eyeglasses.jpg) | ![sunglasses](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/sunglasses.jpg) | ![no_glasses](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/no_glasses.jpg) |
 | --------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------ |
-| Full/frames eyeglasses segmenter  | ![full/frames eyeglasses mask](assets/eyeglasses_mask.jpg) | ![black image](assets/no_glasses_mask.jpg)                  | ![black image](assets/no_glasses_mask.jpg) |
-| Full/frames sunglasses segmenter  | ![black image](assets/no_glasses_mask.jpg)                 | ![full/frames sunglasses mask](assets/sunglasses_mask.jpg)  | ![black image](assets/no_glasses_mask.jpg) |
-| Full/frames any glasses segmenter | ![full/frames eyeglasses mask](assets/eyeglasses_mask.jpg) | ![full/frames sunglasses mask](assets/sunglasses_mask.jpg)  | ![black image](assets/no_glasses_mask.jpg) |
+| Full/frames eyeglasses segmenter  | ![full/frames eyeglasses mask](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/eyeglasses_mask.jpg) | ![black image](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/no_glasses_mask.jpg)                  | ![black image](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/no_glasses_mask.jpg) |
+| Full/frames sunglasses segmenter  | ![black image](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/no_glasses_mask.jpg)                 | ![full/frames sunglasses mask](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/sunglasses_mask.jpg)  | ![black image](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/no_glasses_mask.jpg) |
+| Full/frames any glasses segmenter | ![full/frames eyeglasses mask](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/eyeglasses_mask.jpg) | ![full/frames sunglasses mask](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/sunglasses_mask.jpg)  | ![black image](https://raw.githubusercontent.com/mantasu/glasses-detector/main/assets/no_glasses_mask.jpg) |
 
 There is only one model group for each _full-glasses_ and _frames-only_ _segmentation_ tasks. Each group is trained for both _eyeglasses_ and _sunglasses_. Although you can use it as is, it is only one part of the final _full-glasses_ or _frames-only_ _segmentation_ model - the other part is a specific _classifier_, therefore, the accuracy and the model size would be a combination of the generic (base) _segmenter_ and a _classifier_ of a specific glasses category.
 
@@ -200,178 +185,6 @@ git clone https://github.com/mantasu/glasses-detector && cd glasses-detector/dat
 glasses-detector -i demo -o demo_labels.csv --kind sunglasses-classifier --label str
 ```
 
-## Data
-
-Before downloading the datasets, please install `unrar` package, for example if you're using Ubuntu (if you're using Windows, just install [WinRAR](https://www.win-rar.com/start.html?&L=0)):
-
-```bash
-sudo apt-get install unrar
-```
-
-Also, ensure the scripts are executable:
-
-```bash
-chmod +x scripts/*
-```
-
-Once you download a specific dataset (instructions given below), run `preprocess.py` script and specify the corresponding task name and the directory with the dataset(-s) for that task. Note that after running the script, the original raw data will be extracted and deleted, thus make backups if needed. E.g., for sunglasses classification, run:
-
-```bash
-python scripts/preprocess.py --task sunglasses-classification --root data/classification/sunglasses
-```
-
-After processing every dataset group, your `data` directory should have the following structure:
-
-```
-└── data                    <- The data directory under project
-    ├── classification
-    │   ├── eyeglasses      <- Contains sub-folders with eyeglasses images
-    |   └── sunglasses      <- Contains sub-folders with sunglasses images
-    │
-    └── segmentation
-        ├── full-glasses    <- Contains sub-folders with full-glasses images/masks
-        └── glass-frames    <- Contains sub-folders with glass-frames images/masks
-```
-
-
-### Classification
-
-<details>
-
-<summary><b>Eyeglasses</b></summary>
-
-Coming soon!
-
-</details>
-
-<details>
-
-<summary><b>Sunglasses</b></summary>
-
-Download the following files and _place them all under directory_ `data/classification/sunglasses` (please note for some datasets you need to have created a free [Kaggle](https://www.kaggle.com/) account):
-
-* From [CMU Face Images](http://archive.ics.uci.edu/dataset/124/cmu+face+images) download `cmu+face+images.zip`
-* From [Face Attributes Grouped](https://www.kaggle.com/datasets/mantasu/face-attributes-grouped) download `archive.zip` and _rename_ to `face-attributes-grouped.zip`
-* From [Face Attributes Extra](https://www.kaggle.com/datasets/mantasu/face-attributes-extra) download `archive.zip` and _rename_ to `face-attributes-extra.zip`
-* From [Glasses and Coverings](https://www.kaggle.com/datasets/mantasu/glasses-and-coverings) download `archive.zip` and _rename_ to `glasses-and-coverings.zip`
-* From [Specs on Faces](https://sites.google.com/view/sof-dataset) download `whole images.rar` and `metadata.rar`
-* From [Sunglasses / No Sunglasses](https://www.kaggle.com/datasets/amol07/sunglasses-no-sunglasses) download `archive.zip` and _rename_ to `sunglasses-no-sunglasses.zip`
-
-After downloading all the datasests and putting them under the specified directory, run the script to extract the data and create splits:
-
-```bash
-python scripts/preprocess.py --task sunglasses-classification --root data/classification/sunglasses
-```
-
-After running `preprocess.py`, the following subdirectories should be created inside root:
-
-```
-└── data/classification/sunglasses
-    ├── cmu-face-images 
-    |   ├── test
-    |   |   ├── no_sunglasses       <- 256x256 images of people without sunglasses
-    │   |   └── sunglasses          <- 256x256 images of people with sunglasses
-    │   |
-    |   ├── train
-    │   |   ├── no_sunglasses       <- 256x256 images of people without sunglasses
-    │   |   └── sunglasses          <- 256x256 images of people with sunglasses
-    │   |
-    |   └── val
-    │       ├── no_sunglasses       <- 256x256 images of people without sunglasses
-    │       └── sunglasses          <- 256x256 images of people with sunglasses
-    |
-    ├── face-attributes-grouped     <- Same directory tree as for cmu-face-images
-    ├── glasses-and-coverings       <- Same directory tree as for cmu-face-images
-    ├── specs-on-faces              <- Same directory tree as for cmu-face-images
-    └── sunglasses-no-sunglasses    <- Same directory tree as for cmu-face-images
-```
-
-</details>
-
-### Segmentation
-
-<details>
-
-<summary><b>Full Glasses</b></summary>
-
-Download the following files and _place them all under directory_ `data/segmentation/full-glasses`:
-
-* From [CelebA Mask HQ](https://drive.google.com/file/d/1badu11NqxGf6qM3PTTooQDJvQbejgbTv/view) download `CelebAMask-HQ.zip`
-* From [CelebA Annotations](https://drive.google.com/file/d/1xd-d1WRnbt3yJnwh5ORGZI3g-YS-fKM9/view) download `annotations.zip`
-
-After downloading the files and putting them under the specified directory, run the script to extract the data and create splits:
-
-```bash
-python scripts/preprocess.py --task full-glasses-segmentation --root data/segmentation/full-glasses
-```
-
-After running `preprocess.py`, the following subdirectories should be created inside root:
-
-```
-└── data/segmentation/full-glasses
-    └── celeba-mask-hq
-        ├── test
-        |   ├── images              <- 256x256 images of people with glasses
-        |   └── masks               <- 256x256 images of corresponding masks
-        |
-        ├── train
-        |   ├── images              <- 256x256 images of people with glasses
-        |   └── masks               <- 256x256 images of corresponding masks
-        |
-        └── val
-            ├── images              <- 256x256 images of people with glasses
-            └── masks               <- 256x256 images of corresponding masks
-```
-
-</details>
-
-<details>
-
-<summary><b>Glasses Frames</b></summary>
-
-Coming soon!
-
-</details>
-
-## Running
-
-To run custom training and testing, it is first advised to familiarize with how [Pytorch Lightning](https://lightning.ai/docs/pytorch/stable/) works and briefly check its [CLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html#lightning-cli). In particular, take into account what arguments are accepted by the [Trainer class](https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.trainer.trainer.Trainer.html#trainer) and how to customize your own [optimizer](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli_intermediate_2.html#multiple-optimizers) and [scheduler](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli_intermediate_2.html#multiple-schedulers) via command line. **Prerequisites**:
-
-1. Clone the repository
-2. Install the requirements
-3. Download and preprocess the data
-
-### Training
-
-You can run simple training as follows (which is the default):
-```bash
-python scripts/run.py fit --task sunglasses-classification --size medium 
-```
-
-You can customize things like `batch-size`, `num-workers`, as well as `trainer` and `checkpoint` arguments:
-```bash
-python scripts/run.py fit --batch-size 64 --trainer.max_epochs 300 --checkpoint.dirname ckpt
-```
-
-It is also possible to overwrite default optimizer and scheduler:
-```bash
-python scripts/run.py fit --optimizer Adam --optimizer.lr 1e-3 --lr_scheduler CosineAnnealingLR
-```
-
-### Testing
-
-To run testing, specify the trained model and the checkpoint to it:
-```bash
-python scripts/run.py test -t sunglasses-classification -s small --ckpt_path path/to/model.ckpt
-```
-
-Or you can also specify the `pth` file to pre-load the model with weights:
-```bash
-python scripts/run.py -t sunglasses-classification -s small -w path/to/weights.pth
-```
-
-If you get _UserWarning: No positive samples in targets, true positive value should be meaningless_, increase the batch size.
-
 ## References
 
 The following model architectures were used from [Torchvision](https://pytorch.org/vision/stable/index.html) library:
@@ -397,3 +210,60 @@ The following model architectures were used from [Torchvision](https://pytorch.o
   doi = {TBA}
 }
 ```
+"""
+
+setuptools.setup(
+    name = "glasses-detector",
+    version = "0.1.0",
+    author = "Mantas Birškus",
+    author_email = "mantix7@gmail.com",
+    license = "MIT",
+    description = f"Eyeglasses and sunglasses detector (classifier and segmenter)",
+    long_description = DESCRIPTION,
+    long_description_content_type = "text/markdown",
+    url = "https://github.com/mantasu/glasses-detector",
+    project_urls = {
+        "Documentation": "https://mantasu.github.io/glasses-detector",
+        "Bug Tracker": "https://github.com/mantasu/glasses-detector/issues",
+    },
+    keywords = [
+        "face",
+        "python",
+        "pytorch",
+        "glasses",
+        "frames",
+        "eyeglasses",
+        "sunglasses",
+        "binary",
+        "classification",
+        "classifier",
+        "segmentation",
+        "segmenter",
+        "detection",
+        "detector",
+    ],
+    install_requires = [
+        "tqdm",
+        "torch",
+        "torchvision",
+        "albumentations",
+    ],
+    classifiers = [
+        "Intended Audience :: Science/Research",
+        "Intended Audience :: Developers",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+    ],
+    package_dir = {"": "src"},
+    packages = setuptools.find_packages(where="src"),
+    entry_points={
+        "console_scripts": [
+            "glasses-detector=glasses_detector.__main__:main",
+        ]
+    },
+    python_requires = ">=3.10"
+)

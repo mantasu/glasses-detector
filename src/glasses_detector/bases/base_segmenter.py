@@ -1,4 +1,5 @@
 import os
+import tqdm
 import numpy
 import torch
 import pickle
@@ -7,7 +8,6 @@ import warnings
 
 from PIL import Image
 from typing import Any
-from copy import deepcopy
 from collections import defaultdict
 from collections.abc import Callable
 
@@ -40,31 +40,13 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
         extends this, the *kind* attribute would be inferred 
         correspondingly.
     
-    .. warn::
+    .. warning::
         A base model is expected to produce a dictionary of outputs from 
         its ``forward`` method and this class will automatically select 
         *"out"* entry. If you pass a custom model as ``base_model``, and 
         it simply returns :class:`torch.Tensor`, please ensure to 
         modify it so it returns a dummy dictionary 
         ``{"out": actual_output}``.
-
-    Attributes:
-        ABBREV_MAP (dict[str, str]): A dictionary mapping the 
-            abbreviation, i.e., names "tiny", "small", "medium", 
-            "large", "huge", to corresponding base model names, e.g., 
-            "small" is mapped to "lraspp_mobilenet_v3_large". This is 
-            the default abbreviation map, based on which pretrained 
-            weights for some kinds of segmentation models can be 
-            downloaded. To specify a custom abbreviation map, use 
-            ``abbrev_map`` argument when instantiating an object and 
-            either provide an empty dictionary or a custom one.
-        VERSION_MAP (dict[str, str]): A dictionary mapping from the 
-            possible pretrained segmentation model kinds, e.g., 
-            "full glasses", "glass frames", to their corresponding 
-            GitHub release versions, e.g., "v1.0.0" (where the newest 
-            weights are stored). This can be customized via 
-            ``version_map`` argument as well, e.g., if other versions 
-            can be chosen.
 
     Args:
         *args: Same arguments as for :class:`.BaseModel`.
@@ -73,15 +55,33 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
     ABBREV_MAP = {
         "tiny": "tinysegnet_v1",
         "small": "lraspp_mobilenet_v3_large",
-        "medium": "fcn_resnet50",
-        "large": "deeplabv3_resnet101",
-        "huge": None,
+        "medium": "deeplabv3_mobilenet_v3_large",
+        "large": "fcn_resnet50",
+        "huge": "deeplabv3_resnet101",
     }
+    """
+    dict[str, str]: A dictionary mapping the abbreviation, i.e., names 
+        "tiny", "small", "medium", "large", "huge", to corresponding 
+        base model names, e.g., "small" is mapped to 
+        "lraspp_mobilenet_v3_large". This is the default abbreviation 
+        map, based on which pretrained weights for some kinds of 
+        segmentation models can be downloaded. To specify a custom 
+        abbreviation map, use ``abbrev_map`` argument when instantiating 
+        an object and either provide an empty dictionary or a custom one.
+    """
 
     VERSION_MAP = {
-        "full_glasses_segmenter": None,
+        "full_glasses_segmenter": "0.1.0",
         "glass_frames_segmenter": None,
     }
+    """
+    dict[str, str]: A dictionary mapping from the possible pretrained 
+        segmentation model kinds, e.g., "full glasses", "glass frames", 
+        to their corresponding GitHub release versions, e.g., "v1.0.0" 
+        (where the newest weights are stored). This can be customized 
+        via ``version_map`` argument as well, e.g., if other versions 
+        can be chosen.
+    """
 
     def __init__(self, *args, **kwargs):
         kwargs["abbrev_map"] = kwargs.get("abbrev_map", self.ABBREV_MAP)
@@ -126,15 +126,15 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
         pixels. Mask type can be customized with ``mask_type`` argument.
 
         Args:
-            image (str | Image.Image | numpy.ndarray): The path to the 
-                image to generate the mask for or the image itself
+            image (str | PIL.Image.Image | numpy.ndarray): The path to 
+                the image to generate the mask for or the image itself
                 represented as :class:`Image.Image` or as a 
                 :class:`numpy.ndarray`. Note that the image should have 
                 values between 0 and 255 and be of RGB format. 
                 Normalization is not needed as the channels will be 
                 automatically normalized before passing through the 
                 network.
-            mask_type (str | callable | dict[bool, Any], optional):
+            mask_type (str | collections.abc.Callable[[torch.Tensor], typing.Any] | dict[bool, typing.Any], optional):
                 The string specifying the way to map the predictions 
                 (pixel scores) to masks. These are the following 
                 options:
@@ -164,8 +164,8 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
 
         Returns:
             numpy.ndarray: Output mask of shape (H, W) with each pixel 
-                mapped to some ranged value or to a binary value, based 
-                on whether which are positive and which are negative.
+            mapped to some ranged value or to a binary value, based on 
+            whether which are positive and which are negative.
 
         Raises:
             ValueError: If the specified ``mask_type`` as a string is 
@@ -204,6 +204,7 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
         output_path: str | None = None,
         mask_type: str | Callable[[torch.Tensor], Any] | dict[bool, Any] = "img",
         ext: str | None = None,
+        desc: str | None = "Processing", 
     ):
         """Process a file or a dir of images by predicting mask(-s).
 
@@ -225,7 +226,7 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
                 another directory will be created at the same root path 
                 as the input directory and with the same name, but with 
                 "_masks" suffix added. Defaults to None.
-            mask_type (str | callable | dict[bool, Any], optional): 
+            mask_type (str | collections.abc.Callable[[torch.Tensor], typing.Any] | dict[bool, typing.Any], optional): 
                 The type of mask to generate. For example, a mask could 
                 be a black and white image, in which case "img" should 
                 be specified. For more details, check :meth:`predict`. 
@@ -255,23 +256,39 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
                 i.e., if mask type is "img", then the extension will 
                 be "jpg" by default, otherwise it will be "npy". 
                 Defaults to None.
+            desc (str | None, optional): Only used if input path leads 
+                to a directory of images. It is the description that is
+                used for the progress bar. If specified as ``None``, 
+                no progress bar is shown. Defaults to "Processing".
+        
+        Raises
+            FileNotFoundError: If the specified input path is does not 
+                lead to any file or directory.
         """
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(f"No such file or directory: {input_path}")
+        
         # Check if the input is file or dir
         is_file = os.path.isfile(input_path)
 
-        if ext is None and is_file and output_path is not None:
+        if ext is not None and is_file and output_path is not None:
+            # Update the output path to match the specified extension
+            output_path = os.path.splitext(output_path)[0] + '.' + ext
+        elif ext is None and is_file and output_path is not None:
             # If None, ext is taken from output file
-            ext = os.path.splitext(output_path)[1]
+            ext = os.path.splitext(output_path)[1][1:]
         elif ext is None:
             # If output file not given, we use default
             ext = "jpg" if mask_type == "img" else "npy"
 
-        if mask_type == "img" and '.' + ext not in VALID_EXTENSIONS:
+        if mask_type != "img" and '.' + ext in VALID_EXTENSIONS:
             # Raise a warning if ext doesn't support mask type
             warnings.warn(
                 f"Mask type is not 'img', therefore, it is not possible to "
                 f"save mask(-s) to a specified file type '{ext}'. "
-                f"Switching extension (file type) to 'npy'."
+                f"Switching extension (file type) to 'npy'. To avoid this "
+                f"warning, Either set mask_type to 'img' or choose a "
+                f"non-image extension, e.g., csv, pkl, npz etc."
             )
             ext = "npy"
         
@@ -294,6 +311,10 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
                 name = os.path.splitext(input_path)[0]
                 output_path = name + "_mask." + ext
             
+            if (dir := os.path.dirname(output_path)) != '':
+                # Create dir if doesn't exist
+                os.makedirs(dir, exist_ok=True)
+            
             # Predict and save single mask
             mask = self.predict(input_path)
             on_file(mask, output_path)
@@ -304,8 +325,13 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
             
             # Create the possibly non-existing dirs
             os.makedirs(output_path, exist_ok=True)
+            imgs = list(os.scandir(input_path))
 
-            for img in os.scandir(input_path):
+            if desc is not None:
+                # If description is provided, wrap progress bar around
+                imgs = tqdm.tqdm(imgs, desc=desc)
+
+            for img in imgs:
                 # Gen mask path, predict and save a single mask
                 mask_name = os.path.splitext(img.name)[0] + '.' + ext
                 mask_path = os.path.join(output_path, mask_name)
@@ -331,7 +357,7 @@ class _BaseConditionalSegmenter(BaseSegmenter):
     
     def forward(self, x):
         # Check which inputs to segment
-        is_positive = self.classifier(x)
+        is_positive = (self.classifier(x) > 0).flatten()
         masks = torch.zeros_like(x)
 
         if is_positive.any():

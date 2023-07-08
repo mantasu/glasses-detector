@@ -1,6 +1,7 @@
 import torch
 from .bases import BaseSegmenter, _BaseConditionalSegmenter
-from .classifiers import EyeglassesClassifier, SunglassesClassifier, GlassesClassifier
+from .classifiers import EyeglassesClassifier, SunglassesClassifier, AnyglassesClassifier
+
 
 class FullGlassesSegmenter(BaseSegmenter):
     """Segmenter to mark the pixels of the glasses.
@@ -14,41 +15,41 @@ class FullGlassesSegmenter(BaseSegmenter):
         :header-rows: 1
 
         * - Backbone name
-          - Num parameters ↓
           - Model size ↓
+          - Num parameters ↓
           - BCE loss ↓
           - F1 score ↑
-          - ROC-AUC score ↑
+          - Dice score ↑
         * - TinySegNet (tiny)
-          - 926 K
-          - 3.704 MB (estimated)
-          - 0.0584
-          - 0.9031
-          - 0.9201
+          - **3.54 Mb**
+          - **926.07 k**
+          - 0.0580
+          - 0.9054
+          - 0.9220
         * - LR-ASPP (small)
-          - 3.2 M
-          - 12.873 MB (estimated)
-          - 0.0595
-          - 0.9034
-          - 0.9169
-        * - FCN (medium)
-          - 32.9 M
-          - 131.787 MB (estimated)
-          - 0.0515
-          - 0.9167
-          - 0.9292
-        * - DeepLab (large)
-          - 58.6 M
-          - 234.503 MB (estimated)
-          - 0.0510
-          - 0.9150
-          - 0.9275
-        * - TBA (huge)
+          - 12.37 Mb
+          - 3.22 M
+          - 0.0603
+          - 0.8990
+          - 0.9131
+        * - DeepLab-MobileNet (medium)
+          - 50.00 Mb (estimated)
+          - 11.00 M (estimated)
           - TODO
           - TODO
           - TODO
-          - TODO
-          - TODO
+        * - FCN (large)
+          - 125.89 Mb
+          - 32.95 M
+          - **0.0515**
+          - **0.9152**
+          - **0.9279**
+        * - DeepLab-ResNet (huge)
+          - 224.06 Mb
+          - 58.63 M
+          - 0.0516
+          - 0.9147
+          - 0.9272
 
     Note:
         This model always returns binary maps, e.g., a few pixels could 
@@ -61,9 +62,9 @@ class FullGlassesSegmenter(BaseSegmenter):
             "small", "medium", "large", "huge". It can also be the name 
             of the model architecture - for available classification 
             architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. Finally, it can 
+            :meth:`~.create_base_model`. Finally, it can 
             also be custom torch model, e.g., personally trained on some 
-            other data. Defaults to "medium".
+            other data. Defaults to "small".
         pretrained (bool, optional): Whether to load the pretrained 
             weights for the chosen base model. Check the note inside the 
             documentation of :class:`.BaseModel` to see how the weights 
@@ -71,7 +72,7 @@ class FullGlassesSegmenter(BaseSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | torch.nn.Module = "medium", 
+        base_model: str | torch.nn.Module = "small", 
         pretrained: bool = False,
     ):
         super().__init__(base_model, pretrained)
@@ -87,38 +88,38 @@ class GlassFramesSegmenter(BaseSegmenter):
         :header-rows: 1
 
         * - Backbone name
-          - Num parameters ↓
           - Model size ↓
+          - Num parameters ↓
           - BCE loss ↓
           - F1 score ↑
           - ROC-AUC score ↑
         * - TinySegNet (tiny)
-          - 926 K
-          - 3.704 MB (estimated)
+          - 3.54 Mb
+          - 926.07 k
           - TODO
           - TODO
           - TODO
         * - LR-ASPP (small)
-          - 3.2 M
-          - 12.873 MB (estimated)
+          - 12.37 Mb
+          - 3.22 M
           - TODO
           - TODO
           - TODO
-        * - FCN (medium)
-          - 32.9 M
-          - 131.787 MB (estimated)
+        * - DeepLab-MobileNet (medium)
+          - 50.00 Mb (estimated)
+          - 11.00 M (estimated)
           - TODO
           - TODO
           - TODO
-        * - DeepLab (large)
-          - 58.6 M
-          - 234.503 MB (estimated)
+        * - FCN (large)
+          - 125.89 Mb
+          - 32.95 M
           - TODO
           - TODO
           - TODO
-        * - TBA (huge)
-          - TODO
-          - TODO
+        * - DeepLab-ResNet (huge)
+          - 224.06 Mb
+          - 58.63 M
           - TODO
           - TODO
           - TODO
@@ -134,9 +135,9 @@ class GlassFramesSegmenter(BaseSegmenter):
             "small", "medium", "large", "huge". It can also be the name 
             of the model architecture - for available classification 
             architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. Finally, it can 
+            :meth:`~.create_base_model`. Finally, it can 
             also be custom torch model, e.g., personally trained on some 
-            other data. Defaults to "medium".
+            other data. Defaults to "small".
         pretrained (bool, optional): Whether to load the pretrained 
             weights for the chosen base model. Check the note inside the 
             documentation of :class:`.BaseModel` to see how the weights 
@@ -144,12 +145,12 @@ class GlassFramesSegmenter(BaseSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | torch.nn.Module = "medium", 
+        base_model: str | torch.nn.Module = "small", 
         pretrained: bool = False,
     ):
         super().__init__(base_model, pretrained)
 
-class FullGlassesEyeglassesSegmenter(_BaseConditionalSegmenter):
+class FullEyeglassesSegmenter(_BaseConditionalSegmenter):
     """Segmenter to mark the pixels of eyeglasses.
 
     A binary segmenter that marks the pixels of full eyeglasses (this 
@@ -167,17 +168,16 @@ class FullGlassesEyeglassesSegmenter(_BaseConditionalSegmenter):
         does not wear eyeglasses.
 
     Args:
-        base_model (str | tuple[str | torch.nn.Module, 
-            str | torch.nn.Module], optional): The abbreviation of the 
-            base model to use for classification. One of "tiny", 
-            "small", "medium", "large", "huge". It can also be the name 
-            of the model architecture - for available classification 
-            architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. If provided as a 
+        base_model (str | tuple[str | torch.nn.Module, str | torch.nn.Module], optional): 
+            The abbreviation of the base model to use for 
+            classification. One of "tiny", "small", "medium", "large", 
+            "huge". It can also be the name of the model architecture - 
+            for available classification architecture names, check 
+            :meth:`~.create_base_model`. If provided as a 
             tuple, the first value will be used for the classifier and 
             the second value for segmenter. Note that, in the case of a 
             tuple, it is also possible to provide pure 
-            :class:`torch.nn.Module` values. Defaults to "medium".
+            :class:`torch.nn.Module` values. Defaults to "small".
         pretrained (bool | tuple[bool, bool], optional): Whether to load 
             the pretrained weights for the chosen base model(-s). Check 
             the note inside the documentation of :class:`.BaseModel` to 
@@ -188,7 +188,7 @@ class FullGlassesEyeglassesSegmenter(_BaseConditionalSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module], 
+        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module] = "small", 
         pretrained: bool | tuple[bool, bool] = False,
     ):
         super().__init__(
@@ -198,7 +198,7 @@ class FullGlassesEyeglassesSegmenter(_BaseConditionalSegmenter):
             pretrained
         )
 
-class FullGlassesSunglassesSegmenter(_BaseConditionalSegmenter):
+class FullSunglassesSegmenter(_BaseConditionalSegmenter):
     """Segmenter to mark the pixels of sunglasses.
 
     A binary segmenter that marks the pixels of full sunglasses wore by 
@@ -215,17 +215,16 @@ class FullGlassesSunglassesSegmenter(_BaseConditionalSegmenter):
         does not wear sunglasses.
 
     Args:
-        base_model (str | tuple[str | torch.nn.Module, 
-            str | torch.nn.Module], optional): The abbreviation of the 
-            base model to use for classification. One of "tiny", 
-            "small", "medium", "large", "huge". It can also be the name 
-            of the model architecture - for available classification 
-            architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. If provided as a 
+        base_model (str | tuple[str | torch.nn.Module, str | torch.nn.Module], optional): 
+            The abbreviation of the base model to use for 
+            classification. One of "tiny", "small", "medium", "large", 
+            "huge". It can also be the name of the model architecture - 
+            for available classification architecture names, check 
+            :meth:`~.create_base_model`. If provided as a 
             tuple, the first value will be used for the classifier and 
             the second value for segmenter. Note that, in the case of a 
             tuple, it is also possible to provide pure 
-            :class:`torch.nn.Module` values. Defaults to "medium".
+            :class:`torch.nn.Module` values. Defaults to "small".
         pretrained (bool | tuple[bool, bool], optional): Whether to load 
             the pretrained weights for the chosen base model(-s). Check 
             the note inside the documentation of :class:`.BaseModel` to 
@@ -236,7 +235,7 @@ class FullGlassesSunglassesSegmenter(_BaseConditionalSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module], 
+        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module] = "small", 
         pretrained: bool | tuple[bool, bool] = False,
     ):
         super().__init__(
@@ -246,7 +245,7 @@ class FullGlassesSunglassesSegmenter(_BaseConditionalSegmenter):
             pretrained
         )
 
-class FullGlassesGlassesSegmenter(_BaseConditionalSegmenter):
+class FullAnyglassesSegmenter(_BaseConditionalSegmenter):
     """Segmenter to mark the pixels of glasses.
 
     A binary segmenter that marks the pixels of full glasses of any type 
@@ -255,9 +254,9 @@ class FullGlassesGlassesSegmenter(_BaseConditionalSegmenter):
     the person is wearing any type of glasses and the full glasses 
     segmenter. Since it is a combination of a classifier and a 
     segmenter, the weights will depend on the architectures chosen for 
-    :class:`.GlassesClassifier` and for :class:`.FullGlassesSegmenter`. 
-    Therefore, the accuracy will be a combination of the chosen 
-    architectures.
+    :class:`.AnyglassesClassifier` and for 
+    :class:`.FullGlassesSegmenter`. Therefore, the accuracy will be a 
+    combination of the chosen architectures.
 
     Note:
         This model will return empty maps in cases where the person 
@@ -265,17 +264,16 @@ class FullGlassesGlassesSegmenter(_BaseConditionalSegmenter):
         from :class:`FullGlassesSegmenter`.
 
     Args:
-        base_model (str | tuple[str | torch.nn.Module, 
-            str | torch.nn.Module], optional): The abbreviation of the 
-            base model to use for classification. One of "tiny", 
-            "small", "medium", "large", "huge". It can also be the name 
-            of the model architecture - for available classification 
-            architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. If provided as a 
+        base_model (str | tuple[str | torch.nn.Module, str | torch.nn.Module], optional): 
+            The abbreviation of the base model to use for 
+            classification. One of "tiny", "small", "medium", "large", 
+            "huge". It can also be the name of the model architecture - 
+            for available classification architecture names, check 
+            :meth:`~.create_base_model`. If provided as a 
             tuple, the first value will be used for the classifier and 
             the second value for segmenter. Note that, in the case of a 
             tuple, it is also possible to provide pure 
-            :class:`torch.nn.Module` values. Defaults to "medium".
+            :class:`torch.nn.Module` values. Defaults to "small".
         pretrained (bool | tuple[bool, bool], optional): Whether to load 
             the pretrained weights for the chosen base model(-s). Check 
             the note inside the documentation of :class:`.BaseModel` to 
@@ -286,17 +284,17 @@ class FullGlassesGlassesSegmenter(_BaseConditionalSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module], 
+        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module] = "small", 
         pretrained: bool | tuple[bool, bool] = False,
     ):
         super().__init__(
-            GlassesClassifier, 
+            AnyglassesClassifier, 
             FullGlassesSegmenter, 
             base_model, 
             pretrained
         )
 
-class GlassFramesEyeglassesSegmenter(_BaseConditionalSegmenter):
+class EyeglassesFramesSegmenter(_BaseConditionalSegmenter):
     """Segmenter to mark the pixels of eyeglasses frames.
 
     A binary segmenter that marks the pixels of eyeglasses frames (this 
@@ -314,17 +312,16 @@ class GlassFramesEyeglassesSegmenter(_BaseConditionalSegmenter):
         does not wear eyeglasses.
 
     Args:
-        base_model (str | tuple[str | torch.nn.Module, 
-            str | torch.nn.Module], optional): The abbreviation of the 
-            base model to use for classification. One of "tiny", 
-            "small", "medium", "large", "huge". It can also be the name 
-            of the model architecture - for available classification 
-            architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. If provided as a 
+        base_model (str | tuple[str | torch.nn.Module, str | torch.nn.Module], optional): 
+            The abbreviation of the base model to use for 
+            classification. One of "tiny", "small", "medium", "large", 
+            "huge". It can also be the name of the model architecture - 
+            for available classification architecture names, check 
+            :meth:`~.create_base_model`. If provided as a 
             tuple, the first value will be used for the classifier and 
             the second value for segmenter. Note that, in the case of a 
             tuple, it is also possible to provide pure 
-            :class:`torch.nn.Module` values. Defaults to "medium".
+            :class:`torch.nn.Module` values. Defaults to "small".
         pretrained (bool | tuple[bool, bool], optional): Whether to load 
             the pretrained weights for the chosen base model(-s). Check 
             the note inside the documentation of :class:`.BaseModel` to 
@@ -335,7 +332,7 @@ class GlassFramesEyeglassesSegmenter(_BaseConditionalSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module], 
+        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module] = "small", 
         pretrained: bool | tuple[bool, bool] = False,
     ):
         super().__init__(
@@ -345,7 +342,7 @@ class GlassFramesEyeglassesSegmenter(_BaseConditionalSegmenter):
             pretrained
         )
 
-class GlassFramesSunglassesSegmenter(_BaseConditionalSegmenter):
+class SunglassesFramesSegmenter(_BaseConditionalSegmenter):
     """Segmenter to mark the pixels of sunglasses frames.
 
     A binary segmenter that marks the pixels of sunglasses frames wore 
@@ -363,17 +360,16 @@ class GlassFramesSunglassesSegmenter(_BaseConditionalSegmenter):
         does not wear sunglasses.
 
     Args:
-        base_model (str | tuple[str | torch.nn.Module, 
-            str | torch.nn.Module], optional): The abbreviation of the 
-            base model to use for classification. One of "tiny", 
-            "small", "medium", "large", "huge". It can also be the name 
-            of the model architecture - for available classification 
-            architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. If provided as a 
+        base_model (str | tuple[str | torch.nn.Module, str | torch.nn.Module], optional): 
+            The abbreviation of the base model to use for 
+            classification. One of "tiny", "small", "medium", "large", 
+            "huge". It can also be the name of the model architecture - 
+            for available classification architecture names, check 
+            :meth:`~.create_base_model`. If provided as a 
             tuple, the first value will be used for the classifier and 
             the second value for segmenter. Note that, in the case of a 
             tuple, it is also possible to provide pure 
-            :class:`torch.nn.Module` values. Defaults to "medium".
+            :class:`torch.nn.Module` values. Defaults to "small".
         pretrained (bool | tuple[bool, bool], optional): Whether to load 
             the pretrained weights for the chosen base model(-s). Check 
             the note inside the documentation of :class:`.BaseModel` to 
@@ -384,7 +380,7 @@ class GlassFramesSunglassesSegmenter(_BaseConditionalSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module], 
+        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module] = "small", 
         pretrained: bool | tuple[bool, bool] = False,
     ):
         super().__init__(
@@ -394,7 +390,7 @@ class GlassFramesSunglassesSegmenter(_BaseConditionalSegmenter):
             pretrained
         )
 
-class GlassFramesGlassesSegmenter(_BaseConditionalSegmenter):
+class AnyglassesFramesSegmenter(_BaseConditionalSegmenter):
     """Segmenter to mark the pixels of glasses frames.
 
     A binary segmenter that marks the pixels of glasses frames of any 
@@ -403,9 +399,9 @@ class GlassFramesGlassesSegmenter(_BaseConditionalSegmenter):
     the person is wearing any type of glasses and the glasses frames 
     segmenter. Since it is a combination of a classifier and a 
     segmenter, the weights will depend on the architectures chosen for 
-    :class:`.GlassesClassifier` and for :class:`.GlassFramesSegmenter`. 
-    Therefore, the accuracy will be a combination of the chosen 
-    architectures.
+    :class:`.AnyglassesClassifier` and for 
+    :class:`.GlassFramesSegmenter`. Therefore, the accuracy will be a 
+    combination of the chosen architectures.
 
     Note:
         This model will return empty maps in cases where the person 
@@ -413,17 +409,16 @@ class GlassFramesGlassesSegmenter(_BaseConditionalSegmenter):
         from :class:`GlassFramesSegmenter`.
 
     Args:
-        base_model (str | tuple[str | torch.nn.Module, 
-            str | torch.nn.Module], optional): The abbreviation of the 
-            base model to use for classification. One of "tiny", 
-            "small", "medium", "large", "huge". It can also be the name 
-            of the model architecture - for available classification 
-            architecture names, check 
-            :meth:`~.BaseClassifier.create_base_model`. If provided as a 
+        base_model (str | tuple[str | torch.nn.Module, str | torch.nn.Module], optional): 
+            The abbreviation of the base model to use for 
+            classification. One of "tiny", "small", "medium", "large", 
+            "huge". It can also be the name of the model architecture - 
+            for available classification architecture names, check 
+            :meth:`~.create_base_model`. If provided as a 
             tuple, the first value will be used for the classifier and 
             the second value for segmenter. Note that, in the case of a 
             tuple, it is also possible to provide pure 
-            :class:`torch.nn.Module` values. Defaults to "medium".
+            :class:`torch.nn.Module` values. Defaults to "small".
         pretrained (bool | tuple[bool, bool], optional): Whether to load 
             the pretrained weights for the chosen base model(-s). Check 
             the note inside the documentation of :class:`.BaseModel` to 
@@ -434,11 +429,11 @@ class GlassFramesGlassesSegmenter(_BaseConditionalSegmenter):
     """
     def __init__(
         self, 
-        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module], 
+        base_model: str | tuple[str | torch.nn.Module, str | torch.nn.Module] = "small", 
         pretrained: bool | tuple[bool, bool] = False,
     ):
         super().__init__(
-            GlassesClassifier, 
+            AnyglassesClassifier, 
             GlassFramesSegmenter, 
             base_model, 
             pretrained
