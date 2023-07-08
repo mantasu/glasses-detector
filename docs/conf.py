@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 project = 'Glasses Detector'
 copyright = '2023, Mantas Birškus'
 author = 'Mantas Birškus'
-release = '0.1.0'
+release = '0.1.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -36,8 +36,6 @@ intersphinx_mapping = {
     "torch": ("https://pytorch.org/docs/stable/", None),
     "torchvision": ("https://pytorch.org/vision/stable/", None),
 }
-
-# intersphinx_disabled_reftypes = ["*"]
 
 napoleon_use_param = True
 templates_path = ['_templates']

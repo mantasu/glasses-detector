@@ -7,7 +7,7 @@ DESCRIPTION = r"""
 [![Python](https://img.shields.io/badge/python-3.10%20|%203.11-yellow)](https://docs.python.org/3/)
 [![CUDA: yes](https://img.shields.io/badge/cuda-yes-green)](https://developer.nvidia.com/cuda-toolkit)
 [![Docs: passing](https://img.shields.io/badge/docs-passing-skyblue)](https://mantasu.github.io/glasses-detector/)
-[![DOI](https://zenodo.org/badge/TODO.svg)](https://zenodo.org/badge/latestdoi/TODO)
+[![DOI](https://zenodo.org/badge/610509640.svg)](https://zenodo.org/badge/latestdoi/610509640)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
 **Eyeglasses** and **sunglasses** _classifier_ + **glasses** and their **frames** _segmenter_. This project provides a quick way to use the pre-trained models via python script or terminal. Based on selected task, an image or a directory of images will be processed and corresponding labels or masks will be generated.
@@ -214,7 +214,7 @@ The following model architectures were used from [Torchvision](https://pytorch.o
 
 setuptools.setup(
     name = "glasses-detector",
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Mantas Birškus",
     author_email = "mantix7@gmail.com",
     license = "MIT",

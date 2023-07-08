@@ -55,7 +55,7 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
     
     VERSION_MAP = {
         "eyeglasses_classifier": None, 
-        "sunglasses_classifier": "0.1.0"
+        "sunglasses_classifier": "v0.1.0"
     }
     """
     dict[str, str]: A dictionary mapping from the possible pretrained 

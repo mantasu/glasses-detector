@@ -71,7 +71,7 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
     """
 
     VERSION_MAP = {
-        "full_glasses_segmenter": "0.1.0",
+        "full_glasses_segmenter": "v0.1.0",
         "glass_frames_segmenter": None,
     }
     """
