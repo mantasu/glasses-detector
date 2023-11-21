@@ -165,7 +165,7 @@ You can import the package and its models via the python script for more flexibi
 ```python
 from glasses_detector import SunglassesClassifier
 
-classifier = SunglassesClassifier(model_type="small", pretrained=True).eval()
+classifier = SunglassesClassifier(base_model="small", pretrained=True).eval()
 
 classifier.predict(
     input_path="path/to/dir", 
@@ -179,8 +179,8 @@ Using a segmenter is similar, here is an example of using a sunglasses segmentat
 ```python
 from glasses_detector import FullSunglassesSegmenter
 
-# model_type can also be a tuple: (classifier size, base glasses segmenter size)
-segmenter = FullSunglassesSegmenter(model_type="small", pretrained=True).eval()
+# base_model can also be a tuple: (classifier size, base glasses segmenter size)
+segmenter = FullSunglassesSegmenter(base_model="small", pretrained=True).eval()
 
 segmenter.predict(
     input_path="path/to/dir",
