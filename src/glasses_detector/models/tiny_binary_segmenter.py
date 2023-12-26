@@ -59,22 +59,25 @@ class TinyBinarySegmenter(nn.Module):
         )
 
         # Down-sampling layers
+        # self.down1 = self._Down(16, 32)
+        # self.down2 = self._Down(32, 64)
+        # self.down3 = self._Down(64, 128)
+        # self.down4 = self._Down(128, 128)
         self.down1 = self._Down(16, 32)
         self.down2 = self._Down(32, 64)
-        self.down3 = self._Down(64, 128)
-        self.down4 = self._Down(128, 128)
+        self.down3 = self._Down(64, 64)
 
         # Up-sampling layers
-        self.up1 = self._Up(256, 64)
-        self.up2 = self._Up(128, 32)
-        self.up3 = self._Up(64, 16)
-        self.up4 = self._Up(32, 16)
+        # self.up1 = self._Up(256, 64)
+        # self.up2 = self._Up(128, 32)
+        # self.up3 = self._Up(64, 16)
+        # self.up4 = self._Up(32, 16)
+        self.up1 = self._Up(128, 32)
+        self.up2 = self._Up(64, 16)
+        self.up3 = self._Up(32, 16)
 
         # Pixel-wise classification layer
         self.last = nn.Conv2d(16, 1, 1)
-    
-    def hi_there(self):
-        return None
 
     def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Performs forward pass.
@@ -103,13 +106,11 @@ class TinyBinarySegmenter(nn.Module):
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
-        x5 = self.down4(x4)
 
         # Updample features
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
+        x = self.up1(x4, x3)
+        x = self.up2(x, x2)
+        x = self.up3(x, x1)
 
         # Predict one channel
         out = self.last(x)

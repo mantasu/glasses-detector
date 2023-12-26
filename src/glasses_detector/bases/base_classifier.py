@@ -38,9 +38,9 @@ class BaseClassifier(BaseModel, ImageLoaderMixin):
     ABBREV_MAP = {
         "tiny": "tinyclsnet_v1",
         "small": "shufflenet_v2_x0_5",
-        "medium": "mobilenet_v3_small",
-        "large": "efficientnet_b0",
-        "huge": None,
+        "medium": "mnasnet0_5",
+        "large": "mobilenet_v3_large",
+        "huge": "efficientnet_v2_s",
     }
     """
     dict[str, str]: A dictionary mapping the abbreviation, i.e., names 

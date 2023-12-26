@@ -82,7 +82,7 @@ class BinaryClassifier(pl.LightningModule):
     
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Cosine Annealing scheduler
-        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-2)
+        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=0.1)
         scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
 
         return [optimizer], [scheduler]

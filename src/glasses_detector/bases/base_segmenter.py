@@ -57,7 +57,7 @@ class BaseSegmenter(BaseModel, ImageLoaderMixin):
         "small": "lraspp_mobilenet_v3_large",
         "medium": "deeplabv3_mobilenet_v3_large",
         "large": "fcn_resnet50",
-        "huge": "deeplabv3_resnet101",
+        "huge": "fcn_resnet101",
     }
     """
     dict[str, str]: A dictionary mapping the abbreviation, i.e., names 

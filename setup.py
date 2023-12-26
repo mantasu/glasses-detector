@@ -207,7 +207,7 @@ The following model architectures were used from [Torchvision](https://pytorch.o
   publisher = {GitHub},
   journal = {GitHub repository},
   howpublished = {\url{https://github.com/mantasu/glasses-detector}},
-  doi = {TBA}
+  doi = {10.5281/zenodo.8126101}
 }
 ```
 """

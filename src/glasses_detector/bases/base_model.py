@@ -8,15 +8,17 @@ from torchvision.models.segmentation.lraspp import LRASPPHead
 from torchvision.models.segmentation.deeplabv3 import DeepLabHead
 
 from torchvision.models.segmentation import (
-    deeplabv3_resnet101,
-    fcn_resnet50,
     lraspp_mobilenet_v3_large,
+    deeplabv3_mobilenet_v3_large,
+    fcn_resnet50,
+    fcn_resnet101,
 )
 
 from torchvision.models import (
     shufflenet_v2_x0_5,
-    mobilenet_v3_small,
-    efficientnet_b0,
+    mnasnet0_5,
+    mobilenet_v3_large,
+    efficientnet_v2_s,
 )
 
 from ..models import TinyBinarySegmenter
@@ -176,12 +178,15 @@ class BaseModel(nn.Module):
                 * ``"shufflenet_v2_x0_5"`` - ShuffleNet V2 model taken 
                   from torchvision package. For more information, see 
                   :func:`~torchvision.models.shufflenet_v2_x0_5`.
-                * ``"mobilenet_v3_small"`` - MobileNet V3 model taken 
+                * ``"mnasnet0_5"`` - MnasNet model taken from 
+                  torchvision package. For more information, see 
+                  :func:`~torchvision.models.mnasnet0_5`.
+                * ``"mobilenet_v3_large"`` - MobileNet V3 model taken 
                   from torchvision package. For more information, see 
-                  :func:`~torchvision.models.mobilenet_v3_small`.
-                * ``"efficientnet_b0"`` - EfficientNet B0 model taken 
-                  from torchvision package. For more information, see 
-                  :func:`~torchvision.models.efficientnet_b0`.
+                  :func:`~torchvision.models.mobilenet_v3_large`.
+                * ``"efficientnet_v2_s"`` - EfficientNet V2 Small model 
+                  taken from torchvision package. For more information, 
+                  see :func:`~torchvision.models.efficientnet_v2_s`.
             
                 And these are the available options for segmentation:
 
@@ -191,12 +196,18 @@ class BaseModel(nn.Module):
                 * ``"lraspp_mobilenet_v3_large"`` - LR-ASPP model taken 
                   from torchvision package. For more information, see 
                   :func:`~torchvision.models.segmentation.lraspp_mobilenet_v3_large`.
-                * ``"fcn_resnet50"`` - FCN model taken from torchvision 
+                * ``"deeplabv3_mobilenet_v3_large"`` - DeepLab V3 model 
+                  with MobileNet V3 backbone taken from torchvision 
                   package. For more information, see 
+                  :func:`~torchvision.models.segmentation.deeplabv3_mobilenet_v3_large`.
+                * ``"fcn_resnet50"`` - FCN model with ResNet 50 
+                  backbone taken from torchvision package. For more 
+                  information, see 
                   :func:`~torchvision.models.segmentation.fcn_resnet50`.
-                * ``"deeplabv3_resnet101"`` - DeepLab V3 model taken 
-                  from torchvision package. For more information, see 
-                  :func:`~torchvision.models.segmentation.deeplabv3_resnet101`.
+                * ``"fcn_resnet101"`` - FCN model with ResNet 101 
+                  backbone taken from torchvision package. For more 
+                  information, see 
+                  :func:`~torchvision.models.segmentation.fcn_resnet101`.
 
         Raises:
             ValueError: If the model type is not available.
@@ -212,24 +223,31 @@ class BaseModel(nn.Module):
             case "shufflenet_v2_x0_5":
                 m = shufflenet_v2_x0_5()
                 m.fc = nn.Linear(m.fc.in_features, 1)
-            case "mobilenet_v3_small":
-                m = mobilenet_v3_small()
+            case "mnasnet0_5":
+                m = mnasnet0_5()
+                m.classifier[1] = nn.Linear(m.classifier[1].in_features, 1)
+            case "mobilenet_v3_large":
+                m = mobilenet_v3_large()
                 m.classifier[3] = nn.Linear(m.classifier[3].in_features, 1)
-            case "efficientnet_b0":
-                m = efficientnet_b0()
+            case "efficientnet_v2_s":
+                m = efficientnet_v2_s()
                 m.classifier[1] = nn.Linear(m.classifier[1].in_features, 1)
             case "tinysegnet_v1":
                 m = TinyBinarySegmenter()
             case "lraspp_mobilenet_v3_large":
                 m = lraspp_mobilenet_v3_large()
                 m.classifier = LRASPPHead(40, 960, 1, 128)
+            case "deeplabv3_mobilenet_v3_large":
+                m = deeplabv3_mobilenet_v3_large()
+                m.classifier = DeepLabHead(960, 1)
+                m.aux_classifier = None
             case "fcn_resnet50":
                 m = fcn_resnet50()
                 m.classifier[-1] = nn.Conv2d(512, 1, 1)
                 m.aux_classifier = None
-            case "deeplabv3_resnet101":
-                m = deeplabv3_resnet101()
-                m.classifier = DeepLabHead(2048, 1)
+            case "fcn_resnet101":
+                m = fcn_resnet101()
+                m.classifier[-1] = nn.Conv2d(512, 1, 1)
                 m.aux_classifier = None
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")

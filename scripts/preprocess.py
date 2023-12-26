@@ -1,44 +1,59 @@
+import argparse
 import os
-import torch
 import random
 import shutil
-import zipfile
 import tarfile
-import rarfile
 import warnings
-import argparse
-import numpy as np
-
-from PIL import Image
-from tqdm import tqdm
-from scipy.io import loadmat
-from face_crop_plus import Cropper
+import zipfile
 from multiprocessing import cpu_count
+
+import numpy as np
+import rarfile
+import torch
+from face_crop_plus import Cropper
+from PIL import Image
+from scipy.io import loadmat
+from tqdm import tqdm
 
 random.seed(0)
 
 VALID_EXTENSIONS = {
-    ".rgb", ".gif", ".pbm", ".pgm", ".ppm", ".tiff", ".rast", 
-    ".xbm", ".jpeg", ".jpg", ".bmp", ".png", ".webp", ".exr",
+    ".rgb",
+    ".gif",
+    ".pbm",
+    ".pgm",
+    ".ppm",
+    ".tiff",
+    ".rast",
+    ".xbm",
+    ".jpeg",
+    ".jpg",
+    ".bmp",
+    ".png",
+    ".webp",
+    ".exr",
 }
+
 
 def generate_title(title, pad=5):
     # Generate title with borders and print it
-    midline = '#' * pad + ' ' + title + ' ' + '#' * pad
-    top_bot = '#' * len(midline)
-    print('\n'.join(['\n' + top_bot, midline, top_bot]))
+    midline = "#" * pad + " " + title + " " + "#" * pad
+    top_bot = "#" * len(midline)
+    print("\n".join(["\n" + top_bot, midline, top_bot]))
+
 
 def folder_name(filepath):
     return os.path.basename(os.path.dirname(filepath))
 
-def unpack(filename, root='.', members=set()):
+
+def unpack(filename, root=".", members=set()):
     if not os.path.exists(file_path := os.path.join(root, filename)):
         warnings.warn(f"Please ensure {file_path} is a valid path.")
         return []
-    
+
     # Check the contents before extracting
     contents = set(os.listdir(root))
-    
+
     # Choose a correct unpacking interface
     if file_path.endswith(".zip"):
         open_file = zipfile.ZipFile
@@ -46,7 +61,7 @@ def unpack(filename, root='.', members=set()):
         open_file = rarfile.RarFile
     elif file_path.endswith(".tar.gz"):
         open_file = tarfile.open
-    
+
     with open_file(file_path) as file:
         # Choose a correct method to list files inside pack
         if isinstance(file, (zipfile.ZipFile, rarfile.RarFile)):
@@ -71,6 +86,7 @@ def unpack(filename, root='.', members=set()):
 
     return list(set(os.listdir(root)) - contents) + [filename]
 
+
 def categorize(**kwargs):
     # Retreive items from kwargs
     data_dir = kwargs["inp_dir"]
@@ -78,8 +94,8 @@ def categorize(**kwargs):
     categories = kwargs["categories"]
 
     # Create positive and negative dirs (for sunglasses/no sunglasses)
-    pos_dir = os.path.join(os.path.dirname(data_dir), categories[0] + '/')
-    neg_dir = os.path.join(os.path.dirname(data_dir), categories[1] + '/')
+    pos_dir = os.path.join(os.path.dirname(data_dir), categories[0] + "/")
+    neg_dir = os.path.join(os.path.dirname(data_dir), categories[1] + "/")
 
     # Make the actual directories
     os.makedirs(pos_dir, exist_ok=True)
@@ -96,7 +112,7 @@ def categorize(**kwargs):
                 # Skip non-image files
                 pbar.update(1)
                 continue
-            
+
             # Choose correct target directory
             filepath = os.path.join(root, filename)
             target_dir = pos_dir if criteria_fn(filepath) else neg_dir
@@ -109,6 +125,7 @@ def categorize(**kwargs):
 
             # Update pbar
             pbar.update(1)
+
 
 def gen_splits(**kwargs):
     # Retrieve kwarg vals
@@ -131,9 +148,9 @@ def gen_splits(**kwargs):
 
         # Split filenames to 3 group types
         splits = {
-            "train/": filenames[num_test+num_val:],
-            "val/": filenames[num_test:num_test+num_val],
-            "test/": filenames[:num_test]
+            "train/": filenames[num_test + num_val :],
+            "val/": filenames[num_test : num_test + num_val],
+            "test/": filenames[:num_test],
         }
 
         for splitname, files in splits.items():
@@ -146,7 +163,8 @@ def gen_splits(**kwargs):
                 shutil.move(os.path.join(root, dir, file), split_dir)
                 pbar.update(1)
 
-def crop_align(**kwargs):    
+
+def crop_align(**kwargs):
     # Initialize cropper
     cropper = Cropper(
         output_size=kwargs.get("size", (256, 256)),
@@ -168,6 +186,7 @@ def crop_align(**kwargs):
         shutil.rmtree(input_dir)
         os.rename(input_dir + "_faces", input_dir)
 
+
 def resize_all(**kwargs):
     # Retrieve kwarg vals
     size = kwargs["size"]
@@ -187,12 +206,13 @@ def resize_all(**kwargs):
             if image.size != size:
                 # Resize if needed
                 image = image.resize(size)
-            
+
             # Save under same path
             image.save(filepath)
             pbar.update(1)
 
-def clean(contents, root='.'):
+
+def clean(contents, root="."):
     for file_or_dir in contents:
         # Create full path to the file or dir
         path = os.path.join(root, file_or_dir)
@@ -200,12 +220,13 @@ def clean(contents, root='.'):
         if not os.path.exists(path):
             # Skip if not exists
             continue
-        
+
         # Remove either file or dir
         if os.path.isfile(path):
             os.remove(path)
         elif os.path.isdir(path):
             shutil.rmtree(path)
+
 
 def clear_keys(**kwargs):
     # Get key set and deletables
@@ -217,23 +238,24 @@ def clear_keys(**kwargs):
             # Del added key
             del kwargs[key]
 
+
 def prepare_specs_on_faces(**kwargs):
     # Generate title to show in terminal
     generate_title("Specs on Faces")
 
     # Get root, update kwargs
     root = kwargs["root"]
-    kwargs["inp_dir"] = os.path.join(root, "whole images")
+    kwargs["inp_dir"] = os.path.join(root, "original images")
     kwargs["out_dir"] = os.path.join(root, "specs-on-faces")
-    
+
     # Unpack contents that later will be removed
-    contents = unpack("whole images.rar", root)
+    contents = unpack("original images.rar", root)
     contents += unpack("metadata.rar", root)
     contents += kwargs["categories"]
-    
+
     # Init landmarks, is_sunglasses set, metadata path and get_name fn
     names, coords, landmarks, is_sunglasses_set = [], [], {}, set()
-    get_name = lambda path: '_'.join(os.path.basename(path).split('_')[:4])
+    get_name = lambda path: "_".join(os.path.basename(path).split("_")[:4])
     mat_path = os.path.join(root, "metadata", "metadata.mat")
 
     for sample in loadmat(mat_path)["metadata"][0]:
@@ -249,7 +271,7 @@ def prepare_specs_on_faces(**kwargs):
         # Append filenames and landms
         names.append(filename)
         coords.append(landmarks[get_name(filename)])
-    
+
     # Create landmarks required to align and center-crop images
     kwargs["landmarks"] = np.stack(coords)[:, [3, 0, 14, 7, 6]], np.array(names)
     kwargs["criteria_fn"] = lambda path: get_name(path) in is_sunglasses_set
@@ -260,8 +282,9 @@ def prepare_specs_on_faces(**kwargs):
     crop_align(**kwargs)
     gen_splits(**kwargs)
     clear_keys(**kwargs)
-    clean(contents, root)   
-    
+    clean(contents, root)
+
+
 def prepare_cmu_face_images(**kwargs):
     # Generate title to show in terminal
     generate_title("CMU Face Images")
@@ -284,6 +307,7 @@ def prepare_cmu_face_images(**kwargs):
     clear_keys(**kwargs)
     clean(contents, root)
 
+
 def prepare_sunglasses_no_sunglasses(**kwargs):
     # Generate title to show in terminal
     generate_title("Sunglasses/No Sunglasses")
@@ -305,6 +329,7 @@ def prepare_sunglasses_no_sunglasses(**kwargs):
     clear_keys(**kwargs)
     clean(contents, root)
 
+
 def prepare_glasses_and_coverings(**kwargs):
     # Generate title to show in terminal
     generate_title("Glasses and Coverings")
@@ -313,12 +338,15 @@ def prepare_glasses_and_coverings(**kwargs):
     root = kwargs["root"]
     kwargs["inp_dir"] = os.path.join(root, "glasses-and-coverings")
     kwargs["out_dir"] = os.path.join(root, "glasses-and-coverings-done")
-    kwargs["criteria_fn"] = lambda path: "sunglasses" in folder_name(path)
+
+    target_dir = kwargs["categories"][0]  # eyeglasses or sunglasses
+    target_dir = "glasses" if target_dir == "eyeglasses" else target_dir
+    kwargs["criteria_fn"] = lambda path: target_dir == folder_name(path)
 
     # Unpack the contents from the zip directory
     contents = unpack("glasses-and-coverings.zip", root)
     contents += kwargs["categories"]
-    
+
     # Sequential operations
     categorize(**kwargs)
     resize_all(**kwargs)
@@ -328,6 +356,7 @@ def prepare_glasses_and_coverings(**kwargs):
 
     # Rename the output directory to more exact name
     os.rename(kwargs["out_dir"], kwargs["inp_dir"])
+
 
 def prepare_face_attributes_grouped(**kwargs):
     # Generate title to show in terminal, define 2 dirs
@@ -339,7 +368,9 @@ def prepare_face_attributes_grouped(**kwargs):
     root = kwargs["root"]
     kwargs["inp_dir"] = os.path.join(root, inp1)
     kwargs["out_dir"] = os.path.join(root, inp1 + "-done")
-    kwargs["criteria_fn"] = lambda path: "sunglasses" in folder_name(path)
+
+    target_dir = kwargs["categories"][0]  # eyeglasses or sunglasses
+    kwargs["criteria_fn"] = lambda path: target_dir in folder_name(path)
 
     # Define members to extract from both of the zip files
     mem1 = [f"{inp1}/{x}/eyewear" for x in ["train", "val", "test"]]
@@ -361,6 +392,7 @@ def prepare_face_attributes_grouped(**kwargs):
     # Rename the output directory to more exact name
     os.rename(kwargs["out_dir"], kwargs["inp_dir"])
 
+
 def generate_split_paths(split_info_file_paths, celeba_mapping_file_path, save_dir):
     for split_info_path in split_info_file_paths:
         # Read the first column of the the data split info file (filenames)
@@ -380,11 +412,11 @@ def generate_split_paths(split_info_file_paths, celeba_mapping_file_path, save_d
         # Create image and mask directories as well while looping
         os.makedirs(os.path.join(save_dir, subdir, "images"), exist_ok=True)
         os.makedirs(os.path.join(save_dir, subdir, "masks"), exist_ok=True)
-    
+
     # Init split info
     split_info = {}
-    
-    with open(celeba_mapping_file_path, 'r') as f:
+
+    with open(celeba_mapping_file_path, "r") as f:
         for line in f.readlines()[1:]:
             # Read Celeba Mask HQ index and CelebA file name
             [idx, _, orig_file] = line.split()
@@ -401,6 +433,7 @@ def generate_split_paths(split_info_file_paths, celeba_mapping_file_path, save_d
 
     return split_info
 
+
 def walk_through_masks(mask_dir, img_dir, split_info, resize):
     # Count the total number of files in the directory tree, init tqdm
     total = sum(len(files) for _, _, files in os.walk(mask_dir))
@@ -414,9 +447,9 @@ def walk_through_masks(mask_dir, img_dir, split_info, resize):
             if "eye_g" not in file:
                 # Ignore no-glasses
                 continue
-            
+
             # Get the train/val/test type
-            idx = int(file.split('_')[0])
+            idx = int(file.split("_")[0])
             parent_path = split_info[idx]
 
             # Create the full path to original files
@@ -425,8 +458,10 @@ def walk_through_masks(mask_dir, img_dir, split_info, resize):
 
             # Create a save path of original files to train/val/test location
             image_save_path = os.path.join(parent_path, "images", str(idx) + ".jpg")
-            mask_save_path = os.path.join(parent_path, "masks", file.replace(".png", ".jpg"))
-            
+            mask_save_path = os.path.join(
+                parent_path, "masks", file.replace(".png", ".jpg")
+            )
+
             # Open the image, convert mask to black/white
             image = Image.open(image_path).resize(resize)
             mask = Image.open(mask_path).resize(resize)
@@ -435,6 +470,7 @@ def walk_through_masks(mask_dir, img_dir, split_info, resize):
             # Save the mask and the image
             image.save(image_save_path)
             mask.save(mask_save_path)
+
 
 def prepare_celeba_mask_hq(**kwargs):
     # Generate title to show in terminal
@@ -451,7 +487,7 @@ def prepare_celeba_mask_hq(**kwargs):
     split_info = generate_split_paths(
         [os.path.join(root, f"{x}_label.txt") for x in ["train", "val", "test"]],
         os.path.join(root, "CelebAMask-HQ/CelebA-HQ-to-CelebA-mapping.txt"),
-        os.path.join(root, "celeba-mask-hq")
+        os.path.join(root, "celeba-mask-hq"),
     )
 
     # Walk through samples and process
@@ -459,11 +495,73 @@ def prepare_celeba_mask_hq(**kwargs):
         os.path.join(root, "CelebAMask-HQ/CelebAMask-HQ-mask-anno"),
         os.path.join(root, "CelebAMask-HQ/CelebA-HQ-img"),
         split_info,
-        size
+        size,
     )
 
     # Clean up data dir
     clean(contents, root)
+
+
+def prepare_glasses_segmentation_synthetic(**kwargs):
+    # Generate title to show in terminal
+    generate_title("Glasses Segmentation Synthetic")
+
+    # Get root
+    root = kwargs["root"]
+    frac = kwargs.get("sunglasses_fraction", 0.5)
+
+    # Unpack the contents and
+    unpack("glasses-segmentation-synthetic.zip", root)
+
+    root = os.path.join(root, "glasses-segmentation-synthetic")
+    total = sum(len(files) for _, _, files in os.walk(root))
+    pbar = tqdm(desc=f"    * Selecting images and masks", total=total)
+
+    for split_type in ["train", "val", "test"]:
+        # Get all the filepaths, sort them, compute number of sunglasses
+        filenames = sorted([f.name for f in os.scandir(os.path.join(root, split_type))])
+        num_sunglasses = int((len(filenames) // 8) * frac)
+        keep, i = set(), 0
+
+        for filename in filenames:
+            if "-seg" in filename:
+                # Always add frame
+                keep.add(filename)
+
+            if (i >= num_sunglasses and "-all" in filename) or (
+                i < num_sunglasses and "-sunglasses" in filename
+            ):
+                # Add either regular eyeglasses or sunglasses
+                keep.add(filename)
+                i += 1
+
+        # Create 2 directories: for images and masks
+        os.makedirs(os.path.join(root, split_type, "images"), exist_ok=True)
+        os.makedirs(os.path.join(root, split_type, "masks"), exist_ok=True)
+
+        for filename in filenames:
+            # Get the filename in the current split
+            split_path = os.path.join(root, split_type)
+            filepath = os.path.join(split_path, filename)
+
+            if filename not in keep:
+                # Remove if not needed
+                os.remove(filepath)
+            elif "-seg" in filename:
+                # Get the mask name without suffix, move to masks
+                filename = filename.replace("-seg", "")
+                shutil.move(filepath, os.path.join(split_path, "masks", filename))
+            else:
+                # Get the image name without suffix, move to images
+                filename = filename.replace("-all", "").replace("-sunglasses", "")
+                shutil.move(filepath, os.path.join(split_path, "images", filename))
+
+            # Update other half
+            pbar.update(1)
+
+    # Remove the zip dir
+    os.remove(root + ".zip")
+
 
 def parse_kwargs():
     # Init parser for command-line interface
@@ -471,35 +569,57 @@ def parse_kwargs():
 
     # Add the possible arguments
     parser.add_argument(
-        "-t", "--task", required=True, 
-        choices=["eyeglasses-classification", "sunglasses-classification",
-                 "full-glasses-segmentation", "glass-frames-segmentation"],
-        help="The type of task to generate data splits for."
+        "-t",
+        "--task",
+        required=True,
+        choices=[
+            "eyeglasses-classification",
+            "sunglasses-classification",
+            "full-glasses-segmentation",
+            "glass-frames-segmentation",
+        ],
+        help="The type of task to generate data splits for.",
     )
     parser.add_argument(
-        "-r", "--root", required=True,
-        help="The path to the directory with all the unzipped data files."
+        "-r",
+        "--root",
+        required=True,
+        help="The path to the directory with all the unzipped data files.",
     ),
     parser.add_argument(
-        "-s", "--size", type=int, nargs='+', default=[256, 256], 
+        "-s",
+        "--size",
+        type=int,
+        nargs="+",
+        default=[256, 256],
         help=f"The desired size (width, height) of cropped image faces. If "
-             f"provided as a single number, the same value is used for both "
-             f"width and height. Defaults to [256, 256].")
+        f"provided as a single number, the same value is used for both "
+        f"width and height. Defaults to [256, 256].",
+    )
     parser.add_argument(
-        "-vs", "--val-size", type=float, default=0.15,
+        "-vs",
+        "--val-size",
+        type=float,
+        default=0.15,
         help=f"The fraction of images to use for validation set. Note that "
-             f"for some datasets this is ignored as default splits are known."
+        f"for some datasets this is ignored as default splits are known.",
     )
     parser.add_argument(
-        "-ts", "--test-size", type=float, default=0.15,
+        "-ts",
+        "--test-size",
+        type=float,
+        default=0.15,
         help=f"The fraction of images to use for test set. Note that for some "
-             f"datasets this is ignored because default splits are known."
+        f"datasets this is ignored because default splits are known.",
     )
     parser.add_argument(
-        "-d", "--device", type=str, default="auto",
+        "-d",
+        "--device",
+        type=str,
+        default="",
         help=f"The device on which to perform preprocessing. Can be, for "
-             f"example, 'cpu', 'cuda'. If not specified the device is chosen "
-             f"CUDA, if it is available. Defaults to 'auto'."
+        f"example, 'cpu', 'cuda'. If not specified the device is chosen "
+        f"CUDA or MPS, if either is available. Defaults to ''.",
     )
 
     # Parse the acquired args as kwargs
@@ -511,12 +631,17 @@ def parse_kwargs():
             kwargs["categories"] = ["eyeglasses", "no_eyeglasses"]
         case "sunglasses-classification":
             kwargs["categories"] = ["sunglasses", "no_sunglasses"]
-    
-    if kwargs["device"] == "auto":
-        # If device is set to auto, use CUDA if it is available
-        kwargs["device"] = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Automatically determine the device
+    if kwargs["device"] == "" and torch.cuda.is_available():
+        kwargs["device"] = torch.device("cuda")
+    elif kwargs["device"] == "" and torch.backends.mps.is_available():
+        kwargs["device"] = torch.device("mps")
+    elif kwargs["device"] == "":
+        kwargs["device"] = torch.device("cpu")
 
     return kwargs
+
 
 if __name__ == "__main__":
     # Get command-line args
@@ -524,7 +649,9 @@ if __name__ == "__main__":
 
     match kwargs.pop("task"):
         case "eyeglasses-classification":
-            raise NotImplementedError("Sorry, not implemented yet!")
+            prepare_glasses_and_coverings(**kwargs)
+            prepare_face_attributes_grouped(**kwargs)
+            # raise NotImplementedError("Sorry, not implemented yet!")
         case "sunglasses-classification":
             prepare_specs_on_faces(**kwargs)
             prepare_cmu_face_images(**kwargs)
@@ -534,6 +661,6 @@ if __name__ == "__main__":
         case "full-glasses-segmentation":
             prepare_celeba_mask_hq(**kwargs)
         case "glass-frames-segmentation":
-            raise NotImplementedError("Sorry, not implemented yet!")
+            prepare_glasses_segmentation_synthetic(**kwargs)
 
     print()

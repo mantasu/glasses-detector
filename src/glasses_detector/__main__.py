@@ -9,14 +9,14 @@ def parse_kwargs():
 
     parser.add_argument(
         "-i", "--input-path",
-        metavar="path/to/dir/or/file",
+        metavar="<path/to/dir_or_file>",
         type=str,
         required=True,
         help="Path to the input image or the directory with images."
     )
     parser.add_argument(
         "-o", "--output-path",
-        metavar="path/to/dir/or/file",
+        metavar="<path/to/dir_or_file>",
         type=str,
         default=None,
         help=f"For classification, it is the path to a file, e.g., txt or "
@@ -77,7 +77,7 @@ def parse_kwargs():
              f"'logit', 'proba'. Defaults to 'int'."
     )
     parser.add_argument(
-        "-sep", "--sep",
+        "-sep", "--separator",
         type=str,
         metavar="<sep>",
         default=",",
@@ -99,7 +99,7 @@ def parse_kwargs():
              f"'proba'. Defaults to 'img'."
     )
     parser.add_argument(
-        "-ext", "--ext",
+        "-ext", "--extension",
         type=str,
         metavar="<ext>",
         default=None,
@@ -115,7 +115,7 @@ def parse_kwargs():
              f"None."
     )
     parser.add_argument(
-        "-d", "--desc",
+        "-pbd", "--pbar-desc",
         type=str,
         metavar="<pbar-desc>",
         default="Processing",
@@ -125,7 +125,7 @@ def parse_kwargs():
              f"'Processing'."
     )
     parser.add_argument(
-        "-dev", "--device",
+        "-d", "--device",
         type=str,
         metavar="<device>",
         default="",
