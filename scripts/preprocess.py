@@ -3,6 +3,7 @@ import glob
 import os
 import random
 import shutil
+import sys
 import tarfile
 import warnings
 import zipfile
@@ -743,7 +744,17 @@ def parse_coco_json(
 ):
     # Get img dir, load COCO annotations
     img_dir = os.path.dirname(json_path)
+
+    # Save original std and redirect stdout and stderr to os.devnull
+    original_stdout, sys.stdout = sys.stdout, open(os.devnull, "w")
+    original_stderr, sys.stderr = sys.stderr, open(os.devnull, "w")
+
+    # Load COCO annotations
     coco = COCO(json_path)
+
+    # Restore the original stdout and stderr
+    sys.stdout = original_stdout
+    sys.stderr = original_stderr
 
     # Create a dictionary to map category ids to category names
     cat_id_to_name = {cat["id"]: cat["name"] for cat in coco.dataset["categories"]}
@@ -780,7 +791,7 @@ def parse_coco_json(
 
                     # Copy the image and create .txt annotation filename
                     img.save(os.path.join(path, "images", img_info["file_name"]))
-                    txt = img_info["file_name"].split(".")[0] + ".txt"
+                    txt = img_info["file_name"].rsplit(".", 1)[0] + ".txt"
 
                     with open(os.path.join(path, "annotations", txt), "w") as f:
                         # Write the bounding box
@@ -803,10 +814,30 @@ def walk_coco_splits(
     data_file: str,
     save_name: str,
     root: str = "data",
-    class_map: dict[str, list[dict[str, list[str]]]] = {},
+    class_map: dict[str, dict[str, list[str]]] = {},
     size: tuple[int, int] = (256, 256),
     delete_original: bool = False,
+    tasks: list[str] = [],
+    **kwargs,
 ):
+    for key, val in list(class_map.items()):
+        # Filter out unwanted task preprocessing
+        class_map[key] = {k: v for k, v in val.items() if k in tasks}
+
+    for class_name, task_map in class_map.items():
+        for task_name, task_cats in task_map.items():
+            for task_cat in task_cats:
+                # Check how many files are in save_dir
+                task_cat = task_cat.replace("no_", "")
+                save_path = os.path.join(root, task_name, task_cat, save_name)
+
+                if not os.path.exists(save_path):
+                    continue
+
+                if sum(len(files) for _, _, files in os.walk(save_path)) > 0:
+                    print(f"* Skipping {save_name} (already processed)")
+                    return
+
     # Initialize tqdm progress bar for current dataset
     pbar_desc = f"* Processing {save_name}"
     pbar = tqdm(desc=pbar_desc, total=0)
@@ -822,7 +853,7 @@ def walk_coco_splits(
     # Compute total files to process, update pbar
     extracted_path = os.path.join(root, "tmp")
     total = sum(len(files) for _, _, files in os.walk(extracted_path))
-    pbar.total += total
+    pbar.total += total + 1
     pbar.refresh()
     pbar.set_description(f"{pbar_desc} (categorizing)")
 
@@ -837,48 +868,52 @@ def walk_coco_splits(
         _class_map = {key: [] for key in class_map.keys()}
         pbar.update(1)
 
-        for class_name, task_maps in class_map.items():
-            for task_map in task_maps:
-                for task_name, task_cats in task_map.items():
-                    for task_cat in task_cats:
-                        # Create the output directory
-                        output_dir = os.path.join(
-                            root,
-                            task_name,
-                            task_cat,
-                            save_name,
-                            split_name,
-                        )
+        for class_name, task_map in class_map.items():
+            for task_name, task_cats in task_map.items():
+                for task_cat in task_cats:
+                    if task_name == "classification":
+                        # Binary dir name is given
+                        bin_name = task_cat
+                        task_cat = task_cat.replace("no_", "")
+                    else:
+                        # Not classification
+                        bin_name = None
 
-                        if task_name == "classification":
-                            # Create positive and negative sub-dirs
-                            pos_dir = os.path.join(output_dir, task_cat)
-                            neg_dir = os.path.join(output_dir, "no_" + task_cat)
-                            os.makedirs(pos_dir, exist_ok=True)
-                            os.makedirs(neg_dir, exist_ok=True)
-                        elif task_name == "detection":
-                            # Create images and annotations sub-dirs
-                            os.makedirs(os.path.join(output_dir, "images"))
-                            os.makedirs(os.path.join(output_dir, "annotations"))
-                        elif task_name == "segmentation":
-                            # Create images and masks sub-dirs
-                            os.makedirs(os.path.join(output_dir, "images"))
-                            os.makedirs(os.path.join(output_dir, "masks"))
+                    # Create the output directory
+                    join = [root, task_name, task_cat, save_name, split_name]
+                    join += [bin_name] if bin_name is not None else []
+                    output_dir = os.path.join(*join)
 
-                        # Append output parent dir to the class map
-                        _class_map[class_name].append(output_dir)
+                    if task_name == "classification":
+                        # Create positive or negative sub-dir
+                        os.makedirs(output_dir, exist_ok=True)
+                    elif task_name == "detection":
+                        # Create images and annotations sub-dirs
+                        img_dir = os.path.join(output_dir, "images")
+                        ann_dir = os.path.join(output_dir, "annotations")
+                        os.makedirs(img_dir, exist_ok=True)
+                        os.makedirs(ann_dir, exist_ok=True)
+                    elif task_name == "segmentation":
+                        # Create images and masks sub-dirs
+                        img_dir = os.path.join(output_dir, "images")
+                        msk_dir = os.path.join(output_dir, "masks")
+                        os.makedirs(img_dir, exist_ok=True)
+                        os.makedirs(msk_dir, exist_ok=True)
 
-        # Parse the COCO JSON file and update progress bar
+                    # Append output parent dir to the class map
+                    _class_map[class_name].append(output_dir)
+
+        # Parse the COCO JSON file
         parse_coco_json(json_path, _class_map, size, pbar)
-        pbar.set_description(f"{pbar_desc} (cleaning)")
 
-        # Init deletable files and dirs and clean them up
-        deletable = ["tmp"] + ([data_file] if delete_original else [])
-        clean(deletable, root)
+    # Init deletable files and dirs and clean them up
+    pbar.set_description(f"{pbar_desc} (cleaning)")
+    deletable = ["tmp"] + ([data_file] if delete_original else [])
+    clean(deletable, root)
 
-        # Update pbar
-        pbar.update(1)
-        pbar.set_description(f"{pbar_desc} (done)")
+    # Update pbar
+    pbar.update(1)
+    pbar.set_description(f"{pbar_desc} (done)")
 
 
 def prepare_ai_pass(**kwargs):
@@ -886,14 +921,14 @@ def prepare_ai_pass(**kwargs):
     kwargs["data_file"] = "AI-Pass.v6i.coco.zip"
     kwargs["save_name"] = "ai-pass"
     kwargs["class_map"] = {
-        "glasses": [
-            {"detection": ["worn"]},
-            {"classification": ["eyeglasses", "no_sunglasses"]},
-        ],
-        "sunglasses": [
-            {"detection": ["worn"]},
-            {"classification": ["sunglasses", "no_eyeglasses"]},
-        ],
+        "glasses": {
+            "detection": ["worn"],
+            "classification": ["eyeglasses", "no_sunglasses"],
+        },
+        "sunglasses": {
+            "detection": ["worn"],
+            "classification": ["sunglasses", "no_eyeglasses"],
+        },
     }
 
     # Process the data splits
@@ -905,14 +940,14 @@ def prepare_pex5(**kwargs):
     kwargs["data_file"] = "PEX5.v4i.coco.zip"
     kwargs["save_name"] = "pex5"
     kwargs["class_map"] = {
-        "glasses": [
-            {"detection": ["worn"]},
-            {"classification": ["eyeglasses", "no_sunglasses"]},
-        ],
-        "sunglasses": [
-            {"detection": ["worn"]},
-            {"classification": ["sunglasses", "no_eyeglasses"]},
-        ],
+        "glasses": {
+            "detection": ["worn"],
+            "classification": ["eyeglasses", "no_sunglasses"],
+        },
+        "sunglasses": {
+            "detection": ["worn"],
+            "classification": ["sunglasses", "no_eyeglasses"],
+        },
     }
 
     # Process the data splits
@@ -924,14 +959,14 @@ def prepare_sunglasses_glasses_detect(**kwargs):
     kwargs["data_file"] = "sunglasses_glasses_detect.v1i.coco.zip"
     kwargs["save_name"] = "sunglasses-glasses-detect"
     kwargs["class_map"] = {
-        "glasses": [
-            {"detection": ["worn"]},
-            {"classification": ["eyeglasses", "no_sunglasses"]},
-        ],
-        "sunglasses": [
-            {"detection": ["worn"]},
-            {"classification": ["sunglasses", "no_eyeglasses"]},
-        ],
+        "glasses": {
+            "detection": ["worn"],
+            "classification": ["eyeglasses", "no_sunglasses"],
+        },
+        "sunglasses": {
+            "detection": ["worn"],
+            "classification": ["sunglasses", "no_eyeglasses"],
+        },
     }
 
     # Process the data splits
@@ -943,18 +978,18 @@ def prepare_glasses_detection(**kwargs):
     kwargs["data_file"] = "Glasses Detection.v2i.coco.zip"
     kwargs["save_name"] = "glasses-detection"
     kwargs["class_map"] = {
-        "Glasses": [
-            {"detection": ["worn"]},
-            {"classification": ["eyeglasses", "anyglasses", "no_sunglasses"]},
-        ],
-        "Sunglasses": [
-            {"detection": ["worn"]},
-            {"classification": ["sunglasses", "anyglasses", "no_eyeglasses"]},
-        ],
-        "No Glasses": [
-            {"detection": ["eyes"]},
-            {"classification": ["no_eyeglasses", "no_sunglasses", "no_anyglasses"]},
-        ],
+        "Glasses": {
+            "detection": ["worn"],
+            "classification": ["eyeglasses", "anyglasses", "no_sunglasses"],
+        },
+        "Sunglasses": {
+            "detection": ["worn"],
+            "classification": ["sunglasses", "anyglasses", "no_eyeglasses"],
+        },
+        "No Glasses": {
+            "detection": ["eyes"],
+            "classification": ["no_eyeglasses", "no_sunglasses", "no_anyglasses"],
+        },
     }
 
     # Process the data splits
@@ -966,18 +1001,18 @@ def prepare_glasses_image_dataset(**kwargs):
     kwargs["data_file"] = "glasses.v1-glasses_2022-04-01-8-12pm.coco.zip"
     kwargs["save_name"] = "glasses-image-dataset"
     kwargs["class_map"] = {
-        "glasses": [
-            {"detection": ["worn"]},
-            {"classification": ["eyeglasses", "anyglasses", "no_sunglasses"]},
-        ],
-        "sun_glasses": [
-            {"detection": ["worn"]},
-            {"classification": ["sunglasses", "anyglasses", "no_eyeglasses"]},
-        ],
-        "no_glasses": [
-            {"detection": ["eyes"]},
-            {"classification": ["no_eyeglasses", "no_sunglasses", "no_anyglasses"]},
-        ],
+        "glasses": {
+            "detection": ["worn"],
+            "classification": ["eyeglasses", "anyglasses", "no_sunglasses"],
+        },
+        "sun_glasses": {
+            "detection": ["worn"],
+            "classification": ["sunglasses", "anyglasses", "no_eyeglasses"],
+        },
+        "no_glasses": {
+            "detection": ["eyes"],
+            "classification": ["no_eyeglasses", "no_sunglasses", "no_anyglasses"],
+        },
     }
 
     # Process the data splits
@@ -986,17 +1021,17 @@ def prepare_glasses_image_dataset(**kwargs):
 
 def prepare_ex07(**kwargs):
     # Update the kwargs (file path, dataset name, class map)
-    kwargs["data_file"] = "Ex07.v1i.tensorflow.zip"
+    kwargs["data_file"] = "Ex07.v1i.coco.zip"
     kwargs["save_name"] = "ex07"
     kwargs["class_map"] = {
-        "eyesglass": [
-            {"detection": ["worn"]},
-            {"classification": ["anyglasses"]},
-        ],
-        "without_eyesglass": [
-            {"detection": ["eyes"]},
-            {"classification": ["no_anyglasses"]},
-        ],
+        "eyesglass": {
+            "detection": ["worn"],
+            "classification": ["anyglasses"],
+        },
+        "without_eyesglass": {
+            "detection": ["eyes"],
+            "classification": ["no_anyglasses"],
+        },
     }
 
     # Process the data splits
@@ -1088,11 +1123,11 @@ def parse_kwargs():
     kwargs = vars(parser.parse_args())
 
     # Add custom arguments
-    match kwargs["task"]:
-        case "eyeglasses-classification":
-            kwargs["categories"] = ["eyeglasses", "no_eyeglasses"]
-        case "sunglasses-classification":
-            kwargs["categories"] = ["sunglasses", "no_sunglasses"]
+    # match kwargs["task"]:
+    #     case "eyeglasses-classification":
+    #         kwargs["categories"] = ["eyeglasses", "no_eyeglasses"]
+    #     case "sunglasses-classification":
+    #         kwargs["categories"] = ["sunglasses", "no_sunglasses"]
 
     # Automatically determine the device
     if kwargs["device"] == "" and torch.cuda.is_available():
@@ -1125,4 +1160,9 @@ if __name__ == "__main__":
     #     case "glass-frames-segmentation":
     #         prepare_glasses_segmentation_synthetic(**kwargs)
 
-    print()
+    prepare_ai_pass(**kwargs)
+    prepare_pex5(**kwargs)
+    prepare_sunglasses_glasses_detect(**kwargs)
+    prepare_glasses_detection(**kwargs)
+    prepare_glasses_image_dataset(**kwargs)
+    prepare_ex07(**kwargs)
