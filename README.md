@@ -240,7 +240,12 @@ After processing every dataset group, your `data` directory should have the foll
 
 <summary><b>Eyeglasses</b></summary>
 
-Coming soon!
+Download the following files and _place them all under directory_ `data/classification/eyeglasses` (please note for some datasets you need to have created a free [Kaggle](https://www.kaggle.com/) account):
+
+1. From [Specs on Faces](https://sites.google.com/view/sof-dataset) download `original images.rar` and `metadata.rar`
+2. From [Face Attributes Grouped](https://www.kaggle.com/datasets/mantasu/face-attributes-grouped) download `archive.zip` and _rename_ to `face-attributes-grouped.zip`
+3. From [Face Attributes Extra](https://www.kaggle.com/datasets/mantasu/face-attributes-extra) download `archive.zip` and _rename_ to `face-attributes-extra.zip`
+4. From [Glasses and Coverings](https://www.kaggle.com/datasets/mantasu/glasses-and-coverings) download `archive.zip` and _rename_ to `glasses-and-coverings.zip`
 
 </details>
 
@@ -250,11 +255,8 @@ Coming soon!
 
 Download the following files and _place them all under directory_ `data/classification/sunglasses` (please note for some datasets you need to have created a free [Kaggle](https://www.kaggle.com/) account):
 
+* Same datasets as for **Eyeglasses**: rename them as instructed but place under `sunglasses` sub-directory.
 * From [CMU Face Images](http://archive.ics.uci.edu/dataset/124/cmu+face+images) download `cmu+face+images.zip`
-* From [Face Attributes Grouped](https://www.kaggle.com/datasets/mantasu/face-attributes-grouped) download `archive.zip` and _rename_ to `face-attributes-grouped.zip`
-* From [Face Attributes Extra](https://www.kaggle.com/datasets/mantasu/face-attributes-extra) download `archive.zip` and _rename_ to `face-attributes-extra.zip`
-* From [Glasses and Coverings](https://www.kaggle.com/datasets/mantasu/glasses-and-coverings) download `archive.zip` and _rename_ to `glasses-and-coverings.zip`
-* From [Specs on Faces](https://sites.google.com/view/sof-dataset) download `original images.rar` and `metadata.rar`
 * From [Sunglasses / No Sunglasses](https://www.kaggle.com/datasets/amol07/sunglasses-no-sunglasses) download `archive.zip` and _rename_ to `sunglasses-no-sunglasses.zip`
 
 After downloading all the datasests and putting them under the specified directory, run the script to extract the data and create splits:
@@ -288,11 +290,31 @@ After running `preprocess.py`, the following subdirectories should be created in
 
 </details>
 
+<details>
+
+<summary><b>Anyglasses</b></summary>
+
+Download the following files and _place them all under directory_ `data/classification/anyglasses`:
+* Same datasets as for **Eyeglasses** and **Sunglasses**: rename them as instructed but place under `anyglasses` sub-directory.
+* From [Glasses No Glasses](https://www.kaggle.com/datasets/jorgebuenoperez/datacleaningglassesnoglasses) download `archive.zip` and _rename_ to `glasses-no-glasses.zip`
+* From [Indian Facial Database](https://drive.google.com/file/d/1DPQQ2omEYPJDLFP3YG2h1SeXbh2ePpOq/view) download `An Indian facial database highlighting the Spectacle.zip`
+* From [Face Attribute 2](https://universe.roboflow.com/heheteam-g9fnm/faceattribute-2) download `FaceAttribute 2.v2i.multiclass.zip` (choose `v2` and `Multi Label Classification` format)
+
+
+
+</details>
+
 ### Segmentation
+
+<summary><b>Smart</b></summary>
+
+Coming soon!
+
+</details>
 
 <details>
 
-<summary><b>Full Glasses</b></summary>
+<summary><b>Full</b></summary>
 
 Download the following files and _place them all under directory_ `data/segmentation/full-glasses`:
 
@@ -327,11 +349,67 @@ After running `preprocess.py`, the following subdirectories should be created in
 
 <details>
 
-<summary><b>Glasses Frames</b></summary>
+<summary><b>Frames</b></summary>
 
-Coming soon!
+Download the following files and _place them all under directory_ `data/segmentation/frames`:
+1. From [Eyeglass](https://universe.roboflow.com/azaduni/eyeglass-6wu5y) download `eyeglass.v10i.coco-segmentation.zip` (choose `v10` and `COCO Segmentation` format)
+2. From [Glasses Segmentation Synthetic Dataset](https://www.kaggle.com/datasets/mantasu/glasses-segmentation-synthetic-dataset) download `archive.zip` and _rename_ to `glasses-segmentation-synthetic.zip`
 
 </details>
+
+
+<details>
+
+<summary><b>Lenses</b></summary>
+
+Download the following files and _place them all under directory_ `data/segmentation/lenses`:
+1. Download dataset `1` as described in **Frames** category but place under `lenses` sub-directory
+2. From [Glasses Lenses Segmentation](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-lenses-segmentation) download `glasses lenses segmentation.v7-sh-improvments-version.coco.zip` (choose `v7` and `COCO` format)
+3. From [Glasses Lens](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-lens) download `glasses lens.v6i.coco-segmentation.zip` (choose `v6` and `COCO Segmentation` format)
+4. From [Glasses Segmentation Cropped Faces](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-segmentation-cropped-faces) download `glasses segmentation cropped faces.v2-segmentation_models_pytorch-s_1st_version.coco-segmentation.zip` (choose `v2` and `COCO Segmentation` format)
+
+</details>
+
+
+### Detection
+
+<details>
+
+<summary><b>Worn</b></summary>
+
+Download the following files and _place them all under directory_ `data/detection/worn`:
+
+1. From [AI Pass](https://universe.roboflow.com/shinysky5166/ai-pass) download `AI-Pass.v6i.tensorflow.zip` (choose `v6` and `Tensorflow Object Detection` format)
+2. From [PEX5](https://universe.roboflow.com/pex-5-ylpua/pex5-gxq3t) download `PEX5.v4i.tensorflow.zip` (choose `v4` and `Tensorflow Object Detection` format)
+3. From [Sunglasses Glasses Detect](https://universe.roboflow.com/burhan-6fhqx/sunglasses_glasses_detect) download `sunglasses_glasses_detect.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
+6. From [Glasses Detection](https://universe.roboflow.com/su-yee/glasses-detection-qotpz) download `Glasses Detection.v2i.tensorflow.zip` (choose `v2` and `Tensorflow Object Detection` format)
+7. From [Glasses Image Dataset](https://universe.roboflow.com/new-workspace-ld3vn/glasses-ffgqb) download `glasses.v1-glasses_2022-04-01-8-12pm.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
+8. From [EX07](https://universe.roboflow.com/cam-vrmlm/ex07-o8d6m) download `Ex07.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
+
+
+</details>
+
+<details>
+
+<summary><b>Eyes</b></summary>
+
+Download the following files and _place them all under directory_ `data/detection/eyes`:
+1. Datasets `?` to `?` described in **Worn** category: rename them as instructed but place under `eyes` sub-directory.
+2. From [No Eyeglass](https://universe.roboflow.com/doms/no-eyeglass) download `no eyeglass.v3i.tensorflow.zip` (choose `v3` and `Tensorflow Object Detection` format)
+
+</details>
+
+<details>
+
+<summary><b>Standalone</b></summary>
+
+Download the following files and _place them all under directory_ `data/detection/standalone`:
+1. From [Kacamata-Membaca](https://universe.roboflow.com/uas-kelas-machine-learning-blended/kacamata-membaca) download `Kacamata-Membaca.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
+2. From [Only Glasses](https://universe.roboflow.com/woodin-ixal8/onlyglasses) download `onlyglasses.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
+
+
+</details>
+
 
 ## Running
 

@@ -2,6 +2,7 @@ tqdm
 torch
 scipy
 rarfile
+pycocotools
 torchvision
 tensorboard
 albumentations
