@@ -48,63 +48,65 @@ VALID_EXTENSIONS = {
 ########################################################################
 
 
-def generate_title(title, pad=5):
-    # Generate title with borders and print it
-    midline = "#" * pad + " " + title + " " + "#" * pad
-    top_bot = "#" * len(midline)
-    print("\n".join(["\n" + top_bot, midline, top_bot]))
+# def generate_title(title, pad=5):
+#     # Generate title with borders and print it
+#     midline = "#" * pad + " " + title + " " + "#" * pad
+#     top_bot = "#" * len(midline)
+#     print("\n".join(["\n" + top_bot, midline, top_bot]))
 
 
-def folder_name(filepath):
-    return os.path.basename(os.path.dirname(filepath))
+# def folder_name(filepath):
+#     return os.path.basename(os.path.dirname(filepath))
 
 
-def unpack(filename, root=".", members=set()):
-    if not os.path.exists(file_path := os.path.join(root, filename)):
-        warnings.warn(f"Please ensure {file_path} is a valid path.")
-        return []
+# def unpack(filename, root=".", members=set()):
+#     if not os.path.exists(file_path := os.path.join(root, filename)):
+#         warnings.warn(f"Please ensure {file_path} is a valid path.")
+#         return []
 
-    # Check the contents before extracting
-    contents = set(os.listdir(root))
+#     # Check the contents before extracting
+#     contents = set(os.listdir(root))
 
-    # Choose a correct unpacking interface
-    if file_path.endswith(".zip"):
-        open_file = zipfile.ZipFile
-    elif file_path.endswith(".rar"):
-        open_file = rarfile.RarFile
-    elif file_path.endswith(".tar.gz"):
-        open_file = tarfile.open
+#     # Choose a correct unpacking interface
+#     if file_path.endswith(".zip"):
+#         open_file = zipfile.ZipFile
+#     elif file_path.endswith(".rar"):
+#         open_file = rarfile.RarFile
+#     elif file_path.endswith(".tar.gz"):
+#         open_file = tarfile.open
 
-    with open_file(file_path) as file:
-        # Choose a correct method to list files inside pack
-        if isinstance(file, (zipfile.ZipFile, rarfile.RarFile)):
-            iterable = file.namelist()
-        elif isinstance(file, tarfile.TarFile):
-            iterable = file.getnames()
+#     with open_file(file_path) as file:
+#         # Choose a correct method to list files inside pack
+#         if isinstance(file, (zipfile.ZipFile, rarfile.RarFile)):
+#             iterable = file.namelist()
+#         elif isinstance(file, tarfile.TarFile):
+#             iterable = file.getnames()
 
-        for member in tqdm(iterable, desc=f"    * Extracting '{filename}'"):
-            if len(members) > 0 and not any(member.startswith(m) for m in members):
-                # Skip if not needed to extract
-                continue
+#         for member in tqdm(iterable, desc=f"    * Extracting '{filename}'"):
+#             if len(members) > 0 and not any(member.startswith(m) for m in members):
+#                 # Skip if not needed to extract
+#                 continue
 
-            if os.path.exists(os.path.join(root, member)):
-                # Not extracting if it is already extracted
-                continue
+#             if os.path.exists(os.path.join(root, member)):
+#                 # Not extracting if it is already extracted
+#                 continue
 
-            try:
-                # Extract and print error is failed
-                file.extract(member=member, path=root)
-            except zipfile.error | rarfile.Error | tarfile.TarError as e:
-                print(e)
+#             try:
+#                 # Extract and print error is failed
+#                 file.extract(member=member, path=root)
+#             except zipfile.error | rarfile.Error | tarfile.TarError as e:
+#                 print(e)
 
-    return list(set(os.listdir(root)) - contents) + [filename]
+#     return list(set(os.listdir(root)) - contents) + [filename]
 
 
 def get_extractable(
     filenames: list[str] | dict[str, list[str] | dict],
     root: str = ".",
+    unpack_dir: str | None = None,
+    is_nested: bool = False,
 ) -> Generator[
-    tuple[zipfile.ZipFile | rarfile.RarFile | tarfile.TarFile, str], None, None
+    tuple[zipfile.ZipFile | rarfile.RarFile | tarfile.TarFile, str, bool], None, None
 ]:
     if isinstance(filenames, list):
         # Convert to dict if a list of filenames is passed
@@ -112,7 +114,10 @@ def get_extractable(
 
     for filename, members in filenames.items():
         if not os.path.exists(file_path := os.path.join(root, filename)):
-            warnings.warn(f"Please ensure {file_path} is a valid path.")
+            if not is_nested:
+                # Raise a warning if the top-level archive is not found
+                warnings.warn(f"Please ensure {file_path} is a valid path.")
+
             continue
 
         # Choose a correct unpacking interface
@@ -131,198 +136,205 @@ def get_extractable(
                 iterable = file.getnames()
 
             for member in list(iterable):
-                if len(members) > 0 and member not in members:
+                if len(members) > 0 and not any(member.startswith(m) for m in members):
                     continue
 
-                # print("GEN", file.filename)
+                yield file, member, is_nested
 
-                # Yield extractable
-                yield file, member
+                if not any(member.endswith(ext) for ext in {".zip", ".rar", ".tar.gz"}):
+                    # Skip if the current member is not an archive
+                    continue
+
+                # Nested root and filenames
+                new_filenames = [member]
+                new_root = root
+
+                if unpack_dir is not None:
+                    # Top archive was extracted to unpack_dir
+                    new_root = os.path.join(root, unpack_dir)
 
                 if isinstance(members, dict) and len(members) > 0:
+                    # Nested archive has specific members to extract
                     new_filenames = {member: members[member]}
-                else:
-                    new_filenames = [member]
 
-                if any(member.endswith(ext) for ext in {".zip", ".rar", ".tar.gz"}):
-                    # {file: [member1, member2, ...], file2: {member3: {}, ...]}
-                    # If the member is archive, recurse
-                    new_root = os.path.join(root, "tmp")
-                    print("NEW", new_root)
-                    yield from get_extractable(new_filenames, new_root)
+                yield from get_extractable(new_filenames, new_root, is_nested=True)
 
 
-def unpack_v2(
+def unpack(
     filenames: list[str] | dict[str, list[str] | dict],
     root: str = ".",
     unpack_dir: str = ".",
-    pbar: tqdm = None,
+    pbar: tqdm | None = None,
+    update_total: bool = False,
 ):
     # Create a directory to unpack files to
     unpack_path = os.path.join(root, unpack_dir)
     os.makedirs(unpack_path, exist_ok=True)
 
-    # Calculate total number of files to extract
-    total = sum(1 for _ in get_extractable(filenames, root))
-
-    if pbar is None:
-        # Initialize progress bar
-        pbar = tqdm(total=total)
-    elif pbar.total == 0:
-        # Update total and description
+    if pbar is not None and update_total:
+        # Caclulate num files to extract and update pbar total
+        total = sum(1 for _ in get_extractable(filenames, root))
         pbar.total = pbar.total + total
         pbar.refresh()
+    elif pbar is not None:
+        # Update description to indicate extracting
+        pbar.set_description(f"{pbar.desc} (extracting)")
 
-    # Update description to indicate extracting
-    pbar.set_description("Processing" if pbar.desc is None else pbar.desc)
-    pbar.set_description(f"{pbar.desc} (extracting)")
-
-    for file, member in get_extractable(filenames, root):
-        # Update pbar
-        pbar.update(1)
-
-        # print("EXTRACTING", file.filename)
-
-        if os.path.exists(os.path.join(root, member)):
-            # Not extracting if it is already extracted
-            continue
-
+    for file, member, is_nested in get_extractable(filenames, root, unpack_dir):
         try:
-            # Extract and print error is failed
+            # Extract and print error if failed
             file.extract(member=member, path=unpack_path)
         except zipfile.error | rarfile.Error | tarfile.TarError as e:
             print(e)
 
-    # Update the description not to indicate extracting anymore
-    pbar.set_description(pbar.desc.replace(" (extracting)", ""))
-
-
-def categorize(**kwargs):
-    # Retreive items from kwargs
-    data_dir = kwargs["inp_dir"]
-    criteria_fn = kwargs["criteria_fn"]
-    categories = kwargs["categories"]
-
-    # Create positive and negative dirs (for sunglasses/no sunglasses)
-    pos_dir = os.path.join(os.path.dirname(data_dir), categories[0] + "/")
-    neg_dir = os.path.join(os.path.dirname(data_dir), categories[1] + "/")
-
-    # Make the actual directories
-    os.makedirs(pos_dir, exist_ok=True)
-    os.makedirs(neg_dir, exist_ok=True)
-
-    # Count the total number of files in the directory tree, init tqdm
-    basedir = os.path.basename(data_dir)
-    total = sum(len(files) for _, _, files in os.walk(data_dir))
-    pbar = tqdm(desc=f"    * Grouping images in '{basedir}'", total=total)
-
-    for root, _, filenames in os.walk(data_dir):
-        for filename in filenames:
-            if os.path.splitext(filename)[1] not in VALID_EXTENSIONS:
-                # Skip non-image files
-                pbar.update(1)
-                continue
-
-            # Choose correct target directory
-            filepath = os.path.join(root, filename)
-            target_dir = pos_dir if criteria_fn(filepath) else neg_dir
-
-            try:
-                # Move to target dir, ignore duplicates
-                shutil.move(filepath, target_dir)
-            except shutil.Error:
-                pass
-
+        if pbar is not None and not update_total:
+            # Update pbar
+            pbar.update(1)
+        elif pbar is not None and not is_nested:
             # Update pbar
             pbar.update(1)
 
-
-def gen_splits(**kwargs):
-    # Retrieve kwarg vals
-    root = kwargs["root"]
-    dirs = kwargs["categories"]
-    out_dir = kwargs["out_dir"]
-
-    # Calculate total number of file and initialize progress bar
-    total = sum(len(os.listdir(os.path.join(root, x))) for x in dirs)
-    pbar = tqdm(desc=f"    * Creating data splits", total=total)
-
-    for dir in dirs:
-        # List the files in the directory that has to be split and shuffle
-        filenames = list(os.listdir(os.path.join(root, dir)))
-        random.shuffle(filenames)
-
-        # Compute the number of val and test files
-        num_val = int(len(filenames) * kwargs["val_size"])
-        num_test = int(len(filenames) * kwargs["test_size"])
-
-        # Split filenames to 3 group types
-        splits = {
-            "train/": filenames[num_test + num_val :],
-            "val/": filenames[num_test : num_test + num_val],
-            "test/": filenames[:num_test],
-        }
-
-        for splitname, files in splits.items():
-            # Create a split directory for the dir to split
-            split_dir = os.path.join(out_dir, splitname, dir)
-            os.makedirs(split_dir, exist_ok=True)
-
-            for file in files:
-                # Move all the files in this split to the created directory
-                shutil.move(os.path.join(root, dir, file), split_dir)
-                pbar.update(1)
+    if pbar is not None:
+        # Update the description not to indicate extracting anymore
+        pbar.set_description(pbar.desc.replace(" (extracting)", ""))
 
 
-def crop_align(**kwargs):
-    # Initialize cropper
-    cropper = Cropper(
-        output_size=kwargs.get("size", (256, 256)),
-        landmarks=kwargs.get("landmarks", None),
-        output_format="jpg",
-        padding="replicate",
-        enh_threshold=None,
-        device=kwargs.get("device", "cpu"),
-        num_processes=kwargs.get("num_processes", 1),
-    )
+# def categorize(**kwargs):
+#     # Retreive items from kwargs
+#     data_dir = kwargs["inp_dir"]
+#     criteria_fn = kwargs["criteria_fn"]
+#     categories = kwargs["categories"]
 
-    for category in kwargs["categories"]:
-        # Process directory (crop and align faces inside it)
-        input_dir = os.path.join(kwargs["root"], category)
-        pbar_desc = f"    * Cropping faces for {category}"
-        cropper.process_dir(input_dir, desc=pbar_desc)
+#     # Create positive and negative dirs (for sunglasses/no sunglasses)
+#     pos_dir = os.path.join(os.path.dirname(data_dir), categories[0] + "/")
+#     neg_dir = os.path.join(os.path.dirname(data_dir), categories[1] + "/")
 
-        # Remove the original dir
-        shutil.rmtree(input_dir)
-        os.rename(input_dir + "_faces", input_dir)
+#     # Make the actual directories
+#     os.makedirs(pos_dir, exist_ok=True)
+#     os.makedirs(neg_dir, exist_ok=True)
 
+#     # Count the total number of files in the directory tree, init tqdm
+#     basedir = os.path.basename(data_dir)
+#     total = sum(len(files) for _, _, files in os.walk(data_dir))
+#     pbar = tqdm(desc=f"    * Grouping images in '{basedir}'", total=total)
 
-def resize_all(**kwargs):
-    # Retrieve kwarg vals
-    size = kwargs["size"]
-    root = kwargs["root"]
-    dirs = kwargs["categories"]
+#     for root, _, filenames in os.walk(data_dir):
+#         for filename in filenames:
+#             if os.path.splitext(filename)[1] not in VALID_EXTENSIONS:
+#                 # Skip non-image files
+#                 pbar.update(1)
+#                 continue
 
-    # Calculate total number of file and initialize progress bar
-    total = sum(len(os.listdir(os.path.join(root, dir))) for dir in dirs)
-    pbar = tqdm(desc=f"    * Resizing images", total=total)
+#             # Choose correct target directory
+#             filepath = os.path.join(root, filename)
+#             target_dir = pos_dir if criteria_fn(filepath) else neg_dir
 
-    for dir in dirs:
-        for filename in os.listdir(os.path.join(root, dir)):
-            # Generate filepath and open the image
-            filepath = os.path.join(root, dir, filename)
-            image = Image.open(filepath)
+#             try:
+#                 # Move to target dir, ignore duplicates
+#                 shutil.move(filepath, target_dir)
+#             except shutil.Error:
+#                 pass
 
-            if image.size != size:
-                # Resize if needed
-                image = image.resize(size)
-
-            # Save under same path
-            image.save(filepath)
-            pbar.update(1)
+#             # Update pbar
+#             pbar.update(1)
 
 
-def clean(contents, root="."):
+# def gen_splits(**kwargs):
+#     # Retrieve kwarg vals
+#     root = kwargs["root"]
+#     dirs = kwargs["categories"]
+#     out_dir = kwargs["out_dir"]
+
+#     # Calculate total number of file and initialize progress bar
+#     total = sum(len(os.listdir(os.path.join(root, x))) for x in dirs)
+#     pbar = tqdm(desc=f"    * Creating data splits", total=total)
+
+#     for dir in dirs:
+#         # List the files in the directory that has to be split and shuffle
+#         filenames = list(os.listdir(os.path.join(root, dir)))
+#         random.shuffle(filenames)
+
+#         # Compute the number of val and test files
+#         num_val = int(len(filenames) * kwargs["val_size"])
+#         num_test = int(len(filenames) * kwargs["test_size"])
+
+#         # Split filenames to 3 group types
+#         splits = {
+#             "train/": filenames[num_test + num_val :],
+#             "val/": filenames[num_test : num_test + num_val],
+#             "test/": filenames[:num_test],
+#         }
+
+#         for splitname, files in splits.items():
+#             # Create a split directory for the dir to split
+#             split_dir = os.path.join(out_dir, splitname, dir)
+#             os.makedirs(split_dir, exist_ok=True)
+
+#             for file in files:
+#                 # Move all the files in this split to the created directory
+#                 shutil.move(os.path.join(root, dir, file), split_dir)
+#                 pbar.update(1)
+
+
+# def crop_align(**kwargs):
+#     # Initialize cropper
+#     cropper = Cropper(
+#         output_size=kwargs.get("size", (256, 256)),
+#         landmarks=kwargs.get("landmarks", None),
+#         output_format="jpg",
+#         padding="replicate",
+#         enh_threshold=None,
+#         device=kwargs.get("device", "cpu"),
+#         num_processes=kwargs.get("num_processes", 1),
+#     )
+
+#     for category in kwargs["categories"]:
+#         # Process directory (crop and align faces inside it)
+#         input_dir = os.path.join(kwargs["root"], category)
+#         pbar_desc = f"    * Cropping faces for {category}"
+#         cropper.process_dir(input_dir, desc=pbar_desc)
+
+#         # Remove the original dir
+#         shutil.rmtree(input_dir)
+#         os.rename(input_dir + "_faces", input_dir)
+
+
+# def resize_all(**kwargs):
+#     # Retrieve kwarg vals
+#     size = kwargs["size"]
+#     root = kwargs["root"]
+#     dirs = kwargs["categories"]
+
+#     # Calculate total number of file and initialize progress bar
+#     total = sum(len(os.listdir(os.path.join(root, dir))) for dir in dirs)
+#     pbar = tqdm(desc=f"    * Resizing images", total=total)
+
+#     for dir in dirs:
+#         for filename in os.listdir(os.path.join(root, dir)):
+#             # Generate filepath and open the image
+#             filepath = os.path.join(root, dir, filename)
+#             image = Image.open(filepath)
+
+#             if image.size != size:
+#                 # Resize if needed
+#                 image = image.resize(size)
+
+#             # Save under same path
+#             image.save(filepath)
+#             pbar.update(1)
+
+# def clear_keys(**kwargs):
+#     # Get key set and deletables
+#     key_set = set(kwargs.keys())
+#     to_del = ["inp_dir", "outp_dir", "criteria_fn", "landmarks", "num_processes"]
+
+#     for key in to_del:
+#         if key in key_set:
+#             # Del added key
+#             del kwargs[key]
+
+
+def clean(contents: list[str], root: str = "."):
     for file_or_dir in contents:
         # Create full path to the file or dir
         path = os.path.join(root, file_or_dir)
@@ -338,17 +350,6 @@ def clean(contents, root="."):
             shutil.rmtree(path)
 
 
-def clear_keys(**kwargs):
-    # Get key set and deletables
-    key_set = set(kwargs.keys())
-    to_del = ["inp_dir", "outp_dir", "criteria_fn", "landmarks", "num_processes"]
-
-    for key in to_del:
-        if key in key_set:
-            # Del added key
-            del kwargs[key]
-
-
 ########################################################################
 #########################                    ###########################
 #########################   CLASSIFICATION   ###########################
@@ -358,8 +359,7 @@ def clear_keys(**kwargs):
 
 def categorize_binary(
     data_files: list[str] | dict[str, dict | list[str]],
-    pos_criteria: tuple[Callable[[str], bool], list[str]],
-    neg_criteria: tuple[Callable[[str], bool], list[str]],
+    cat_map: dict[str, Callable[[str], bool]],
     save_name: str,
     root: str = "data",
     split_fn: Callable[[str], str] | None = None,
@@ -367,90 +367,114 @@ def categorize_binary(
     delete_original: bool = False,
     **kwargs,
 ):
+    for cat in os.scandir(os.path.join(root, "classification")):
+        if not cat.is_dir():
+            continue
+
+        for ds_dir in os.scandir(cat.path):
+            if ds_dir.name == save_name and kwargs.get("force", False):
+                # Remove the dataset if exists
+                shutil.rmtree(ds_dir.path)
+            elif (
+                ds_dir.name == save_name
+                and sum(len(files) for _, _, files in os.walk(ds_dir.path)) > 0
+            ):
+                print(f"* Skipping {save_name} (already processed)")
+                return
+
     # Initialize tqdm progress bar for current dataset
     pbar_desc = f"* Processing {save_name}"
     pbar_total = kwargs.get("total", 0)
+    update_total = pbar_total == 0
     pbar = tqdm(desc=pbar_desc, total=pbar_total)
 
-    unpack_v2(data_files, root, "tmp", pbar)
+    # Unpack the contents from the dataset archives
+    unpack(data_files, root, "tmp", pbar, update_total)
     extracted_path = os.path.join(root, "tmp")
 
-    if pbar_total == 0:
-        # Update total
-        pbar.total = sum(len(files) for _, _, files in os.walk(extracted_path))
-        pbar.refresh()
-
+    # Update pbar description, unpack criteria, init src2tgt
     pbar.set_description(f"{pbar_desc} (reading contents)")
-    is_pos_fn, pos_cats = pos_criteria
-    is_neg_fn, neg_cats = neg_criteria
+    bin_count = defaultdict(lambda: defaultdict(lambda: 0))
     src_to_tgt = defaultdict(lambda: [])
 
-    for root, _, filenames in os.walk(extracted_path):
+    for _root, _, filenames in os.walk(extracted_path):
         for filename in filenames:
             if os.path.splitext(filename)[1] not in VALID_EXTENSIONS:
                 continue
 
-            # Choose correct target directory
-            filepath = os.path.join(root, filename)
-            is_pos = is_pos_fn(filepath)
-            is_neg = is_neg_fn(filepath)
+            # Choose the correct target directory
+            filepath = os.path.join(_root, filename)
 
-            if (is_pos and is_neg) or (not is_pos and not is_neg):
-                continue
-
-            # Choose the correct split type ("train" by default)
+            # Choose the correct split type (always "train" by default)
             split = "train" if split_fn is None else split_fn(filepath)
-            cats = pos_cats if is_pos else neg_cats
 
-            for cat in cats:
-                # Create the target dir if not exists
+            for cat, fn in cat_map.items():
+                # Get the dirname (pos/neg) based on the criteria
+                dirname = ("" if fn(filepath) else "no_") + cat
+
+                # Create the target dir
                 tgt_dir = os.path.join(
                     root,
                     "classification",
-                    cat.replace("no_", ""),
+                    cat,
                     save_name,
                     split,
-                    cat,
+                    dirname,
                 )
+
+                # Create tgt_dir and update src2tgt
                 os.makedirs(tgt_dir, exist_ok=True)
                 src_to_tgt[filepath].append(tgt_dir)
+                bin_count[cat][dirname] += 1
 
+            # Update total
             pbar_total += 1
 
     if split_fn is None:
-        # Generate train/val/test splits if no split criteria given
-        num_val = int(len(src_to_tgt) * kwargs.get("val_size", 0.0))
-        num_test = int(len(src_to_tgt) * kwargs.get("test_size", 0.0))
-        srcs = sorted(src_to_tgt.keys())
+        for cat, pos_neg_count in bin_count.items():
+            for dirname, count in pos_neg_count.items():
+                # Generate train/val/test splits for each cat & bin
+                num_val = int(count * kwargs.get("val_size", 0.0))
+                num_test = int(count * kwargs.get("test_size", 0.0))
+                val_cnt, test_cnt = 0, 0
 
-        for src in srcs[:num_test]:
-            for i in range(len(src_to_tgt[src])):
-                # Replace some of the training samples with test samples
-                path = os.path.normpath(src_to_tgt[src][i]).split(os.sep)
-                path[-2] = "test"
-                os.makedirs(path, exist_ok=True)
-                src_to_tgt[src][i] = os.sep.join(path)
+                for key in sorted(src_to_tgt.keys()):
+                    for i in range(len(src_to_tgt[key])):
+                        # Split the target path to multiple parts
+                        path = os.path.normpath(src_to_tgt[key][i]).split(os.sep)
 
-        for src in srcs[num_test : num_test + num_val]:
-            for i in range(len(src_to_tgt[src])):
-                # Replace some of the training samples with val samples
-                path = os.path.normpath(src_to_tgt[src][i]).split(os.sep)
-                path[-2] = "val"
-                os.makedirs(path, exist_ok=True)
-                src_to_tgt[src][i] = os.sep.join(path)
+                        if path[-1] != dirname:
+                            continue
 
-    pbar.total = pbar_total + pbar.total + 1
-    pbar.refresh()
+                        if val_cnt < num_val:
+                            # train -> "val"
+                            path[-2] = "val"
+                            val_cnt += 1
+                        elif test_cnt < num_test:
+                            # train -> "test"
+                            path[-2] = "test"
+                            test_cnt += 1
+
+                        # Update the target path and make dirs
+                        src_to_tgt[key][i] = os.sep.join(path)
+                        os.makedirs(src_to_tgt[key][i], exist_ok=True)
+
+    if update_total:
+        # Update progress bar total (+1 for cleaning)
+        pbar.total = pbar_total + pbar.total + 1
+        pbar.refresh()
+
+    # Update pbar description to indicate categorization
     pbar.set_description(f"{pbar_desc} (categorizing)")
 
     for src, tgts in src_to_tgt.items():
         # Open the image and resize if needed
-        image = Image.open(src)
-        image = image.resize(size) if image.size != size else image
+        image = Image.open(src).resize(size)
 
         for tgt in tgts:
-            # Save the image to target dir
-            image.save(os.path.join(tgt, os.path.basename(src)))
+            # Save the image to target dir (as .jpg image)
+            name, _ = os.path.splitext(os.path.basename(src))
+            image.save(os.path.join(tgt, name + ".jpg"), "JPEG")
 
         # Update pbar
         pbar.update(1)
@@ -467,173 +491,167 @@ def categorize_binary(
 
 
 def prepare_specs_on_faces(**kwargs):
-    # Generate title to show in terminal
-    generate_title("Specs on Faces")
+    # Dataset name and files
+    kwargs = deepcopy(kwargs)
+    kwargs["save_name"] = "specs-on-faces"
+    kwargs["data_files"] = ["original images.rar"]
 
-    # Get root, update kwargs
-    root = kwargs["root"]
-    kwargs["inp_dir"] = os.path.join(root, "original images")
-    kwargs["out_dir"] = os.path.join(root, "specs-on-faces")
+    # Unpack metadata immediately (before data archive)
+    unpack(["metadata.rar"], kwargs["root"], "tmp")
 
-    # Unpack contents that later will be removed
-    contents = unpack("original images.rar", root)
-    contents += unpack("metadata.rar", root)
-    contents += kwargs["categories"]
-
-    # Init landmarks, is_glasses set, metadata path and get_name fn
-    names, coords, landmarks, is_glasses_set = [], [], {}, set()
+    # Init glasses sets, helper function and metadata path
+    is_eyeglasses_set, is_sunglasses_set = set(), set()
     get_name = lambda path: "_".join(os.path.basename(path).split("_")[:4])
-    set_type = [2, 3] if kwargs["categories"][0] == "sunglasses" else [1]
-    mat_path = os.path.join(root, "metadata", "metadata.mat")
+    mat_path = os.path.join(kwargs["root"], "tmp", "metadata", "metadata.mat")
 
     for sample in loadmat(mat_path)["metadata"][0]:
-        # Add landmarks to the dictionary
+        # Get the name of the sample
         name = sample[-1][0][0][0][:-2]
-        landmarks[name] = np.array(sample[12][0]).reshape(-1, 2)
 
-        if sample[10][0][0] in set_type:
-            # If glasses exist, add
-            is_glasses_set.add(name)
+        if sample[10][0][0] == 1:
+            # If transparent
+            is_eyeglasses_set.add(name)
+        elif sample[10][0][0] in {2, 3}:
+            # If semi-transparent/opaque
+            is_sunglasses_set.add(name)
 
-    for filename in os.listdir(kwargs["inp_dir"]):
-        # Append filenames and landms
-        names.append(filename)
-        coords.append(landmarks[get_name(filename)])
+    # Remove the temporary directory (if not removed)
+    shutil.rmtree(os.path.join(kwargs["root"], "tmp"))
 
-    # Create landmarks required to align and center-crop images
-    kwargs["landmarks"] = np.stack(coords)[:, [3, 0, 14, 7, 6]], np.array(names)
-    kwargs["criteria_fn"] = lambda path: get_name(path) in is_glasses_set
-    kwargs["num_processes"] = cpu_count()
+    # Add category map
+    kwargs["cat_map"] = {
+        "eyeglasses": lambda path: get_name(path) in is_eyeglasses_set,
+        "sunglasses": lambda path: get_name(path) in is_sunglasses_set,
+    }
 
-    # Sequential operations
-    categorize(**kwargs)
-    crop_align(**kwargs)
-    gen_splits(**kwargs)
-    clear_keys(**kwargs)
-    clean(contents, root)
+    # Prepare for classification
+    categorize_binary(**kwargs)
 
 
 def prepare_cmu_face_images(**kwargs):
-    # # Generate title to show in terminal
-    # generate_title("CMU Face Images")
-
-    # # Get root, update kwargs
-    # root = kwargs["root"]
-    # kwargs["inp_dir"] = os.path.join(root, "faces")
-    # kwargs["out_dir"] = os.path.join(root, "cmu-face-images")
-    # kwargs["criteria_fn"] = lambda path: "sunglasses" in os.path.basename(path)
-
-    # # Unpack the contents from faces.tar.gz that's insde a zip file
-    # contents = unpack("cmu+face+images.zip", root, {"faces.tar.gz"})
-    # contents += unpack("faces.tar.gz", root)
-    # contents += kwargs["categories"]
-
-    # # Sequential operations
-    # categorize(**kwargs)
-    # crop_align(**kwargs)
-    # gen_splits(**kwargs)
-    # clear_keys(**kwargs)
-    # clean(contents, root)
-
+    # Dataset name and files
     kwargs = deepcopy(kwargs)
     kwargs["save_name"] = "cmu-face-images"
     kwargs["data_files"] = {"cmu+face+images.zip": ["faces.tar.gz"]}
 
-    is_pos = lambda path: "sunglasses" in os.path.basename(path)
-    is_neg = lambda path: "sunglasses" not in os.path.basename(path)
-    pos_cats = ["sunglasses", "anyglasses"]
-    neg_cats = ["no_sunglasses", "no_anyglasses"]
-    kwargs["pos_criteria"] = (is_pos, pos_cats)
-    kwargs["neg_criteria"] = (is_neg, neg_cats)
+    # Add category map
+    kwargs["cat_map"] = {
+        "sunglasses": lambda path: "sunglasses" in os.path.basename(path),
+        "anyglasses": lambda path: "sunglasses" in os.path.basename(path),
+    }
 
+    # Prepare for classification
     categorize_binary(**kwargs)
 
 
 def prepare_sunglasses_no_sunglasses(**kwargs):
-    # Generate title to show in terminal
-    generate_title("Sunglasses/No Sunglasses")
+    # Dataset name and files
+    kwargs = deepcopy(kwargs)
+    kwargs["save_name"] = "sunglasses-no-sunglasses"
+    kwargs["data_files"] = ["sunglasses-no-sunglasses.zip"]
 
-    # Get root, update kwargs
-    root = kwargs["root"]
-    kwargs["inp_dir"] = os.path.join(root, "glasses_noGlasses")
-    kwargs["out_dir"] = os.path.join(root, "sunglasses-no-sunglasses")
-    kwargs["criteria_fn"] = lambda filepath: "with_glasses" in filepath
+    # Create helper functions to check the folder name the file is in
+    folder_name = lambda path: os.path.basename(os.path.dirname(path))
+    ffn = lambda path: folder_name(os.path.dirname(path))
 
-    # Unpack the contents from the zip directory
-    contents = unpack("sunglasses-no-sunglasses.zip", root)
-    contents += kwargs["categories"]
+    # Add category map
+    kwargs["cat_map"] = {
+        "sunglasses": lambda path: folder_name(path) == "with_glasses",
+        "anyglasses": lambda path: folder_name(path) == "with_glasses",
+    }
 
-    # Sequential operations
-    categorize(**kwargs)
-    resize_all(**kwargs)
-    gen_splits(**kwargs)
-    clear_keys(**kwargs)
-    clean(contents, root)
+    # Add split type check function
+    kwargs["split_fn"] = lambda path: "val" if ffn(path) == "valid" else "train"
+
+    # Prepare for classification
+    categorize_binary(**kwargs)
 
 
 def prepare_glasses_and_coverings(**kwargs):
-    # Generate title to show in terminal
-    generate_title("Glasses and Coverings")
+    # Dataset name and files
+    kwargs = deepcopy(kwargs)
+    kwargs["save_name"] = "glasses-and-coverings"
+    kwargs["data_files"] = {
+        "glasses-and-coverings.zip": [
+            "glasses-and-coverings/plain",
+            "glasses-and-coverings/glasses",
+            "glasses-and-coverings/sunglasses",
+            "glasses-and-coverings/sunglasses-imagenet",
+        ]
+    }
 
-    # Get root, update kwargs
-    root = kwargs["root"]
-    kwargs["inp_dir"] = os.path.join(root, "glasses-and-coverings")
-    kwargs["out_dir"] = os.path.join(root, "glasses-and-coverings-done")
+    # Create helper functions to check the folder name the file is in
+    folder_name = lambda path: os.path.basename(os.path.dirname(path))
 
-    # Define the criteria function
-    target_dir = kwargs["categories"][0]  # "eyeglasses" or "sunglasses"
-    target_dir = "glasses" if target_dir == "eyeglasses" else target_dir
-    kwargs["criteria_fn"] = lambda path: target_dir == folder_name(path)
+    # Add category map
+    kwargs["cat_map"] = {
+        "eyeglasses": lambda path: folder_name(path) == "glasses",
+        "sunglasses": lambda path: folder_name(path)
+        in ["sunglasses", "sunglasses-imagenet"],
+        "anyglasses": lambda path: folder_name(path) != "plain",
+    }
 
-    # Unpack the contents from the zip directory
-    contents = unpack("glasses-and-coverings.zip", root)
-    contents += kwargs["categories"]
-
-    # Sequential operations
-    categorize(**kwargs)
-    resize_all(**kwargs)
-    gen_splits(**kwargs)
-    clear_keys(**kwargs)
-    clean(contents, root)
-
-    # Rename the output directory to more exact name
-    os.rename(kwargs["out_dir"], kwargs["inp_dir"])
+    # Prepare for classification
+    categorize_binary(**kwargs)
 
 
 def prepare_face_attributes_grouped(**kwargs):
-    # Generate title to show in terminal, define 2 dirs
-    generate_title("Face Attributes Grouped")
-    inp1 = "face-attributes-grouped"
-    inp2 = "face-attributes-extra"
+    # Dataset name and files
+    kwargs = deepcopy(kwargs)
+    kwargs["save_name"] = "face-attributes-grouped"
+    kwargs["data_files"] = {
+        "face-attributes-grouped.zip": [
+            "face-attributes-grouped/train/eyewear",
+            "face-attributes-grouped/train/nowear",
+            "face-attributes-grouped/val/eyewear",
+            "face-attributes-grouped/val/nowear",
+            "face-attributes-grouped/test/eyewear",
+            "face-attributes-grouped/test/nowear",
+        ]
+    }
 
-    # Get root, update kwargs
-    root = kwargs["root"]
-    kwargs["inp_dir"] = os.path.join(root, inp1)
-    kwargs["out_dir"] = os.path.join(root, inp1 + "-done")
+    # Create helper functions to check the folder name the file is in
+    folder_name = lambda path: os.path.basename(os.path.dirname(path))
+    fffn = lambda path: folder_name(os.path.dirname(os.path.dirname(path)))
 
-    # Define the criteria function
-    target_dir = kwargs["categories"][0]  # "eyeglasses" or "sunglasses"
-    kwargs["criteria_fn"] = lambda path: target_dir in folder_name(path)
+    # Add category map
+    kwargs["cat_map"] = {
+        "eyeglasses": lambda path: folder_name(path) == "eyeglasses",
+        "sunglasses": lambda path: folder_name(path) == "sunglasses",
+        "anyglasses": lambda path: folder_name(path) in ["eyeglasses", "sunglasses"],
+    }
 
-    # Define members to extract from both of the zip files
-    mem1 = [f"{inp1}/{x}/eyewear" for x in ["train", "val", "test"]]
-    mem2 = [f"{inp2}/{x}" for x in ["eyeglasses", "sunglasses", "no_eyewear"]]
+    # Add split type check function
+    kwargs["split_fn"] = lambda path: fffn(path)
 
-    # Extract the specified members from both of the zip files
-    contents = unpack("face-attributes-grouped.zip", root, mem1)
-    contents += unpack("face-attributes-extra.zip", root, mem2)
-    contents += kwargs["categories"]
+    # Prepare for classification
+    categorize_binary(**kwargs)
 
-    # Sequential operations with additional categorization of inp2
-    categorize(**{**kwargs, "inp_dir": os.path.join(root, inp2)})
-    categorize(**kwargs)
-    resize_all(**kwargs)
-    gen_splits(**kwargs)
-    clear_keys(**kwargs)
-    clean(contents, root)
 
-    # Rename the output directory to more exact name
-    os.rename(kwargs["out_dir"], kwargs["inp_dir"])
+def prepare_face_attributes_extra(**kwargs):
+    # Dataset name and files
+    kwargs = deepcopy(kwargs)
+    kwargs["save_name"] = "face-attributes-extra"
+    kwargs["data_files"] = {
+        "face-attributes-extra.zip": [
+            "face-attributes-extra/sunglasses",
+            "face-attributes-extra/eyeglasses",
+            "face-attributes-extra/no_eyewear",
+        ]
+    }
+
+    # Create helper functions to check the folder name the file is in
+    folder_name = lambda path: os.path.basename(os.path.dirname(path))
+
+    # Add category map
+    kwargs["cat_map"] = {
+        "eyeglasses": lambda path: folder_name(path) == "eyeglasses",
+        "sunglasses": lambda path: folder_name(path) == "sunglasses",
+        "anyglasses": lambda path: folder_name(path) in ["eyeglasses", "sunglasses"],
+    }
+
+    # Prepare for classification
+    categorize_binary(**kwargs)
 
 
 ########################################################################
@@ -993,31 +1011,48 @@ def walk_coco_splits(
         # Filter out unwanted task preprocessing
         class_map[key] = {k: v for k, v in val.items() if k in tasks}
 
-    for class_name, task_map in class_map.items():
-        for task_name, task_cats in task_map.items():
-            for task_cat in task_cats:
-                # Check how many files are in save_dir
-                task_cat = task_cat.replace("no_", "")
-                save_path = os.path.join(root, task_name, task_cat, save_name)
+    if sum(len(v) for v in class_map.values()) == 0:
+        # If no tasks left, return
+        return
 
-                if not os.path.exists(save_path):
-                    continue
+    for task in tasks:
+        for cat in os.scandir(os.path.join(root, task)):
+            if not cat.is_dir():
+                continue
 
-                if sum(len(files) for _, _, files in os.walk(save_path)) > 0:
+            for ds_dir in os.scandir(cat.path):
+                if ds_dir.name == save_name and kwargs.get("force", False):
+                    # Remove the dataset if exists
+                    shutil.rmtree(ds_dir.path)
+                elif (
+                    ds_dir.name == save_name
+                    and sum(len(fs) for _, _, fs in os.walk(ds_dir.path)) > 0
+                ):
                     print(f"* Skipping {save_name} (already processed)")
                     return
 
+    # for class_name, task_map in class_map.items():
+    #     for task_name, task_cats in task_map.items():
+    #         for task_cat in task_cats:
+    #             # Check how many files are in save_dir
+    #             task_cat = task_cat.replace("no_", "")
+    #             save_path = os.path.join(root, task_name, task_cat, save_name)
+
+    #             if not os.path.exists(save_path):
+    #                 continue
+
+    #             if sum(len(files) for _, _, files in os.walk(save_path)) > 0:
+    #                 print(f"* Skipping {save_name} (already processed)")
+    #                 return
+
     # Initialize tqdm progress bar for current dataset
     pbar_desc = f"* Processing {save_name}"
+    pbar_total = kwargs.get("total", 0)
+    update_total = pbar_total == 0
     pbar = tqdm(desc=pbar_desc, total=0)
 
     # Unpack the data files
-    unpack_v2(
-        [data_file],
-        root=root,
-        unpack_dir="tmp",
-        pbar=pbar,
-    )
+    unpack([data_file], root, "tmp", pbar, update_total)
 
     # Compute total files to process, update pbar
     extracted_path = os.path.join(root, "tmp")
@@ -1249,18 +1284,6 @@ def parse_kwargs():
     parser = argparse.ArgumentParser()
 
     # Add the possible arguments
-    # parser.add_argument(
-    #     "-t",
-    #     "--task",
-    #     required=True,
-    #     choices=[
-    #         "eyeglasses-classification",
-    #         "sunglasses-classification",
-    #         "full-glasses-segmentation",
-    #         "glass-frames-segmentation",
-    #     ],
-    #     help="The type of task to generate data splits for.",
-    # )
     parser.add_argument(
         "-t",
         "--tasks",
@@ -1302,20 +1325,28 @@ def parse_kwargs():
         help=f"The fraction of images to use for test set. Note that for some "
         f"datasets this is ignored because default splits are known.",
     )
+    # parser.add_argument(
+    #     "-d",
+    #     "--device",
+    #     type=str,
+    #     default="",
+    #     help=f"The device on which to perform preprocessing. Can be, for "
+    #     f"example, 'cpu', 'cuda'. If not specified the device is chosen "
+    #     f"CUDA or MPS, if either is available. Defaults to ''.",
+    # )
     parser.add_argument(
-        "-d",
-        "--device",
-        type=str,
-        default="",
-        help=f"The device on which to perform preprocessing. Can be, for "
-        f"example, 'cpu', 'cuda'. If not specified the device is chosen "
-        f"CUDA or MPS, if either is available. Defaults to ''.",
+        "-f",
+        "--force",
+        action="store_true",
+        help=f"Whether to force preprocessing each dataset. This flag will"
+        f"delete each dataset for the specified task (all by default) if it"
+        f"already exists and process it again fresh from the start.",
     )
     parser.add_argument(
-        "-del",
+        "-d",
         "--delete-original",
         action="store_true",
-        help=f"Whether to delete the original zip file after unpacking. ",
+        help=f"Whether to delete the original data archives after unpacking.",
     )
 
     # Parse the acquired args as kwargs
@@ -1329,12 +1360,12 @@ def parse_kwargs():
     #         kwargs["categories"] = ["sunglasses", "no_sunglasses"]
 
     # Automatically determine the device
-    if kwargs["device"] == "" and torch.cuda.is_available():
-        kwargs["device"] = torch.device("cuda")
-    elif kwargs["device"] == "" and torch.backends.mps.is_available():
-        kwargs["device"] = torch.device("mps")
-    elif kwargs["device"] == "":
-        kwargs["device"] = torch.device("cpu")
+    # if kwargs["device"] == "" and torch.cuda.is_available():
+    #     kwargs["device"] = torch.device("cuda")
+    # elif kwargs["device"] == "" and torch.backends.mps.is_available():
+    #     kwargs["device"] = torch.device("mps")
+    # elif kwargs["device"] == "":
+    #     kwargs["device"] = torch.device("cpu")
 
     return kwargs
 
@@ -1343,38 +1374,30 @@ if __name__ == "__main__":
     # Get command-line args
     kwargs = parse_kwargs()
 
-    # match kwargs.pop("task"):
-    #     case "eyeglasses-classification":
-    #         prepare_specs_on_faces(**kwargs)
-    #         prepare_glasses_and_coverings(**kwargs)
-    #         prepare_face_attributes_grouped(**kwargs)
-    #     case "sunglasses-classification":
-    #         prepare_specs_on_faces(**kwargs)
-    #         prepare_cmu_face_images(**kwargs)
-    #         prepare_glasses_and_coverings(**kwargs)
-    #         prepare_face_attributes_grouped(**kwargs)
-    #         prepare_sunglasses_no_sunglasses(**kwargs)
-    #     case "full-glasses-segmentation":
-    #         prepare_celeba_mask_hq(**kwargs)
-    #     case "glass-frames-segmentation":
-    #         prepare_glasses_segmentation_synthetic(**kwargs)
+    if "classification" in kwargs["tasks"]:
+        # Main target: classification
+        prepare_cmu_face_images(**kwargs)
+        prepare_specs_on_faces(**kwargs)
+        prepare_sunglasses_no_sunglasses(**kwargs)
+        prepare_glasses_and_coverings(**kwargs)
+        prepare_face_attributes_grouped(**kwargs)
+        prepare_face_attributes_extra(**kwargs)
 
-    # Main target: classification
-    prepare_cmu_face_images(**kwargs)
+    if "segmentation" in kwargs["tasks"]:
+        # Main target: segmentation
+        prepare_eyeglass(**kwargs)
+        prepare_glasses_lenses(**kwargs)
+        prepare_glasses_lens(**kwargs)
+        prepare_glasses_segmentation_cropped_faces(**kwargs)
 
-    # Main target: segmentation
-    prepare_eyeglass(**kwargs)
-    prepare_glasses_lenses(**kwargs)
-    prepare_glasses_lens(**kwargs)
-    prepare_glasses_segmentation_cropped_faces(**kwargs)
-
-    # Main target: detection
-    prepare_ai_pass(**kwargs)
-    prepare_pex5(**kwargs)
-    prepare_sunglasses_glasses_detect(**kwargs)
-    prepare_glasses_detection(**kwargs)
-    prepare_glasses_image_dataset(**kwargs)
-    prepare_ex07(**kwargs)
-    prepare_no_eyeglasses(**kwargs)
-    prepare_kacamata_membaca(**kwargs)
-    prepare_onlyglasses(**kwargs)
+    if "classification" in kwargs["tasks"] or "detection" in kwargs["tasks"]:
+        # Main target: detection
+        prepare_ai_pass(**kwargs)
+        prepare_pex5(**kwargs)
+        prepare_sunglasses_glasses_detect(**kwargs)
+        prepare_glasses_detection(**kwargs)
+        prepare_glasses_image_dataset(**kwargs)
+        prepare_ex07(**kwargs)
+        prepare_no_eyeglasses(**kwargs)
+        prepare_kacamata_membaca(**kwargs)
+        prepare_onlyglasses(**kwargs)
