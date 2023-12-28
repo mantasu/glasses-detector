@@ -379,12 +379,12 @@ Download the following files and _place them all under directory_ `data/segmenta
 
 Download the following files and _place them all under directory_ `data/detection/worn`:
 
-1. From [AI Pass](https://universe.roboflow.com/shinysky5166/ai-pass) download `AI-Pass.v6i.tensorflow.zip` (choose `v6` and `Tensorflow Object Detection` format)
-2. From [PEX5](https://universe.roboflow.com/pex-5-ylpua/pex5-gxq3t) download `PEX5.v4i.tensorflow.zip` (choose `v4` and `Tensorflow Object Detection` format)
-3. From [Sunglasses Glasses Detect](https://universe.roboflow.com/burhan-6fhqx/sunglasses_glasses_detect) download `sunglasses_glasses_detect.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
-6. From [Glasses Detection](https://universe.roboflow.com/su-yee/glasses-detection-qotpz) download `Glasses Detection.v2i.tensorflow.zip` (choose `v2` and `Tensorflow Object Detection` format)
-7. From [Glasses Image Dataset](https://universe.roboflow.com/new-workspace-ld3vn/glasses-ffgqb) download `glasses.v1-glasses_2022-04-01-8-12pm.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
-8. From [EX07](https://universe.roboflow.com/cam-vrmlm/ex07-o8d6m) download `Ex07.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
+1. From [AI Pass](https://universe.roboflow.com/shinysky5166/ai-pass) download `AI-Pass.v6i.coco.zip` (choose `v6` and `COCO` format)
+2. From [PEX5](https://universe.roboflow.com/pex-5-ylpua/pex5-gxq3t) download `PEX5.v4i.coco.zip` (choose `v4` and `COCO` format)
+3. From [Sunglasses Glasses Detect](https://universe.roboflow.com/burhan-6fhqx/sunglasses_glasses_detect) download `sunglasses_glasses_detect.v1i.coco.zip` (choose `v1` and `COCO` format)
+6. From [Glasses Detection](https://universe.roboflow.com/su-yee/glasses-detection-qotpz) download `Glasses Detection.v2i.coco.zip` (choose `v2` and `COCO` format)
+7. From [Glasses Image Dataset](https://universe.roboflow.com/new-workspace-ld3vn/glasses-ffgqb) download `glasses.v1-glasses_2022-04-01-8-12pm.coco.zip` (choose `v1` and `COCO` format)
+8. From [EX07](https://universe.roboflow.com/cam-vrmlm/ex07-o8d6m) download `Ex07.v1i.coco.zip` (choose `v1` and `COCO` format)
 
 
 </details>
@@ -394,8 +394,8 @@ Download the following files and _place them all under directory_ `data/detectio
 <summary><b>Eyes</b></summary>
 
 Download the following files and _place them all under directory_ `data/detection/eyes`:
-1. Datasets `?` to `?` described in **Worn** category: rename them as instructed but place under `eyes` sub-directory.
-2. From [No Eyeglass](https://universe.roboflow.com/doms/no-eyeglass) download `no eyeglass.v3i.tensorflow.zip` (choose `v3` and `Tensorflow Object Detection` format)
+1. Datasets `6` to `8` described in **Worn** category: rename them as instructed but place under `eyes` sub-directory.
+2. From [No Eyeglass](https://universe.roboflow.com/doms/no-eyeglass) download `no eyeglass.v3i.coco.zip` (choose `v3` and `COCO` format)
 
 </details>
 
@@ -404,8 +404,8 @@ Download the following files and _place them all under directory_ `data/detectio
 <summary><b>Standalone</b></summary>
 
 Download the following files and _place them all under directory_ `data/detection/standalone`:
-1. From [Kacamata-Membaca](https://universe.roboflow.com/uas-kelas-machine-learning-blended/kacamata-membaca) download `Kacamata-Membaca.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
-2. From [Only Glasses](https://universe.roboflow.com/woodin-ixal8/onlyglasses) download `onlyglasses.v1i.tensorflow.zip` (choose `v1` and `Tensorflow Object Detection` format)
+1. From [Kacamata-Membaca](https://universe.roboflow.com/uas-kelas-machine-learning-blended/kacamata-membaca) download `Kacamata-Membaca.v1i.coco.zip` (choose `v1` and `COCO` format)
+2. From [Only Glasses](https://universe.roboflow.com/woodin-ixal8/onlyglasses) download `onlyglasses.v1i.coco.zip` (choose `v1` and `COCO` format)
 
 
 </details>

@@ -7,8 +7,10 @@ import sys
 import tarfile
 import warnings
 import zipfile
+from collections import defaultdict
+from copy import deepcopy
 from multiprocessing import cpu_count
-from typing import Generator
+from typing import Callable, Generator
 
 import numpy as np
 import rarfile
@@ -99,14 +101,14 @@ def unpack(filename, root=".", members=set()):
 
 
 def get_extractable(
-    filenames: dict[str, set[str] | dict] | list[str],
+    filenames: list[str] | dict[str, list[str] | dict],
     root: str = ".",
 ) -> Generator[
     tuple[zipfile.ZipFile | rarfile.RarFile | tarfile.TarFile, str], None, None
 ]:
     if isinstance(filenames, list):
         # Convert to dict if a list of filenames is passed
-        filenames = {filename: set() for filename in filenames}
+        filenames = {filename: {} for filename in filenames}
 
     for filename, members in filenames.items():
         if not os.path.exists(file_path := os.path.join(root, filename)):
@@ -132,19 +134,26 @@ def get_extractable(
                 if len(members) > 0 and member not in members:
                     continue
 
+                # print("GEN", file.filename)
+
                 # Yield extractable
                 yield file, member
 
-                if isinstance(members, dict) and any(
-                    member.endswith(ext) for ext in {".zip", ".rar", ".tar.gz"}
-                ):
+                if isinstance(members, dict) and len(members) > 0:
+                    new_filenames = {member: members[member]}
+                else:
+                    new_filenames = [member]
+
+                if any(member.endswith(ext) for ext in {".zip", ".rar", ".tar.gz"}):
+                    # {file: [member1, member2, ...], file2: {member3: {}, ...]}
                     # If the member is archive, recurse
-                    new_root = os.path.join(root, member)
-                    yield from get_extractable(members[member], new_root)
+                    new_root = os.path.join(root, "tmp")
+                    print("NEW", new_root)
+                    yield from get_extractable(new_filenames, new_root)
 
 
 def unpack_v2(
-    filenames: list[str] | dict[str, set[str] | dict],
+    filenames: list[str] | dict[str, list[str] | dict],
     root: str = ".",
     unpack_dir: str = ".",
     pbar: tqdm = None,
@@ -159,7 +168,7 @@ def unpack_v2(
     if pbar is None:
         # Initialize progress bar
         pbar = tqdm(total=total)
-    else:
+    elif pbar.total == 0:
         # Update total and description
         pbar.total = pbar.total + total
         pbar.refresh()
@@ -171,6 +180,8 @@ def unpack_v2(
     for file, member in get_extractable(filenames, root):
         # Update pbar
         pbar.update(1)
+
+        # print("EXTRACTING", file.filename)
 
         if os.path.exists(os.path.join(root, member)):
             # Not extracting if it is already extracted
@@ -345,6 +356,116 @@ def clear_keys(**kwargs):
 ########################################################################
 
 
+def categorize_binary(
+    data_files: list[str] | dict[str, dict | list[str]],
+    pos_criteria: tuple[Callable[[str], bool], list[str]],
+    neg_criteria: tuple[Callable[[str], bool], list[str]],
+    save_name: str,
+    root: str = "data",
+    split_fn: Callable[[str], str] | None = None,
+    size: tuple[int, int] = (256, 256),
+    delete_original: bool = False,
+    **kwargs,
+):
+    # Initialize tqdm progress bar for current dataset
+    pbar_desc = f"* Processing {save_name}"
+    pbar_total = kwargs.get("total", 0)
+    pbar = tqdm(desc=pbar_desc, total=pbar_total)
+
+    unpack_v2(data_files, root, "tmp", pbar)
+    extracted_path = os.path.join(root, "tmp")
+
+    if pbar_total == 0:
+        # Update total
+        pbar.total = sum(len(files) for _, _, files in os.walk(extracted_path))
+        pbar.refresh()
+
+    pbar.set_description(f"{pbar_desc} (reading contents)")
+    is_pos_fn, pos_cats = pos_criteria
+    is_neg_fn, neg_cats = neg_criteria
+    src_to_tgt = defaultdict(lambda: [])
+
+    for root, _, filenames in os.walk(extracted_path):
+        for filename in filenames:
+            if os.path.splitext(filename)[1] not in VALID_EXTENSIONS:
+                continue
+
+            # Choose correct target directory
+            filepath = os.path.join(root, filename)
+            is_pos = is_pos_fn(filepath)
+            is_neg = is_neg_fn(filepath)
+
+            if (is_pos and is_neg) or (not is_pos and not is_neg):
+                continue
+
+            # Choose the correct split type ("train" by default)
+            split = "train" if split_fn is None else split_fn(filepath)
+            cats = pos_cats if is_pos else neg_cats
+
+            for cat in cats:
+                # Create the target dir if not exists
+                tgt_dir = os.path.join(
+                    root,
+                    "classification",
+                    cat.replace("no_", ""),
+                    save_name,
+                    split,
+                    cat,
+                )
+                os.makedirs(tgt_dir, exist_ok=True)
+                src_to_tgt[filepath].append(tgt_dir)
+
+            pbar_total += 1
+
+    if split_fn is None:
+        # Generate train/val/test splits if no split criteria given
+        num_val = int(len(src_to_tgt) * kwargs.get("val_size", 0.0))
+        num_test = int(len(src_to_tgt) * kwargs.get("test_size", 0.0))
+        srcs = sorted(src_to_tgt.keys())
+
+        for src in srcs[:num_test]:
+            for i in range(len(src_to_tgt[src])):
+                # Replace some of the training samples with test samples
+                path = os.path.normpath(src_to_tgt[src][i]).split(os.sep)
+                path[-2] = "test"
+                os.makedirs(path, exist_ok=True)
+                src_to_tgt[src][i] = os.sep.join(path)
+
+        for src in srcs[num_test : num_test + num_val]:
+            for i in range(len(src_to_tgt[src])):
+                # Replace some of the training samples with val samples
+                path = os.path.normpath(src_to_tgt[src][i]).split(os.sep)
+                path[-2] = "val"
+                os.makedirs(path, exist_ok=True)
+                src_to_tgt[src][i] = os.sep.join(path)
+
+    pbar.total = pbar_total + pbar.total + 1
+    pbar.refresh()
+    pbar.set_description(f"{pbar_desc} (categorizing)")
+
+    for src, tgts in src_to_tgt.items():
+        # Open the image and resize if needed
+        image = Image.open(src)
+        image = image.resize(size) if image.size != size else image
+
+        for tgt in tgts:
+            # Save the image to target dir
+            image.save(os.path.join(tgt, os.path.basename(src)))
+
+        # Update pbar
+        pbar.update(1)
+
+    # Init deletable files and dirs and clean them up
+    pbar.set_description(f"{pbar_desc} (cleaning)")
+    files = list(data_files.keys()) if isinstance(data_files, dict) else data_files
+    deletable = ["tmp"] + (files if delete_original else [])
+    clean(deletable, root)
+
+    # Update pbar
+    pbar.update(1)
+    pbar.set_description(f"{pbar_desc} (done)")
+
+
 def prepare_specs_on_faces(**kwargs):
     # Generate title to show in terminal
     generate_title("Specs on Faces")
@@ -393,26 +514,39 @@ def prepare_specs_on_faces(**kwargs):
 
 
 def prepare_cmu_face_images(**kwargs):
-    # Generate title to show in terminal
-    generate_title("CMU Face Images")
+    # # Generate title to show in terminal
+    # generate_title("CMU Face Images")
 
-    # Get root, update kwargs
-    root = kwargs["root"]
-    kwargs["inp_dir"] = os.path.join(root, "faces")
-    kwargs["out_dir"] = os.path.join(root, "cmu-face-images")
-    kwargs["criteria_fn"] = lambda path: "sunglasses" in os.path.basename(path)
+    # # Get root, update kwargs
+    # root = kwargs["root"]
+    # kwargs["inp_dir"] = os.path.join(root, "faces")
+    # kwargs["out_dir"] = os.path.join(root, "cmu-face-images")
+    # kwargs["criteria_fn"] = lambda path: "sunglasses" in os.path.basename(path)
 
-    # Unpack the contents from faces.tar.gz that's insde a zip file
-    contents = unpack("cmu+face+images.zip", root, {"faces.tar.gz"})
-    contents += unpack("faces.tar.gz", root)
-    contents += kwargs["categories"]
+    # # Unpack the contents from faces.tar.gz that's insde a zip file
+    # contents = unpack("cmu+face+images.zip", root, {"faces.tar.gz"})
+    # contents += unpack("faces.tar.gz", root)
+    # contents += kwargs["categories"]
 
-    # Sequential operations
-    categorize(**kwargs)
-    crop_align(**kwargs)
-    gen_splits(**kwargs)
-    clear_keys(**kwargs)
-    clean(contents, root)
+    # # Sequential operations
+    # categorize(**kwargs)
+    # crop_align(**kwargs)
+    # gen_splits(**kwargs)
+    # clear_keys(**kwargs)
+    # clean(contents, root)
+
+    kwargs = deepcopy(kwargs)
+    kwargs["save_name"] = "cmu-face-images"
+    kwargs["data_files"] = {"cmu+face+images.zip": ["faces.tar.gz"]}
+
+    is_pos = lambda path: "sunglasses" in os.path.basename(path)
+    is_neg = lambda path: "sunglasses" not in os.path.basename(path)
+    pos_cats = ["sunglasses", "anyglasses"]
+    neg_cats = ["no_sunglasses", "no_anyglasses"]
+    kwargs["pos_criteria"] = (is_pos, pos_cats)
+    kwargs["neg_criteria"] = (is_neg, neg_cats)
+
+    categorize_binary(**kwargs)
 
 
 def prepare_sunglasses_no_sunglasses(**kwargs):
@@ -679,6 +813,69 @@ def prepare_glasses_segmentation_synthetic(**kwargs):
     os.remove(root + ".zip")
 
 
+def prepare_eyeglass(**kwargs):
+    # Update the kwargs (file path, dataset name, class map)
+    kwargs["data_file"] = "eyeglass.v10i.coco-segmentation.zip"
+    kwargs["save_name"] = "eyeglass"
+    kwargs["class_map"] = {
+        "frame": {"segmentation": ["frames"]},
+        "glass": {"segmentation": ["lenses"]},
+    }
+
+    def seg_fn(class_name: str, masks: dict[str, np.ndarray]):
+        # Get the masks for the current class
+        mask = masks[class_name]
+
+        if class_name == "frame" and "glass" in masks.keys():
+            # Subtract glass from frame
+            mask -= masks["glass"]
+        elif class_name == "frame":
+            # Raise KeyError if no glass mask found
+            raise KeyError("No glass mask found")
+
+        return mask
+
+    # Add seg_fn to kwargs
+    kwargs["seg_fn"] = seg_fn
+
+    # Process the data splits
+    walk_coco_splits(**kwargs)
+
+
+def prepare_glasses_lenses(**kwargs):
+    # Update the kwargs (file path, dataset name, class map)
+    kwargs[
+        "data_file"
+    ] = "glasses lenses segmentation.v7-sh-improvments-version.coco.zip"
+    kwargs["save_name"] = "glasses-lenses"
+    kwargs["class_map"] = {"glasses-lenses": {"segmentation": ["lenses"]}}
+
+    # Process the data splits
+    walk_coco_splits(**kwargs)
+
+
+def prepare_glasses_lens(**kwargs):
+    # Update the kwargs (file path, dataset name, class map)
+    kwargs["data_file"] = "glasses lens.v6i.coco-segmentation.zip"
+    kwargs["save_name"] = "glasses-lens"
+    kwargs["class_map"] = {"glasses": {"segmentation": ["lenses"]}}
+
+    # Process the data splits
+    walk_coco_splits(**kwargs)
+
+
+def prepare_glasses_segmentation_cropped_faces(**kwargs):
+    # Update the kwargs (file path, dataset name, class map)
+    kwargs[
+        "data_file"
+    ] = "glasses segmentation cropped faces.v2-segmentation_models_pytorch-s_1st_version.coco-segmentation.zip"
+    kwargs["save_name"] = "glasses-segmentation-cropped-faces"
+    kwargs["class_map"] = {"glasses-lenses": {"segmentation": ["lenses"]}}
+
+    # Process the data splits
+    walk_coco_splits(**kwargs)
+
+
 ########################################################################
 ##########################                   ###########################
 ##########################     DETECTION     ###########################
@@ -686,61 +883,12 @@ def prepare_glasses_segmentation_synthetic(**kwargs):
 ########################################################################
 
 
-# def parse_tensorflow_csv(
-#     csv_path: str,
-#     class_map: dict[str : list[str]] = {},
-#     size: tuple[int, int] = (256, 256),
-# ):
-#     # E.g., {
-#     #     "Glasses": ["data/detection/worn/test", "data/classification/eyeglasses/test", "data/classification/anyglasses/test", "data/classification/no_sunglasses/test"],
-#     #     "Sunglasses": ["data/detection/worn/test", "data/classification/sunglasses/test", "data/classification/anyglasses/test", "data/classification/no_eyeglasses/test"],
-#     #     "No Glasses": ["data/detection/eyes/test", "data/classification/no_eyeglasses/test", "data/classification/no_sunglasses/test", "data/classification/no_anyglasses/test"],
-#     # }
-#     class_map
-
-#     # Get the path to image directory
-#     img_dir = os.path.dirname(csv_path)
-
-#     with open(csv_path, "r") as f:
-#         for line in f.readlines()[1:]:
-#             # Get the image name, size, class name, and the bounding box
-#             [filename, w, h, class_name, x1, y1, x2, y2] = line.split(",")
-
-#             if class_name not in class_map.keys():
-#                 # Skip if not needed
-#                 continue
-
-#             # Open the image and resize if needed
-#             img = Image.open(os.path.join(img_dir, filename)).resize(size)
-
-#             for path in class_map[class_name]:
-#                 if "classification" in path:
-#                     # Save the resized image only for classification
-#                     img.save(os.path.join(path, "images", filename))
-#                     continue
-
-#                 # Copy the image and create .txt annotation filename
-#                 img.save(os.path.join(path, "images", filename))
-#                 txt = filename.split(".")[0] + ".txt"
-
-#                 # Compute the normalized bounding box
-#                 bbox = [
-#                     (int(x1) + int(x2)) / 2 / size[0],
-#                     (int(y1) + int(y2)) / 2 / size[1],
-#                     (int(x2) - int(x1)) / size[0],
-#                     (int(y2) - int(y1)) / size[1],
-#                 ]
-
-#                 with open(os.path.join(path, "annotations", txt), "w") as f:
-#                     # Save the bounding box to a .txt
-#                     f.write(" ".join(map(str, bbox)))
-
-
 def parse_coco_json(
     json_path: str,
     class_map: dict[str : list[str]] = {},
     size: tuple[int, int] = (256, 256),
     pbar: tqdm = None,
+    **kwargs,
 ):
     # Get img dir, load COCO annotations
     img_dir = os.path.dirname(json_path)
@@ -766,6 +914,9 @@ def parse_coco_json(
         # Get annotation id for the image
         ann_ids = coco.getAnnIds(imgIds=img_info["id"])
         anns = coco.loadAnns(ann_ids)
+
+        # Create a dictionary to store masks for segmentation task
+        masks = defaultdict(lambda: np.zeros((img_info["height"], img_info["width"])))
 
         for ann in anns:
             # Get the class name of the current annotation
@@ -797,10 +948,28 @@ def parse_coco_json(
                         # Write the bounding box
                         f.write(f"{x} {y} {w} {h}")
                 elif "segmentation" in path:
+                    # Update the mask for the current class
+                    mask = masks[class_name]
+                    masks[class_name] = np.maximum(coco.annToMask(ann), mask)
+
+        if len(masks) > 0:
+            # Get the mask retrieval function (value by default)
+            seg_fn = kwargs.get("seg_fn", lambda k, d: d[k])
+
+            # Save the masks for segmentation task
+            for class_name in masks.keys():
+                for path in class_map[class_name]:
+                    if "segmentation" not in path:
+                        continue
+
+                    try:
+                        # Get the mask for the current class
+                        mask = seg_fn(class_name, masks)
+                    except:
+                        continue
+
                     # Generate the mask from annotation and resize it
-                    mask = np.zeros((img_info["height"], img_info["width"]))
-                    mask = np.maximum(coco.annToMask(ann), mask) * 255
-                    msk = Image.fromarray(mask).convert("1").resize(size)
+                    msk = Image.fromarray(mask * 255).convert("1").resize(size)
 
                     # Save the mask and the image to corresponding dirs
                     img.save(os.path.join(path, "images", img_info["file_name"]))
@@ -904,7 +1073,7 @@ def walk_coco_splits(
                     _class_map[class_name].append(output_dir)
 
         # Parse the COCO JSON file
-        parse_coco_json(json_path, _class_map, size, pbar)
+        parse_coco_json(json_path, _class_map, size, pbar, **kwargs)
 
     # Init deletable files and dirs and clean them up
     pbar.set_description(f"{pbar_desc} (cleaning)")
@@ -1038,6 +1207,36 @@ def prepare_ex07(**kwargs):
     walk_coco_splits(**kwargs)
 
 
+def prepare_no_eyeglasses(**kwargs):
+    # Update the kwargs (file path, dataset name, class map)
+    kwargs["data_file"] = "no eyeglass.v3i.coco.zip"
+    kwargs["save_name"] = "no-eyeglasses"
+    kwargs["class_map"] = {"No Eyeglass": {"detection": ["eyes"]}}
+
+    # Process the data splits
+    walk_coco_splits(**kwargs)
+
+
+def prepare_kacamata_membaca(**kwargs):
+    # Update the kwargs (file path, dataset name, class map)
+    kwargs["data_file"] = "Kacamata-Membaca.v1i.coco.zip"
+    kwargs["save_name"] = "kacamata-membaca"
+    kwargs["class_map"] = {"Kacamata-Membaca": {"detection": ["standalone"]}}
+
+    # Process the data splits
+    walk_coco_splits(**kwargs)
+
+
+def prepare_onlyglasses(**kwargs):
+    # Update the kwargs (file path, dataset name, class map)
+    kwargs["data_file"] = "onlyglasses.v1i.coco.zip"
+    kwargs["save_name"] = "onlyglasses"
+    kwargs["class_map"] = {"glasses": {"detection": ["standalone"]}}
+
+    # Process the data splits
+    walk_coco_splits(**kwargs)
+
+
 ########################################################################
 ##########################                   ###########################
 ##########################        CLI        ###########################
@@ -1160,9 +1359,22 @@ if __name__ == "__main__":
     #     case "glass-frames-segmentation":
     #         prepare_glasses_segmentation_synthetic(**kwargs)
 
+    # Main target: classification
+    prepare_cmu_face_images(**kwargs)
+
+    # Main target: segmentation
+    prepare_eyeglass(**kwargs)
+    prepare_glasses_lenses(**kwargs)
+    prepare_glasses_lens(**kwargs)
+    prepare_glasses_segmentation_cropped_faces(**kwargs)
+
+    # Main target: detection
     prepare_ai_pass(**kwargs)
     prepare_pex5(**kwargs)
     prepare_sunglasses_glasses_detect(**kwargs)
     prepare_glasses_detection(**kwargs)
     prepare_glasses_image_dataset(**kwargs)
     prepare_ex07(**kwargs)
+    prepare_no_eyeglasses(**kwargs)
+    prepare_kacamata_membaca(**kwargs)
+    prepare_onlyglasses(**kwargs)
