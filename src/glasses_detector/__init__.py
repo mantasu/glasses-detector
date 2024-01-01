@@ -1,16 +1,15 @@
-from .classifiers import (
-    EyeglassesClassifier, 
-    SunglassesClassifier, 
+from .old.classifiers import (
     AnyglassesClassifier,
+    EyeglassesClassifier,
+    SunglassesClassifier,
 )
-
-from .segmenters import (
-    FullGlassesSegmenter,
-    FullEyeglassesSegmenter,
-    FullSunglassesSegmenter,
-    FullAnyglassesSegmenter,
-    GlassFramesSegmenter,
-    EyeglassesFramesSegmenter,
-    SunglassesFramesSegmenter,
+from .old.segmenters import (
     AnyglassesFramesSegmenter,
+    EyeglassesFramesSegmenter,
+    FullAnyglassesSegmenter,
+    FullEyeglassesSegmenter,
+    FullGlassesSegmenter,
+    FullSunglassesSegmenter,
+    GlassFramesSegmenter,
+    SunglassesFramesSegmenter,
 )

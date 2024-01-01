@@ -1,12 +1,12 @@
-import numpy
-import torch
-import PIL.Image as Image
 import albumentations as A
-
-from torch.utils.data import DataLoader
+import numpy
+import PIL.Image as Image
+import torch
 from albumentations.pytorch import ToTensorV2
+from torch.utils.data import DataLoader
 
-class ImageLoaderMixin():
+
+class ImageLoaderMixin:
     @staticmethod
     def create_transform(is_train: bool = False) -> A.Compose:
         # Default augmentation
@@ -15,40 +15,49 @@ class ImageLoaderMixin():
             A.HorizontalFlip(),
             A.RandomRotate90(),
             A.ShiftScaleRotate(),
-            A.OneOf([
-                A.RandomResizedCrop(256, 256, p=0.5),
-                A.GridDistortion(),
-                A.OpticalDistortion(distort_limit=0.1, shift_limit=0.1),
-                A.PiecewiseAffine(),
-                A.Perspective()
-            ]),
-            A.OneOf([
-                A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3),
-                A.RandomGamma(),
-                A.CLAHE(),
-                A.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
-                A.HueSaturationValue(),
-            ]),
-            A.OneOf([
-                A.Blur(blur_limit=3),
-                A.GaussianBlur(),
-                A.MedianBlur(),
-                A.GaussNoise(),
-            ]),
+            A.OneOf(
+                [
+                    A.RandomResizedCrop(256, 256, p=0.5),
+                    A.GridDistortion(),
+                    A.OpticalDistortion(distort_limit=0.1, shift_limit=0.1),
+                    A.PiecewiseAffine(),
+                    A.Perspective(),
+                ]
+            ),
+            A.OneOf(
+                [
+                    A.RandomBrightnessContrast(
+                        brightness_limit=0.3, contrast_limit=0.3
+                    ),
+                    A.RandomGamma(),
+                    A.CLAHE(),
+                    A.ColorJitter(
+                        brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1
+                    ),
+                    A.HueSaturationValue(),
+                ]
+            ),
+            A.OneOf(
+                [
+                    A.Blur(blur_limit=3),
+                    A.GaussianBlur(),
+                    A.MedianBlur(),
+                    A.GaussNoise(),
+                ]
+            ),
             A.CoarseDropout(max_holes=5, p=0.3),
             A.Normalize(),
-            ToTensorV2()
+            ToTensorV2(),
         ]
 
         if not is_train:
             # Only keep the last two
             transform = transform[-2:]
-        
+
         return A.Compose(transform)
 
-    @classmethod
+    @staticmethod
     def load_image(
-        cls, 
         image: str | Image.Image | numpy.ndarray,
         masks: list[str | Image.Image | numpy.ndarray] = [],
         transform: A.Compose | bool = False,
@@ -57,23 +66,23 @@ class ImageLoaderMixin():
             if isinstance(image_file, str):
                 # If the image is provided as a path
                 image_file = Image.open(image_file)
-                image_file = image_file.convert('L' if is_mask else "RGB")
-        
+                image_file = image_file.convert("L" if is_mask else "RGB")
+
             if isinstance(image_file, Image.Image):
                 # If the image is not a numpy array
                 image_file = numpy.array(image_file)
-            
+
             if is_mask and image_file.ndim > 2:
                 # Convert the image black & white, ensure a single chan
                 image_file = (image_file > 127).any(axis=2).astype(numpy.uint8)
             elif is_mask:
                 image_file = (image_file > 127).astype(numpy.uint8)
-            
+
             return image_file
 
         if isinstance(transform, bool):
             # Load transform (train/test is based on bool)
-            transform = cls.create_transform(transform)
+            transform = ImageLoaderMixin.create_transform(transform)
 
         # Load image and mask files
         image = open_image_file(image)
@@ -88,12 +97,21 @@ class ImageLoaderMixin():
 
         return image, masks
 
-class DataLoaderMixin():
+
+class DataLoaderMixin:
     @classmethod
     def create_loader(cls, **kwargs) -> DataLoader:
         # Split all the given kwargs to dataset (cls) and loader kwargs
-        cls_kwargs_set = {"root", "dirs", "split_type", "label_type", "img_dirname", "name_map_fn", "seed"}
-        set_kwargs = {k: v for k, v in kwargs.items() if k in cls_kwargs_set} 
+        cls_kwargs_set = {
+            "root",
+            "dirs",
+            "split_type",
+            "label_type",
+            "img_dirname",
+            "name_map_fn",
+            "seed",
+        }
+        set_kwargs = {k: v for k, v in kwargs.items() if k in cls_kwargs_set}
         ldr_kwargs = {k: v for k, v in kwargs.items() if k not in cls_kwargs_set}
 
         # Define default loader kwargs
@@ -102,7 +120,7 @@ class DataLoaderMixin():
             "batch_size": 64,
             "num_workers": 12,
             "pin_memory": True,
-            "shuffle": set_kwargs.get("split_type", "train") == "train"
+            "shuffle": set_kwargs.get("split_type", "train") == "train",
         }
 
         # Update default loader kwargs with custom
