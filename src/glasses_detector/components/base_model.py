@@ -10,8 +10,8 @@ import torch
 import torch.nn as nn
 from PIL import Image
 
-from ._data import ImageLoaderMixin
-from .utils import PredType, is_url
+from .._data import ImageLoaderMixin
+from ..utils import PredType, is_url
 
 
 @dataclass

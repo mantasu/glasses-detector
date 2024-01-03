@@ -9,7 +9,7 @@ import torch.nn as nn
 from PIL import Image
 from torch.types import Number
 
-from .base_model import BaseGlassesModel, T
+from .components.base_model import BaseGlassesModel, T
 from .models import TinyBinaryClassifier
 
 
