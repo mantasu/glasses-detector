@@ -9,7 +9,7 @@
 
 **Eyeglasses** and **sunglasses** _classifier_ + **glasses** and their **frames** _segmenter_. This project provides scripts to download the corresponding datasets, train the corresponding models and by itself is a PyPi project that provides a quick way to use the trained models via python script or terminal.
 
-> **Note**: the project is BETA stage. Currently, only full-glasses base segmentation models are provided.
+> **Note**: `src` in main branch is in development - do not clone it yet, instead, clone the latest release for now.
 
 ## Installation
 

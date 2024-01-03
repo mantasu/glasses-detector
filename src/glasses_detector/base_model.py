@@ -2,7 +2,7 @@ import os
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Callable, ClassVar, Self, override
+from typing import Any, Callable, ClassVar, Self, TypedDict, Unpack, override
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +11,7 @@ import torch.nn as nn
 from PIL import Image
 
 from ._data import ImageLoaderMixin
-from .utils import FormattedPred, PredType, T, is_url, pred_type
+from .utils import PredType, is_url
 
 
 @dataclass
@@ -62,23 +62,48 @@ class BaseGlassesModel(nn.Module, ABC):
             f"using `GlassesModel.create_model` and assign it."
         )
 
+    def _format_pred(self, preds: list[tuple[str, PredType.ANY]], ext: str):
+        if not isinstance(pred, PredType.DEFAULT):
+            raise ValueError("Prediction type not recognized.")
+
+        match ext:
+            case ".txt":
+                init, agg_fn = "", lambda x, y, z: z + f"{x} {y}\n"
+            case ".csv":
+                init, agg_fn = "", lambda x, y, z: z + f"{x},{y}\n"
+            case ".json":
+                init, agg_fn = {}, lambda x, y, z: z.update({x: y})
+            case ".yml" | ".yaml":
+                init, agg_fn = {}, lambda x, y, z: z.update({x: y})
+            case ".pkl":
+                init, agg_fn = {}, lambda x, y, z: z.update({x: y})
+            case ".npy":
+                init, agg_fn = {}, lambda x, y, z: z.update({x: y})
+            case ".npz":
+                init, agg_fn = {}, lambda x, y, z: z.update({x: y})
+            case ".dat":
+                init, agg_fn = "", lambda x, y, z: z + f"{x} {y}\n"
+            case ".jpg" | ".jpeg" | ".png" | ".bmp" | ".pgm" | ".webp":
+                pass
+            case _:
+                pass
+
+        for name, pred in preds:
+            if not PredType.is_default(pred):
+                raise ValueError("Prediction type not recognized.")
+
+            if PredType.is_scalar(pred):
+                pred = [pred]
+
     def _process_file(
         self,
-        input_path: str,
-        output_path: str | None,
-        format: str | dict[bool, T] | Callable[[torch.Tensor], T],
-    ):
-        def to_txt(input_path, pred):
-            input_name = os.path.basename(input_path)
-            return f"{input_name} {pred}"
-
-        def to_csv(input_path, pred):
-            input_name = os.path.basename(input_path)
-            return f"{input_name},{pred}"
-
-        def to_img():
-            pass
-
+        input_path: os.PathLike,
+        output_path: os.PathLike | None,
+        pred_type: str
+        | dict[bool, PredType.ANY]
+        | Callable[[torch.Tensor], PredType.ANY],
+        show: bool = False,
+    ) -> tuple[str, PredType.ANY] | None:
         if output_path is not None:
             ext = os.path.splitext(output_path)[1]
 
@@ -90,7 +115,40 @@ class BaseGlassesModel(nn.Module, ABC):
             ".yaml",
         }
 
-        pred = self.predict(input_path, format)
+        pred = self.predict(input_path, pred_type)
+
+        match pred:
+            case PredType.SCALAR():
+                if show:
+                    # Print pred
+                    print(pred)
+
+                if output_path is None:
+                    return os.path.basename(input_path), pred
+                elif isinstance(output_path, os.PathLike):
+                    ext = os.path.splitext(output_path)[1]
+
+                    with open(output_path, "w") as f:
+                        # Write to file
+                        f.write(pred)
+                elif isinstance(output_path, Callable):
+                    return output_path(input_path, pred)
+            case PredType.ARRAY():
+                pass
+            case PredType.IMAGE():
+                if output_path is None:
+                    # Show the image
+                    plt.imshow(pred)
+                elif isinstance(output_path, os.PathLike):
+                    # Save to output path
+                    pred.save(output_path)
+                elif aggregate_fn is not None:
+                    # Aggregate to dict
+                    aggregate_fn(input_path, pred)
+                else:
+                    pass
+            case _:
+                raise ValueError("Prediction type not recognized")
 
         if output_path is None and isinstance(pred, Image.Image):
             plt.imshow(pred)
@@ -128,7 +186,11 @@ class BaseGlassesModel(nn.Module, ABC):
         ...
 
     @classmethod
-    def from_model(cls, model: nn.Module, **kwargs) -> Self:
+    def from_model(
+        cls,
+        model: nn.Module,
+        **kwargs: Unpack[BaseGlassesModelParams],
+    ) -> Self:
         # Get the specified device or check the one from the model
         device = kwargs.get("device", next(iter(model.parameters())).device)
 
