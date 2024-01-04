@@ -1,9 +1,10 @@
 import imghdr
 import os
-from typing import Iterable, TypeVar
+from typing import Any, Iterable, TypeGuard, TypeVar
 from urllib.parse import urlparse
 
 T = TypeVar("T")
+type ImgPath = str | bytes | os.PathLike
 
 
 def is_url(x: str) -> bool:
@@ -30,5 +31,9 @@ def flatten(items: T | Iterable[T | Iterable]) -> T | list[T]:
             flattened.append(item)
 
 
-def is_image(path: os.PathLike) -> bool:
+def is_image_path(path: Any) -> TypeGuard[ImgPath]:
+    return isinstance(path, (str, bytes, os.PathLike))
+
+
+def is_image_file(path: ImgPath) -> bool:
     return os.path.isfile(path) and imghdr.what(path) is not None

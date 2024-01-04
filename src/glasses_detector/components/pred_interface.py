@@ -3,7 +3,7 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Collection, Iterable
+from typing import Collection, Iterable, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,13 +11,13 @@ import yaml
 from PIL import Image
 from tqdm import tqdm
 
-from ..utils import flatten, is_image
+from ..utils import ImgPath, flatten, is_image_file
 from .pred_type import PredType as PT
 
 
-class PredMixin(ABC):
+class PredInterface(ABC):
     @staticmethod
-    def save(pred: PT.Default | dict[str, PT.Default], filepath: os.PathLike):
+    def save(pred: PT.Default | dict[str, PT.Default], filepath: ImgPath):
         def _standardize(pred) -> PT.StandardDefault | dict[str, PT.StandardDefault]:
             if isinstance(pred, dict):
                 return {k: PT.standardize(v) for k, v in pred.items()}
@@ -101,15 +101,37 @@ class PredMixin(ABC):
     @abstractmethod
     def predict(
         self,
-        image: os.PathLike | Collection[os.PathLike],
+        image: ImgPath | Collection[ImgPath],
         **kwargs,
     ) -> PT.Default | list[PT.Default]:
         ...
 
+    @overload
     def process_file(
         self,
-        input_path: os.PathLike | Collection[os.PathLike],
-        output_path: os.PathLike | Collection[os.PathLike] | None = None,
+        input_path: ImgPath,
+        output_path: ImgPath | None = None,
+        ext: str | None = None,
+        show: bool = False,
+        **pred_kwargs,
+    ) -> PT.Default | None:
+        ...
+
+    @overload
+    def process_file(
+        self,
+        input_path: Collection[ImgPath],
+        output_path: Collection[ImgPath] | None = None,
+        ext: str | None = None,
+        show: bool = False,
+        **pred_kwargs,
+    ) -> list[PT.Default | None]:
+        ...
+
+    def process_file(
+        self,
+        input_path: ImgPath | Collection[ImgPath],
+        output_path: ImgPath | Collection[ImgPath] | None = None,
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
@@ -121,7 +143,7 @@ class PredMixin(ABC):
         safe_paths = []
 
         for path in input_paths:
-            if not is_image(path):
+            if not is_image_file(path):
                 # Raise a warning if not an image is passed; set to None
                 warnings.warn(f"{input_path} is not an image. Skipping...")
             else:
@@ -193,7 +215,7 @@ class PredMixin(ABC):
 
         if (
             is_multiple
-            and isinstance(output_path, os.PathLike)
+            and isinstance(output_path, ImgPath)
             and os.path.splitext(output_path)[1] != ""
         ):
             # Output path is a single file for multiple inputs
@@ -208,8 +230,8 @@ class PredMixin(ABC):
 
     def process_dir(
         self,
-        input_path: os.PathLike,
-        output_path: os.PathLike | None = None,
+        input_path: ImgPath,
+        output_path: ImgPath | None = None,
         ext: str | None = None,
         batch_size: int = 1,
         show: bool = False,

@@ -66,17 +66,20 @@ class ImageLoaderMixin:
             if isinstance(image_file, str):
                 # If the image is provided as a path
                 image_file = Image.open(image_file)
-                image_file = image_file.convert("L" if is_mask else "RGB")
 
             if isinstance(image_file, Image.Image):
                 # If the image is not a numpy array
                 image_file = numpy.array(image_file)
 
             if is_mask and image_file.ndim > 2:
-                # Convert the image black & white, ensure a single chan
+                # Convert image to black & white, ensure only 1 channel
                 image_file = (image_file > 127).any(axis=2).astype(numpy.uint8)
             elif is_mask:
+                # Convert image to black & white of type UINT8
                 image_file = (image_file > 127).astype(numpy.uint8)
+            elif image_file.ndim == 2:
+                # Image is not a mask, so convert it to RGB
+                image_file = numpy.stack([image_file] * 3, axis=-1)
 
             return image_file
 

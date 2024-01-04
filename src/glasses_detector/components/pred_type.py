@@ -67,6 +67,7 @@ class PredType(Enum):
     type StandardTensor = list[StandardScalar | StandardTensor]
     type StandardDefault = StandardScalar | StandardTensor
     type NonDefault = TypeVar("NonDefault")
+    type Custom = Default | NonDefault
 
     @staticmethod
     def is_scalar(pred: Any) -> TypeGuard[Scalar]:
