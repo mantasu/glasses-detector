@@ -1,13 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, ClassVar, Collection, override
 
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
+from torchvision.models import efficientnet_v2_s, shufflenet_v2_x1_0
 
 from .components.base_model import BaseGlassesModel
-from .components.pred_type import PredType
+from .components.pred_type import Default
 from .models import TinyBinaryClassifier
 from .utils import ImgPath
 
@@ -16,15 +17,15 @@ from .utils import ImgPath
 class GlassesClassifier(BaseGlassesModel):
     """Glasses classifier for specific glasses type."""
 
-    task: str = "classification"
+    task: str = field(default="classification", init=False)
     kind: str = "anyglasses"
     size: str = "normal"
-    pretrained: bool = True
+    pretrained: bool | str = field(default=True, repr=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinyclsnet_v1", "version": "v1.0.0"},
-        "medium": {"name": "TBA", "version": "v1.0.0"},
-        "large": {"name": "TBA", "version": "v1.0.0"},
+        "medium": {"name": "shufflenet_v2_x1_0", "version": "v1.0.0"},
+        "large": {"name": "efficientnet_v2_s", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
@@ -39,6 +40,12 @@ class GlassesClassifier(BaseGlassesModel):
         match model_name:
             case "tinyclsnet_v1":
                 m = TinyBinaryClassifier()
+            case "shufflenet_v2_x1_0":
+                m = shufflenet_v2_x1_0()
+                m.fc = nn.Linear(1024, 1)
+            case "efficientnet_v2_s":
+                m = efficientnet_v2_s()
+                m.classifier = nn.Linear(1280, 1)
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 
@@ -52,19 +59,19 @@ class GlassesClassifier(BaseGlassesModel):
         | np.ndarray
         | Collection[ImgPath | Image.Image | np.ndarray],
         format: str
-        | dict[bool, PredType.Custom]
-        | Callable[[torch.Tensor], PredType.Default] = {
+        | dict[bool, Default]
+        | Callable[[torch.Tensor], Default] = {
             True: "wears",
             False: "does_not_wear",
         },
-    ) -> PredType.Default | list[PredType.Default]:
+    ) -> Default | list[Default]:
         """Predicts whether the positive class is present.
 
         Takes a path or multiple paths to image files or the loaded
         images themselves and outputs a boolean value for each image
         indicating whether the it belongs to a positive class, e.g.,
         *"anyglasses"*, or not. The prediction could be mapped to
-        some :attr:`PredType.Default` type.
+        some :attr:`Default` type.
 
         Warning:
             If the image is provided as :class:`numpy.ndarray`, make
@@ -83,7 +90,7 @@ class GlassesClassifier(BaseGlassesModel):
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
-            format (str | dict[bool, PredType.Default] | typing.Callable[[torch.Tensor], PredType.Default], optional):
+            format (str | dict[bool, Default] | typing.Callable[[torch.Tensor], Default], optional):
                 The string specifying the way to map the predictions to
                 labels. These are the following options:
 
@@ -109,7 +116,7 @@ class GlassesClassifier(BaseGlassesModel):
                 to ``{True: "wears", False: "does_not_wear"}``.
 
         Returns:
-            PredType.Default | list[PredType.Default]: The formatted
+            Default | list[Default]: The formatted
             prediction or a list of formatted predictions if multiple
             images were provided.
 

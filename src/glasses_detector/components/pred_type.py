@@ -5,6 +5,15 @@ import numpy as np
 import torch
 from PIL import Image
 
+type Scalar = bool | int | float | str | np.generic | np.ndarray | torch.Tensor
+type Tensor = Iterable[Scalar | Tensor] | Image.Image
+type Default = Scalar | Tensor
+type StandardScalar = bool | int | float | str
+type StandardTensor = list[StandardScalar | StandardTensor]
+type StandardDefault = StandardScalar | StandardTensor
+type NonDefault = TypeVar("NonDefault")
+type Custom = Default | NonDefault
+
 
 class PredType(Enum):
     """Enum class for expected prediction types.
@@ -59,15 +68,6 @@ class PredType(Enum):
         >>> PredType.standardize(Image.fromarray(np.zeros((1, 1))))
         [[0.0]]
     """
-
-    type Scalar = bool | int | float | str | np.generic | np.ndarray | torch.Tensor
-    type Tensor = Iterable[Scalar | Tensor] | Image.Image
-    type Default = Scalar | Tensor
-    type StandardScalar = bool | int | float | str
-    type StandardTensor = list[StandardScalar | StandardTensor]
-    type StandardDefault = StandardScalar | StandardTensor
-    type NonDefault = TypeVar("NonDefault")
-    type Custom = Default | NonDefault
 
     @staticmethod
     def is_scalar(pred: Any) -> TypeGuard[Scalar]:

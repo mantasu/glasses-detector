@@ -7,7 +7,7 @@ import torch.nn as nn
 from PIL import Image
 
 from .components.base_model import BaseGlassesModel
-from .components.pred_type import PredType
+from .components.pred_type import Default
 from .models import TinyBinarySegmenter
 from .utils import ImgPath
 
@@ -54,10 +54,8 @@ class GlassesSegmenter(BaseGlassesModel):
         | Image.Image
         | np.ndarray
         | Collection[ImgPath | Image.Image | np.ndarray],
-        format: str
-        | dict[bool, PredType.Default]
-        | Callable[[torch.Tensor], PredType.Default] = "img",
-    ) -> PredType.Default | list[PredType.Default]:
+        format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "img",
+    ) -> Default | list[Default]:
         """Predicts which pixels in the image are positive.
 
         Takes a path or multiple paths to image files or the loaded
@@ -65,7 +63,7 @@ class GlassesSegmenter(BaseGlassesModel):
         a 2D mask of type :class:`torch.tensor`, e.g., with values of
         either 255 (white) indicating pixels under positive category or
         0 (black) indicating the rest of the pixels). In general, the
-        prediction could be converted to any :attr:`PredType.Default`
+        prediction could be converted to any :attr:`Default`
         type.
 
         Warning:
@@ -85,7 +83,7 @@ class GlassesSegmenter(BaseGlassesModel):
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
-            format (str | dict[bool, PredType.Default] | typing.Callable[[torch.Tensor], PredType.Default], optional):
+            format (str | dict[bool, Default] | typing.Callable[[torch.Tensor], Default], optional):
                 The string specifying the way to map the predictions
                 (pixel scores) to masks. These are the following
                 options:
@@ -115,13 +113,13 @@ class GlassesSegmenter(BaseGlassesModel):
                 Defaults to "img".
 
         Returns:
-            PredType.Default | list[PredType.Default]: The formatted
-            prediction(s) of type :attr:`PredType.Default`. In most
+            Default | list[Default]: The formatted
+            prediction(s) of type :attr:`Default`. In most
             cases the output is a mask of type :class:`torch.Tensor`
             and of shape (H, W)  with each pixel mapped to some ranged
             value or to a binary value. But it can also be a grayscale
             mask image of type :class:`Image.Image` or any other
-            :attr:`PredType.Default` type, depending on the ``format``
+            :attr:`Default` type, depending on the ``format``
             argument.
 
         Raises:

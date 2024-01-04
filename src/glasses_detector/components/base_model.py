@@ -12,7 +12,7 @@ from PIL import Image
 from .._data import ImageLoaderMixin
 from ..utils import ImgPath, is_image_path, is_url
 from .pred_interface import PredInterface
-from .pred_type import PredType
+from .pred_type import *
 
 
 @dataclass
@@ -30,7 +30,8 @@ class BaseGlassesModel(nn.Module, PredInterface):
         the weight will be downloaded there and then loaded.
 
     Args:
-        task (str): The task the model is built for.
+        task (str): The task the model is built for. Used when
+            automatically constructing URL to download the weights from.
         kind (str): The kind of the model. Used to access
             :meth:`model_info`.
         size (str): The size of the model. Used to access
@@ -50,7 +51,7 @@ class BaseGlassesModel(nn.Module, PredInterface):
     size: str
     pretrained: bool | str = field(default=False, repr=False)
     device: str | torch.device = field(default="cpu", repr=False)
-    model: nn.Module = field(default=None, init=False, repr=False)
+    model: nn.Module = field(default_factory=lambda: None, init=False, repr=False)
 
     BASE_WEIGHTS_URL: ClassVar[
         str
@@ -139,8 +140,8 @@ class BaseGlassesModel(nn.Module, PredInterface):
     def predict(
         self,
         image: ImgPath | Image.Image | np.ndarray,
-        format: Callable[[torch.Tensor], PredType.Default] = lambda x: str(x),
-    ) -> PredType.Default:
+        format: Callable[[torch.Tensor], Default] = lambda x: str(x),
+    ) -> Default:
         ...
 
     @override
@@ -148,8 +149,8 @@ class BaseGlassesModel(nn.Module, PredInterface):
     def predict(
         self,
         image: Collection[ImgPath | Image.Image | np.ndarray],
-        format: Callable[[torch.Tensor], PredType.Default] = lambda x: str(x),
-    ) -> list[PredType.Default]:
+        format: Callable[[torch.Tensor], Default] = lambda x: str(x),
+    ) -> list[Default]:
         ...
 
     @torch.inference_mode()
@@ -160,8 +161,8 @@ class BaseGlassesModel(nn.Module, PredInterface):
         | Image.Image
         | np.ndarray
         | Collection[ImgPath | Image.Image | np.ndarray],
-        format: Callable[[torch.Tensor], PredType.Default] = lambda x: str(x),
-    ) -> PredType.Default | list[PredType.Default]:
+        format: Callable[[torch.Tensor], Default] = lambda x: str(x),
+    ) -> Default | list[Default]:
         """Predicts based on the model specified by the child class.
 
         Takes a path or multiple paths to image files or the loaded
@@ -185,14 +186,14 @@ class BaseGlassesModel(nn.Module, PredInterface):
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
-            format (typing.Callable[[torch.Tensor], PredType.Default], optional):
+            format (typing.Callable[[torch.Tensor], Default], optional):
                 Format callback. This is a custom function that takes a
                 predicted tensor as input and outputs a formatted
-                prediction of type :attr:`PredType.Default`. Defaults
+                prediction of type :attr:`Default`. Defaults
                 to ``lambda x: str(x)``.
 
         Returns:
-            PredType.Default | typing.List[PredType.Default]: The
+            Default | typing.List[Default]: The
             formatted prediction or a list of formatted predictions if
             multiple images were provided.
         """
@@ -227,7 +228,7 @@ class BaseGlassesModel(nn.Module, PredInterface):
                 version = self.model_info["version"]
             except KeyError:
                 # Raise model info warning for not constructing URL
-                message = "Path/URL to weights cannot be constructed"
+                message = "Path/URL to weights cannot be constructed. "
                 self._model_info_warning(message)
                 return
 

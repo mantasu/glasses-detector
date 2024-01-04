@@ -12,30 +12,33 @@ from PIL import Image
 from tqdm import tqdm
 
 from ..utils import ImgPath, flatten, is_image_file
-from .pred_type import PredType as PT
+from .pred_type import Default, PredType, Scalar, StandardDefault
 
 
 class PredInterface(ABC):
     @staticmethod
-    def save(pred: PT.Default | dict[str, PT.Default], filepath: ImgPath):
-        def _standardize(pred) -> PT.StandardDefault | dict[str, PT.StandardDefault]:
+    def save(pred: Default | dict[str, Default], filepath: ImgPath):
+        def _standardize(pred) -> StandardDefault | dict[str, StandardDefault]:
             if isinstance(pred, dict):
-                return {k: PT.standardize(v) for k, v in pred.items()}
+                return {k: PredType.standardize(v) for k, v in pred.items()}
             else:
-                return PT.standardize(pred)
+                return PredType.standardize(pred)
 
-        def _as_numpy(pred) -> PT.Scalar | np.ndarray:
-            if PT.is_scalar(pred):
+        def _as_numpy(pred) -> Scalar | np.ndarray:
+            if PredType.is_scalar(pred):
                 return pred
             elif isinstance(pred, dict):
                 # Stack to single 2D matrix (flatten lists)
                 names_col = np.array(pred.keys())[:, None]
                 vals_cols = np.stack(
-                    [np.atleast_1d(flatten(PT.standardize(v))) for v in pred.values()]
+                    [
+                        np.atleast_1d(flatten(PredType.standardize(v)))
+                        for v in pred.values()
+                    ]
                 )
                 return np.hstack((names_col, vals_cols))
             else:
-                return np.array(PT.standardize(pred))
+                return np.array(PredType.standardize(pred))
 
         # Make the directory to save the file to and get ext
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -43,14 +46,14 @@ class PredInterface(ABC):
 
         match ext:
             case ".txt":
-                if PT.is_scalar(pred):
+                if PredType.is_scalar(pred):
                     with open(filepath, "w") as f:
                         f.write(str(pred))
                 else:
                     # Save to .txt each row has image name and pred values
                     np.savetxt(filepath, _as_numpy(pred), delimiter=" ")
             case ".csv":
-                if PT.is_scalar(pred):
+                if PredType.is_scalar(pred):
                     with open(filepath, "w") as f:
                         f.write(str(pred))
                 else:
@@ -71,10 +74,10 @@ class PredInterface(ABC):
                 np.savez_compressed(filepath, _as_numpy(pred))
             case ".dat":
                 if isinstance(pred, Iterable):
-                    np.array(PT.standardize(pred)).tofile(filepath)
+                    np.array(PredType.standardize(pred)).tofile(filepath)
                 else:
                     with open(filepath, "wb") as f:
-                        np.savetxt(f, PT.standardize(pred))
+                        np.savetxt(f, PredType.standardize(pred))
             case ".jpg" | ".jpeg" | ".png" | ".bmp" | ".pgm" | ".webp":
                 if isinstance(pred, dict) and len(pred) > 1:
                     dirname = os.path.splitext(filepath)[0]
@@ -92,7 +95,7 @@ class PredInterface(ABC):
 
                 for name, img in pred.items():
                     if not isinstance(img, Image.Image):
-                        img = Image.fromarray(np.atleast_1d(PT.standardize(img)))
+                        img = Image.fromarray(np.atleast_1d(PredType.standardize(img)))
 
                     img.save(os.path.join(dirname, name))
             case _:
@@ -103,7 +106,7 @@ class PredInterface(ABC):
         self,
         image: ImgPath | Collection[ImgPath],
         **kwargs,
-    ) -> PT.Default | list[PT.Default]:
+    ) -> Default | list[Default]:
         ...
 
     @overload
@@ -114,7 +117,7 @@ class PredInterface(ABC):
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
-    ) -> PT.Default | None:
+    ) -> Default | None:
         ...
 
     @overload
@@ -125,7 +128,7 @@ class PredInterface(ABC):
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
-    ) -> list[PT.Default | None]:
+    ) -> list[Default | None]:
         ...
 
     def process_file(
@@ -135,7 +138,7 @@ class PredInterface(ABC):
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
-    ) -> PT.Default | None | list[PT.Default | None]:
+    ) -> Default | None | list[Default | None]:
         is_multiple = isinstance(input_path, Collection) and not isinstance(
             input_path, str
         )
@@ -238,7 +241,7 @@ class PredInterface(ABC):
         pbar: bool | str | tqdm = True,
         update_total: bool = True,
         **pred_kwargs,
-    ) -> dict[str, PT.Default | None] | None:
+    ) -> dict[str, Default | None] | None:
         if isinstance(pbar, bool) and pbar:
             pbar = ""
 
