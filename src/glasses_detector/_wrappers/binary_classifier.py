@@ -1,11 +1,10 @@
-import torch
 import numpy as np
-import torchmetrics
-import torch.nn as nn
 import pytorch_lightning as pl
-
+import torch
+import torch.nn as nn
+import torchmetrics
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 class BinaryClassifier(pl.LightningModule):
@@ -22,17 +21,20 @@ class BinaryClassifier(pl.LightningModule):
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
 
         # Create F1 score and ROC-AUC metrics to monitor
-        self.metrics = torchmetrics.MetricCollection([
-            torchmetrics.F1Score(task="binary"),
-            torchmetrics.AUROC(task="binary")
-        ])
-    
+        self.metrics = torchmetrics.MetricCollection(
+            [
+                torchmetrics.F1Score(task="binary"),
+                torchmetrics.AUROC(task="binary"),  # ROC-AUC
+                torchmetrics.AveragePrecision(task="binary"),  # PR-AUC
+            ]
+        )
+
     @property
     def pos_weight(self):
         if self.train_loader is None:
             # Not known
             return None
-        
+
         # Calculate the positive weight to account for class imbalance
         targets = np.array([y for _, y in iter(self.train_loader.dataset.data)])
         pos_count = targets.sum()
@@ -50,8 +52,8 @@ class BinaryClassifier(pl.LightningModule):
         loss = self.criterion(y_hat, y)
         self.log("train_loss", loss, prog_bar=True)
         return loss
-    
-    def eval_step(self, batch, prefix=''):
+
+    def eval_step(self, batch, prefix=""):
         # Forward pass
         x, y = batch
         y_hat = self(x)
@@ -64,13 +66,14 @@ class BinaryClassifier(pl.LightningModule):
         self.log(f"{prefix}_loss", loss, prog_bar=True)
         self.log(f"{prefix}_f1", metrics["BinaryF1Score"], prog_bar=True)
         self.log(f"{prefix}_roc_auc", metrics["BinaryAUROC"], prog_bar=True)
-    
+        self.log(f"{prefix}_pr_auc", metrics["BinaryAveragePrecision"], prog_bar=True)
+
     def validation_step(self, batch, batch_idx):
         self.eval_step(batch, prefix="val")
 
     def test_step(self, batch, batch_idx):
         self.eval_step(batch, prefix="test")
-    
+
     def train_dataloader(self):
         return self.train_loader
 
@@ -79,10 +82,15 @@ class BinaryClassifier(pl.LightningModule):
 
     def test_dataloader(self):
         return self.test_loader
-    
+
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Cosine Annealing scheduler
         optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=0.1)
-        scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
+        # scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
+        scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10)
 
-        return [optimizer], [scheduler]
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": scheduler,
+            "monitor": "val_loss",
+        }

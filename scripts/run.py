@@ -144,6 +144,7 @@ def create_wrapper_callback(
 ) -> pl.LightningModule:
     
     # Get task and kind
+    
     task_and_kind = task.split("-", maxsplit=1)
     task = task_and_kind[0]
     kind = DEFAULT_KINDS[task] if len(task_and_kind) == 1 else task_and_kind[1]
@@ -173,12 +174,12 @@ def create_wrapper_callback(
         kwargs["name_map_fn"] = {"masks": lambda x: f"{int(x[:5])}.jpg"}
         wrapper_cls = BinarySegmenter
 
-    # Initialize model arch
-    model = model_cls(size)
+    # Initialize model architecture and load weights if needed
+    model = model_cls(kind=kind, size=size, pretrained=weights_path).model
 
-    if weights_path is not None:
-        # Load weights if the path is specified to them
-        model.load_state_dict(torch.load(weights_path))
+    # if weights_path is not None:
+    #     # Load weights if the path is specified to them
+    #     model.load_state_dict(torch.load(weights_path))
 
     return wrapper_cls(model, *data_cls.create_loaders(**kwargs))
 

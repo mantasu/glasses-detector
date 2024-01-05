@@ -4,6 +4,7 @@ scipy
 rarfile
 pycocotools
 torchvision
+tensorboard
 albumentations
 pytorch_lightning
 jsonargparse[signatures]

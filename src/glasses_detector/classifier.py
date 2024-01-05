@@ -15,12 +15,12 @@ from .utils import ImgPath
 
 @dataclass
 class GlassesClassifier(BaseGlassesModel):
-    """Glasses classifier for specific glasses type."""
+    """Glasses classifier for people wearing spectacles."""
 
     task: str = field(default="classification", init=False)
     kind: str = "anyglasses"
-    size: str = "normal"
-    pretrained: bool | str = field(default=True, repr=False)
+    size: str = "medium"
+    pretrained: bool | str | None = field(default=True, repr=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinyclsnet_v1", "version": "v1.0.0"},

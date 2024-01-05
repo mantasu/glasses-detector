@@ -1,19 +1,21 @@
 import os
-import torch
 import random
-
-from typing import Any
 from collections import defaultdict
+from typing import Any
+
+import torch
 from torch.utils.data import Dataset
-from .mixins import ImageLoaderMixin, DataLoaderMixin
+
+from .mixins import DataLoaderMixin, ImageLoaderMixin
 
 
 class ImageClassificationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
     def __init__(
-        self, 
-        root: str = '.',
+        self,
+        root: str = ".",
         split_type: str = "train",
-        label_type: str | dict[str, Any] = "onehot", # enum, onehot, {} !vals must be immutable objects
+        label_type: str
+        | dict[str, Any] = "onehot",  # enum, onehot, {} !vals must be immutable objects
         seed: int = 0,
     ):
         super().__init__()
@@ -21,9 +23,12 @@ class ImageClassificationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
         # Init attributes and local vars
         self.data, self.label2name = [], {}
         cat2paths = defaultdict(lambda: [])
-        
+
         for dir in os.listdir(root):
-            for cat in os.scandir(os.path.join(root, dir, split_type)):
+            if not os.path.isdir(dir := os.path.join(root, dir, split_type)):
+                continue
+
+            for cat in os.scandir(dir):
                 # Add path to the image under category of the dir's name
                 cat2paths[cat.name].extend([f.path for f in os.scandir(cat.path)])
 
@@ -35,19 +40,19 @@ class ImageClassificationDataset(Dataset, ImageLoaderMixin, DataLoaderMixin):
                 label = i
             elif label_type == "onehot":
                 label = (int(i == j) for j in range(len(cat2paths)))
-            
+
             # Update mapping and data
             self.label2name[label] = key
             self.data.extend([(img_path, label) for img_path in val])
-        
+
         # Sort & shuffle
         self.data.sort()
         random.seed(seed)
         random.shuffle(self.data)
 
         # Create image augmentation pipeline based on split type
-        self.transform = self.create_transform(split_type=="train")
-    
+        self.transform = self.create_transform(split_type == "train")
+
     @property
     def name2label(self):
         return dict(zip(self.label2name.values(), self.label2name.keys()))

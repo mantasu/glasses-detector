@@ -49,7 +49,7 @@ class BaseGlassesModel(nn.Module, PredInterface):
     task: str
     kind: str
     size: str
-    pretrained: bool | str = field(default=False, repr=False)
+    pretrained: bool | str | None = field(default=False, repr=False)
     device: str | torch.device = field(default="cpu", repr=False)
     model: nn.Module = field(default_factory=lambda: None, init=False, repr=False)
 

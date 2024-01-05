@@ -1,10 +1,12 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, ClassVar, Collection, override
 
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
+from torchvision.models.segmentation import fcn_resnet101, lraspp_mobilenet_v3_large
+from torchvision.models.segmentation.lraspp import LRASPPHead
 
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
@@ -16,15 +18,15 @@ from .utils import ImgPath
 class GlassesSegmenter(BaseGlassesModel):
     """Glasses segmenter for glasses and their parts."""
 
-    task: str = "segmentation"
+    task: str = field(default="segmentation", init=False)
     kind: str = "smart"
-    size: str = "normal"
-    pretrained: bool = True
+    size: str = "medium"
+    pretrained: bool | str | None = field(default=True, repr=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinysegnet_v1", "version": "v1.0.0"},
-        "medium": {"name": "TBA", "version": "v1.0.0"},
-        "large": {"name": "TBA", "version": "v1.0.0"},
+        "medium": {"name": "lraspp_mobilenet_v3_large", "version": "v1.0.0"},
+        "large": {"name": "fcn_resnet101", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
@@ -42,6 +44,13 @@ class GlassesSegmenter(BaseGlassesModel):
         match model_name:
             case "tinysegnet_v1":
                 m = TinyBinarySegmenter()
+            case "lraspp_mobilenet_v3_large":
+                m = lraspp_mobilenet_v3_large()
+                m.classifier = LRASPPHead(40, 960, 1, 128)
+            case "fcn_resnet101":
+                m = fcn_resnet101()
+                m.classifier[-1] = nn.Conv2d(512, 1, 1)
+                m.aux_classifier = None
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 

@@ -1,9 +1,9 @@
-import torchmetrics
-import torch.nn as nn
 import pytorch_lightning as pl
-
+import torch.nn as nn
+import torchmetrics
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 
 class BinarySegmenter(pl.LightningModule):
     def __init__(self, model, train_loader=None, val_loader=None, test_loader=None):
@@ -19,17 +19,20 @@ class BinarySegmenter(pl.LightningModule):
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
 
         # Initialize some metrics to monitor the performance
-        self.metrics = torchmetrics.MetricCollection([
-            torchmetrics.F1Score(task="binary"),
-            torchmetrics.Dice()
-        ])
+        self.metrics = torchmetrics.MetricCollection(
+            [
+                torchmetrics.F1Score(task="binary"),
+                torchmetrics.Dice(task="binary"),
+                torchmetrics.JaccardIndex(task="binary"),  # IoU
+            ]
+        )
 
     @property
     def pos_weight(self):
         if self.train_loader is None:
             # Not known
             return None
-        
+
         # Init counts
         pos, neg = 0, 0
 
@@ -51,7 +54,7 @@ class BinarySegmenter(pl.LightningModule):
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
-    def eval_step(self, batch, prefix=''):
+    def eval_step(self, batch, prefix=""):
         # Forward pass
         x, y = batch
         y_hat = self(x)
@@ -63,14 +66,15 @@ class BinarySegmenter(pl.LightningModule):
         # Log the loss and the metrics
         self.log(f"{prefix}_loss", loss, prog_bar=True)
         self.log(f"{prefix}_f1", metrics["BinaryF1Score"], prog_bar=True)
-        self.log(f"{prefix}_dice", metrics["Dice"], prog_bar=True)
-    
+        self.log(f"{prefix}_dice", metrics["BinaryDice"], prog_bar=True)
+        self.log(f"{prefix}_iou", metrics["BinaryJaccardIndex"], prog_bar=True)
+
     def validation_step(self, batch, batch_idx):
         self.eval_step(batch, prefix="val")
 
     def test_step(self, batch, batch_idx):
         self.eval_step(batch, prefix="test")
-    
+
     def train_dataloader(self):
         return self.train_loader
 
@@ -81,7 +85,12 @@ class BinarySegmenter(pl.LightningModule):
         return self.test_loader
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-4)
-        scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
+        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-2)
+        # scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
+        scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10)
 
-        return [optimizer], [scheduler]
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": scheduler,
+            "monitor": "val_loss",
+        }
