@@ -17,8 +17,12 @@ sys.path.append(os.path.join(PROJECT_DIR, "src"))
 torch.set_float32_matmul_precision("medium")
 
 from glasses_detector import GlassesClassifier, GlassesDetector, GlassesSegmenter
-from glasses_detector._data import ImageClassificationDataset, ImageSegmentationDataset
-from glasses_detector._wrappers import BinaryClassifier, BinarySegmenter
+from glasses_detector._data import (
+    ImageClassificationDataset,
+    ImageDetectionDataset,
+    ImageSegmentationDataset,
+)
+from glasses_detector._wrappers import BinaryClassifier, BinaryDetector, BinarySegmenter
 
 
 class RunCLI(LightningCLI):
@@ -152,7 +156,7 @@ def create_wrapper_callback(
     # Get model and dataset classes
     model_cls, data_cls = {
         "classification": (GlassesClassifier, ImageClassificationDataset),
-        "detection": (GlassesDetector, None),
+        "detection": (GlassesDetector, ImageDetectionDataset),
         "segmentation": (GlassesSegmenter, ImageSegmentationDataset),
     }[task]
 
@@ -168,10 +172,8 @@ def create_wrapper_callback(
         kwargs["label_type"] = {kind: 1, "no_" + kind: 0}
         wrapper_cls = BinaryClassifier
     elif task == "detection":
-        raise NotImplementedError("Detection is not implemented yet!")
+        wrapper_cls = BinaryDetector
     elif task == "segmentation":
-        kwargs["img_dirname"] = "images"
-        kwargs["name_map_fn"] = {"masks": lambda x: f"{int(x[:5])}.jpg"}
         wrapper_cls = BinarySegmenter
 
     # Initialize model architecture and load weights if needed

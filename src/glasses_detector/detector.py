@@ -6,6 +6,8 @@ from torchvision.models.detection import (
     fasterrcnn_resnet50_fpn_v2,
     ssdlite320_mobilenet_v3_large,
 )
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.ssd import SSDHead
 
 from .components.base_model import BaseGlassesModel
 from .models import TinyBinaryDetector
@@ -37,11 +39,17 @@ class GlassesDetector(BaseGlassesModel):
             case "tinydetnet_v1":
                 m = TinyBinaryDetector()
             case "ssdlite320_mobilenet_v3_large":
-                m = ssdlite320_mobilenet_v3_large()
-                # m.classifier = SSDHead(40, 960, 1, 128)
+                m = ssdlite320_mobilenet_v3_large(
+                    num_classes=2,
+                    detections_per_img=1,
+                    topk_candidates=10,
+                )
+                # num_in = m.backbone.out_channels
+                # m.head = SSDHead(num_in, m.head.num_anchors, 2)
             case "fasterrcnn_resnet50_fpn_v2":
-                m = fasterrcnn_resnet50_fpn_v2()
-                # m.roi_heads.box_predictor = FastRCNNPredictor(512, 4)
+                m = fasterrcnn_resnet50_fpn_v2(num_classes=2)
+                # num_in = m.roi_heads.box_predictor.cls_score.in_features
+                # m.roi_heads.box_predictor = FastRCNNPredictor(num_in, 2)
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 

@@ -37,21 +37,65 @@ class TinyBinaryDetector(nn.Module):
             nn.MaxPool2d(2, 2),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Performs forward pass.
-
-        Predicts the bounding box for the given batch of inputs.
+    def forward(
+        self,
+        imgs: list[torch.Tensor],
+        targets: list[dict[str, torch.Tensor]] | None = None,
+    ) -> dict[str, torch.Tensor] | list[dict[str, torch.Tensor]]:
+        """Forward pass through the network.
 
         Args:
-            x (torch.Tensor): Image batch of shape (N, C, H, W). Note
-                that pixel values are normalized and squeezed between
-                0 and 1.
+            imgs (list[torch.Tensor]): A list of images.
+            annotations (list[dict[str, torch.Tensor]], optional): A
+                list of annotations for each image. Each annotation is a
+                dictionary that contains the bounding boxes and labels
+                for all objects in the image. If ``None``, the network
+                is in inference mode.
 
         Returns:
-            torch.Tensor: An output tensor of shape (N, 4) indicating
-            the bounding box coordinates for each nth image. The
-            coordinates are in the format (x_min, y_min, x_max, y_max),
-            where (x_min, y_min) is the top-left corner of the bounding
-            box and (x_max, y_max) is the bottom-right corner.
+            dict[str, torch.Tensor] | list[dict[str, torch.Tensor]]:
+            During training, returns a dictionary containing the
+            classification and regression losses for each image in the
+            batch. During inference, returns a list of dictionaries, one
+            for each input image. Each dictionary contains the predicted
+            boxes, labels, and scores for all detections in the image.
         """
-        return self.fc(self.features(x))
+        preds = [self.fc(self.features(img)) for img in imgs]
+
+        if targets is not None:
+            return self.compute_loss(preds, targets)
+        else:
+            return [
+                {
+                    "boxes": pred,
+                    "labels": torch.ones(pred.size(0), dtype=torch.int64),
+                    "scores": torch.ones(pred.size(0)),
+                }
+                for pred in preds
+            ]
+
+    def compute_loss(
+        self,
+        preds: list[torch.Tensor],
+        targets: list[dict[str, torch.Tensor]],
+    ) -> dict[str, torch.Tensor]:
+        """Compute the loss for the predicted bounding boxes.
+
+        Args:
+            preds (list[torch.Tensor]): A list of predicted bounding
+                boxes for each image.
+            targets (list[dict[str, torch.Tensor]]): A list of targets
+                for each image.
+
+        Returns:
+            dict[str, torch.Tensor]: A dictionary of losses for each
+            image in the batch.
+        """
+        criterion = nn.MSELoss()
+        loss_dict = {}
+
+        for i, pred in enumerate(preds):
+            loss = criterion(pred, targets[i]["boxes"])
+            loss_dict[i] = loss
+
+        return loss_dict

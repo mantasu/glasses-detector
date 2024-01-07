@@ -395,10 +395,16 @@ def parse_coco_json(
                     img.save(os.path.join(path, img_info["file_name"]))
                 elif "detection" in path_splits:
                     # Normalize bbox (x_center, y_center, width, height)
-                    x = (ann["bbox"][0] + ann["bbox"][2] / 2) / img_info["width"]
-                    y = (ann["bbox"][1] + ann["bbox"][3] / 2) / img_info["height"]
-                    w = ann["bbox"][2] / img_info["width"]
-                    h = ann["bbox"][3] / img_info["height"]
+                    # x = (ann["bbox"][0] + ann["bbox"][2] / 2) / img_info["width"]
+                    # y = (ann["bbox"][1] + ann["bbox"][3] / 2) / img_info["height"]
+                    # w = ann["bbox"][2] / img_info["width"]
+                    # h = ann["bbox"][3] / img_info["height"]
+
+                    # Convert to pascal_voc format (with resized bbox)
+                    x1 = int(ann["bbox"][0] * size[0] / img_info["width"])
+                    y1 = int(ann["bbox"][1] * size[1] / img_info["height"])
+                    x2 = x1 + int(ann["bbox"][2] * size[0] / img_info["width"])
+                    y2 = y1 + int(ann["bbox"][3] * size[1] / img_info["height"])
 
                     # Copy the image and create .txt annotation filename
                     img.save(os.path.join(path, "images", img_info["file_name"]))
@@ -406,7 +412,7 @@ def parse_coco_json(
 
                     with open(os.path.join(path, "annotations", txt), "w") as f:
                         # Write the bounding box
-                        f.write(f"{x} {y} {w} {h}")
+                        f.write(f"{x1} {y1} {x2} {y2}")
                 elif "segmentation" in path_splits:
                     # Update the mask for the current class
                     mask = masks[class_name]

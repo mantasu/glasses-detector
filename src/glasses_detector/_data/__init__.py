@@ -1,3 +1,4 @@
-from .mixins import ImageLoaderMixin, DataLoaderMixin
 from .classification_dataset import ImageClassificationDataset
+from .detection_dataset import ImageDetectionDataset
+from .mixins import DataLoaderMixin, ImageLoaderMixin
 from .segmentation_dataset import ImageSegmentationDataset

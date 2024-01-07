@@ -1,6 +1,9 @@
+from typing import Any
+
 import albumentations as A
 import numpy
 import PIL.Image as Image
+import skimage.transform as st
 import torch
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import DataLoader
@@ -8,7 +11,7 @@ from torch.utils.data import DataLoader
 
 class ImageLoaderMixin:
     @staticmethod
-    def create_transform(is_train: bool = False) -> A.Compose:
+    def create_transform(is_train: bool = False, **kwargs) -> A.Compose:
         # Default augmentation
         transform = [
             A.VerticalFlip(),
@@ -18,10 +21,10 @@ class ImageLoaderMixin:
             A.OneOf(
                 [
                     A.RandomResizedCrop(256, 256, p=0.5),
-                    A.GridDistortion(),
                     A.OpticalDistortion(distort_limit=0.1, shift_limit=0.1),
                     A.PiecewiseAffine(),
                     A.Perspective(),
+                    A.GridDistortion(),
                 ]
             ),
             A.OneOf(
@@ -45,21 +48,26 @@ class ImageLoaderMixin:
                     A.GaussNoise(),
                 ]
             ),
-            A.CoarseDropout(max_holes=5, p=0.3),
             A.Normalize(),
             ToTensorV2(),
         ]
+
+        if "bbox_params" not in kwargs:
+            transform.insert(-2, A.CoarseDropout(max_holes=5, p=0.3))
 
         if not is_train:
             # Only keep the last two
             transform = transform[-2:]
 
-        return A.Compose(transform)
+        return A.Compose(transform, **kwargs)
 
     @staticmethod
     def load_image(
         image: str | Image.Image | numpy.ndarray,
         masks: list[str | Image.Image | numpy.ndarray] = [],
+        bboxes: list[str | list[int | float | str]] = [],  # x_min, y_min, x_max, y_max
+        classes: list[Any] = [],  # one for each bbox
+        resize: tuple[int, int] | None = None,
         transform: A.Compose | bool = False,
     ) -> torch.Tensor:
         def open_image_file(image_file, is_mask=False):
@@ -81,24 +89,109 @@ class ImageLoaderMixin:
                 # Image is not a mask, so convert it to RGB
                 image_file = numpy.stack([image_file] * 3, axis=-1)
 
+            if resize is not None:
+                # Resize image to new (w, h)
+                size = resize[1], resize[0]
+                image_file = st.resize(image_file, size)
+
             return image_file
 
-        if isinstance(transform, bool):
-            # Load transform (train/test is based on bool)
-            transform = ImageLoaderMixin.create_transform(transform)
+        def open_bbox_files(bbox_files, classes):
+            # Init new
+            _bboxes, _classes = [], []
 
-        # Load image and mask files
+            for i, bbox_file in enumerate(bbox_files):
+                if isinstance(bbox_file, str):
+                    with open(bbox_file, "r") as f:
+                        # Each line is bbox: "x_min y_min x_max y_max"
+                        batch = [xyxy.strip().split() for xyxy in f.readlines()]
+                else:
+                    # bbox_file is a single bbox (list[str | int | float])
+                    batch = [bbox_file]
+
+                batch = [list(map(float, xyxy)) for xyxy in batch]
+
+                for i, xyxy in enumerate(batch):
+                    if xyxy[2] <= xyxy[0]:
+                        batch[i][0] = min(xyxy[0], image.shape[1] - 1)
+                        batch[i][2] = batch[i][0] + 1
+
+                    if xyxy[3] <= xyxy[1]:
+                        batch[i][1] = min(xyxy[1], image.shape[0] - 1)
+                        batch[i][3] = batch[i][1] + 1
+
+                if resize is not None:
+                    # Get old and new width, height
+                    old_h, old_w = image.shape[:2]
+                    new_w, new_h = resize
+
+                    # Convert bboxes to new (w, h)
+                    batch = [
+                        [
+                            xyxy[0] * new_w / old_w,
+                            xyxy[1] * new_h / old_h,
+                            xyxy[2] * new_w / old_w,
+                            xyxy[3] * new_h / old_h,
+                        ]
+                        for xyxy in batch
+                    ]
+
+                # Add to list
+                _bboxes.extend(batch)
+
+                if classes != []:
+                    # If classes are provided, add them
+                    _classes.extend([classes[i]] * len(batch))
+
+            return _bboxes, _classes
+
+        kwargs = {}
+
+        if isinstance(transform, bool):
+            if bboxes != []:
+                kwargs.update(
+                    {
+                        "bbox_params": A.BboxParams(
+                            format="pascal_voc",
+                            label_fields=["classes"] if classes != [] else None,
+                        )
+                    }
+                )
+
+            # Load transform (train/test is based on bool)
+            transform = ImageLoaderMixin.create_transform(transform, **kwargs)
+
+        # Load image, mask, bbox files
         image = open_image_file(image)
         masks = [open_image_file(m, True) for m in masks]
+        bboxes, classes = open_bbox_files(bboxes, classes)
 
-        if masks == []:
-            return transform(image=image)["image"]
+        # Create transform kwargs
+        kwargs["image"] = image
+        kwargs.update({"masks": masks} if masks != [] else {})
+        kwargs.update({"bboxes": bboxes} if bboxes != [] else {})
+        kwargs.update({"classes": classes} if classes != [] else {})
 
-        # Transform the image and masks
-        transformed = transform(image=image, masks=masks)
-        image, masks = transformed["image"], transformed["masks"]
+        # Transform everything, init returns
+        transformed = transform(**kwargs)
+        return_list = [transformed["image"]]
 
-        return image, masks
+        if masks != []:
+            # TODO: check if transformation is converted to a tensor
+            return_list.append(transformed["masks"])
+
+        if bboxes != []:
+            bboxes = torch.tensor(transformed["bboxes"], dtype=torch.float32)
+            return_list.append(bboxes)
+
+        if classes != []:
+            classes = torch.tensor(transformed["classes"], dtype=torch.int64)
+            return_list.append(classes)
+
+        if len(return_list) == 1:
+            return return_list[0]
+
+        return tuple(return_list)
 
 
 class DataLoaderMixin:
