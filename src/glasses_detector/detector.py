@@ -44,12 +44,12 @@ class GlassesDetector(BaseGlassesModel):
                     detections_per_img=1,
                     topk_candidates=10,
                 )
-                # num_in = m.backbone.out_channels
-                # m.head = SSDHead(num_in, m.head.num_anchors, 2)
             case "fasterrcnn_resnet50_fpn_v2":
-                m = fasterrcnn_resnet50_fpn_v2(num_classes=2)
-                # num_in = m.roi_heads.box_predictor.cls_score.in_features
-                # m.roi_heads.box_predictor = FastRCNNPredictor(num_in, 2)
+                m = fasterrcnn_resnet50_fpn_v2(
+                    num_classes=2,
+                    detections_per_img=1,
+                    topk_candidates=10,
+                )
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 

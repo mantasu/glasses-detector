@@ -64,7 +64,7 @@ class BinaryDetector(pl.LightningModule):
 
         # Compute metrics
         f1_score = self.label_metric(y_hat_labels, y_labels)
-        r2_score = self.boxes_metric(y_hat_boxes.squeeze(), y_boxes.squeeze())
+        r1_score = self.boxes_metric(y_hat_boxes.squeeze(1), y_boxes.squeeze(1))
         ious = [
             box_iou(pred_box, target_box)
             for pred_box, target_box in zip(y_hat_boxes, y_boxes)
@@ -74,7 +74,7 @@ class BinaryDetector(pl.LightningModule):
         # Log the loss and the metrics
         self.log(f"{prefix}_loss", loss, prog_bar=True)
         self.log(f"{prefix}_f1", f1_score, prog_bar=True)
-        self.log(f"{prefix}_r2", r2_score, prog_bar=True)
+        self.log(f"{prefix}_r1", r1_score, prog_bar=True)
         self.log(f"{prefix}_iou", mean_iou, prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
@@ -95,7 +95,7 @@ class BinaryDetector(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-2)
         # scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
-        scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10)
+        scheduler = ReduceLROnPlateau(optimizer, factor=0.1, verbose=True)
 
         return {
             "optimizer": optimizer,

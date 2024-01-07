@@ -1,8 +1,10 @@
 name: Deploy Sphinx docs
 
 on:
-  push:
-    branches: [ main ]
+  release:
+    types: [published]
+  # push:
+  #   branches: [ main ]
 
   workflow_dispatch:
 

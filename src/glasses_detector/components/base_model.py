@@ -19,6 +19,16 @@ from .pred_type import *
 class BaseGlassesModel(nn.Module, PredInterface):
     """Base class for all glasses models.
 
+    Base class with common functionality, i.e., prediction and weight
+    loading methods, that should be inherited by all glasses models.
+    Child classes must implement :meth:`create_model` method which
+    should return the model architecture based on :meth:`model_info`
+    which is a dictionary containing the model name and release
+    version. The dictionary depends on the model's :attr:`kind` and
+    :attr:`size`, both of which are used when creating an instance.
+    An instance can be created by providing a custom model instead of
+    creating a predefined one, see :meth:`from_model`.
+
     Note:
         When ``pretrained`` is ``True``, the URL of the weights to be
         downloaded from will be constructed in the background
@@ -29,6 +39,11 @@ class BaseGlassesModel(nn.Module, PredInterface):
         ``~/.cache/torch/hub/checkpoints``, and, if they are not,
         the weight will be downloaded there and then loaded.
 
+    Warning:
+        Any instance of this class should not be used for model training
+        directly - some properties are unhashable. Instead, retrieve
+        the model from the :attr:`model` attribute and train it instead.
+
     Args:
         task (str): The task the model is built for. Used when
             automatically constructing URL to download the weights from.
@@ -36,12 +51,12 @@ class BaseGlassesModel(nn.Module, PredInterface):
             :meth:`model_info`.
         size (str): The size of the model. Used to access
             :meth:`model_info`.
-        pretrained (bool | str, optional): Whether to load weights from
-            a custom URL (or local file if they're already downloaded)
-            which will be inferred based on model's kind and name. If a
-            string is provided, it will be used as a path or a URL
-            (determined automatically) to the model weights. Defaults to
-            ``False``.
+        pretrained (bool | str | None, optional): Whether to load
+            weights from a custom URL (or local file if they're already
+            downloaded) which will be inferred based on model's
+            :attr:`task`, :attr:`kind`, and :attr:`size`. If a string
+            is provided, it will be used as a path or a URL (determined
+            automatically) to the model weights. Defaults to ``False``.
         device (str | torch.device, optional): Device to cast the model
             (once it is loaded) to. Defaults to ``"cpu"``.
     """
@@ -66,7 +81,16 @@ class BaseGlassesModel(nn.Module, PredInterface):
     """
     typing.ClassVar[dict[str, dict[str, dict[str, str]]]]: The template
     for the model info. The model info is used to construct the URL to
-    download the weights from.
+    download the weights from. This nested dictionary has 3 levels which
+    are expected to be as follows:
+
+        1. ``kind`` - the kind of the model, e.g., ``"sunglasses"``
+        2. ``size`` - the size of the model, e.g., ``"medium"``
+        3. ``info`` - the model info, i.e., ``"name"`` and ``"version"``
+
+    For example, ``DEFAULT_KIND_MAP["sunglasses"]["medium"]`` would
+    return ``{"name": <arch-name>, "version": <weight-version>}`` which
+    the expected format for :attr:`model_info`.
     """
 
     def __post_init__(self):
@@ -92,12 +116,50 @@ class BaseGlassesModel(nn.Module, PredInterface):
         self.to(self.device)
 
     @property
-    def model_info(self) -> dict[str, dict[str, dict[str, str]]]:
+    def model_info(self) -> dict[str, str]:
+        """Model info property.
+
+        This contains the information about the model used (e.g.,
+        architecture and weights). By default, it should have 2 fields:
+        `"name"` and `"version"`, both of which are used when
+        initializing the architecture and looking for pretrained weights
+        (see :meth:`load_weights`).
+
+        Note:
+            This is the default implementation which accesses
+            :attr:`DEFAULT_KIND_MAP` based on :attr:`kind` and
+            :attr:`size`. Child classes can override either
+            :attr:`DEFAULT_KIND_MAP` or this property itself for a
+            custom dictionary.
+
+        Returns:
+            dict[str,str]: The model info dictionary with 2 fields -
+            `"name"` and `"version"` which allow to construct model
+            architecture and download the pretrained model weights, if
+            present.
+        """
         return self.DEFAULT_KIND_MAP.get(self.kind, {}).get(self.size, {})
 
     @staticmethod
     @abstractmethod
     def create_model(self, model_name: str) -> nn.Module:
+        """Creates the model architecture.
+
+        Takes the name of the model architecture and returns the
+        corresponding model instance.
+
+        Args:
+            model_name (str): The name of the model architecture to
+                create, for example, ``"efficientnet_v2_s"``.
+
+        Returns:
+            torch.nn.Module: The model instance with the corresponding
+            architecture.
+
+        Raises:
+            ValueError: If the architecture for the model name is not
+                implemented or is not valid.
+        """
         ...
 
     @classmethod
@@ -106,6 +168,40 @@ class BaseGlassesModel(nn.Module, PredInterface):
         model: nn.Module,
         **kwargs,
     ) -> Self:
+        """Creates a glasses model from a custom model.
+
+        Creates a glasses model wrapper for a custom provided
+        :class:`~torch.nn.Module`, instead of creating a predefined
+        one based on :attr:`kind` and :attr:`size`.
+
+        Note:
+            Make sure the provided model's ``forward`` method behaves as
+            expected, i.e., returns the prediction in expected format
+            for compatibility with :meth:`predict`.
+
+        Warning:
+            :meth:`model_info` property will not be useful as it would
+            return an empty dictionary for custom specified :attr:`kind`
+            and :attr:`size` (if specified at all).
+
+        Args:
+            model (torch.nn.Module): The custom model that will be
+                assigned as :attr:`model`.
+            **kwargs: Keyword arguments to pass to the constructor, see
+                :class:`BaseGlassesModel` for more details. If
+                ``task``, ``kind``, and ``size`` are not provided, they
+                will be set to ``"custom"``. If the model architecture
+                is custom, you may still specify the path to the
+                pretrained wights via ``pretrained`` argument. Finally,
+                if ``device`` is not provided, the wrapper will be cast
+                to the the same one as the provided model is currently
+                on.
+
+        Returns:
+            typing.Self: The glasses model wrapper of the same class
+                type from which this method was called for the provided
+                custom model.
+        """
         # Get the specified device or check the one from the model
         device = kwargs.get("device", next(iter(model.parameters())).device)
 

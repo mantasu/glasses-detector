@@ -60,16 +60,16 @@ class TinyBinaryDetector(nn.Module):
             for each input image. Each dictionary contains the predicted
             boxes, labels, and scores for all detections in the image.
         """
-        preds = [self.fc(self.features(img)) for img in imgs]
+        preds = [*self.fc(self.features(torch.stack(imgs)))[:, None, :]]
 
         if targets is not None:
-            return self.compute_loss(preds, targets)
+            return self.compute_loss(preds, targets, imgs[0].size()[-2:])
         else:
             return [
                 {
                     "boxes": pred,
-                    "labels": torch.ones(pred.size(0), dtype=torch.int64),
-                    "scores": torch.ones(pred.size(0)),
+                    "labels": torch.ones(1, dtype=torch.int64, device=pred.device),
+                    "scores": torch.ones(1, device=pred.device),
                 }
                 for pred in preds
             ]
@@ -78,6 +78,7 @@ class TinyBinaryDetector(nn.Module):
         self,
         preds: list[torch.Tensor],
         targets: list[dict[str, torch.Tensor]],
+        size: tuple[int, int],
     ) -> dict[str, torch.Tensor]:
         """Compute the loss for the predicted bounding boxes.
 
@@ -94,8 +95,11 @@ class TinyBinaryDetector(nn.Module):
         criterion = nn.MSELoss()
         loss_dict = {}
 
+        # Use to divide (x_min, y_min, x_max, y_max) by (w, h, w, h)
+        size = torch.tensor([[*size[::-1], *size[::-1]]], device=preds[0].device)
+
         for i, pred in enumerate(preds):
-            loss = criterion(pred, targets[i]["boxes"])
+            loss = criterion(pred / size, targets[i]["boxes"] / size)
             loss_dict[i] = loss
 
         return loss_dict
