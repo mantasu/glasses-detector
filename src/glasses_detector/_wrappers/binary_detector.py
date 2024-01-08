@@ -54,11 +54,18 @@ class BinaryDetector(pl.LightningModule):
             self.eval()
 
         loss = sum(loss for loss in loss_dict.values())
+        y_hat = self(imgs)
+
+        for pred in y_hat:
+            if len(pred["labels"]) == 0 or len(pred["boxes"]) == 0:
+                # If there are no predictions, add a dummy prediction
+                device = pred["labels"].device
+                pred["labels"] = torch.tensor([0], device=device)
+                pred["boxes"] = torch.tensor([[0, 0, 0, 0]], device=device)
 
         # Get actual labels and predictions
         y_labels = torch.stack([ann["labels"] for ann in annotations])
         y_boxes = torch.stack([ann["boxes"] for ann in annotations])
-        y_hat = self(imgs)
         y_hat_labels = torch.stack([pred["labels"] for pred in y_hat])
         y_hat_boxes = torch.stack([pred["boxes"] for pred in y_hat])
 
@@ -93,9 +100,8 @@ class BinaryDetector(pl.LightningModule):
         return self.test_loader
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-2)
-        # scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
-        scheduler = ReduceLROnPlateau(optimizer, factor=0.1, verbose=True)
+        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-3)
+        scheduler = ReduceLROnPlateau(optimizer, factor=0.3)
 
         return {
             "optimizer": optimizer,

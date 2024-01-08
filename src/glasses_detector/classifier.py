@@ -10,7 +10,7 @@ from torchvision.models import efficientnet_v2_s, shufflenet_v2_x1_0
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
 from .models import TinyBinaryClassifier
-from .utils import ImgPath
+from .utils import FilePath
 
 
 @dataclass
@@ -54,10 +54,10 @@ class GlassesClassifier(BaseGlassesModel):
     @override
     def predict(
         self,
-        image: ImgPath
+        image: FilePath
         | Image.Image
         | np.ndarray
-        | Collection[ImgPath | Image.Image | np.ndarray],
+        | Collection[FilePath | Image.Image | np.ndarray],
         format: str
         | dict[bool, Default]
         | Callable[[torch.Tensor], Default] = {
@@ -68,10 +68,11 @@ class GlassesClassifier(BaseGlassesModel):
         """Predicts whether the positive class is present.
 
         Takes a path or multiple paths to image files or the loaded
-        images themselves and outputs a boolean value for each image
-        indicating whether the it belongs to a positive class, e.g.,
-        *"anyglasses"*, or not. The prediction could be mapped to
-        some :attr:`Default` type.
+        images themselves and outputs a formatted prediction for each
+        image indicating whether the it belongs to a positive class,
+        e.g., *"anyglasses"*, or not. The format of the prediction,
+        i.e., the prediction type is :attr:`Default` type which
+        corresponds to :attr:`~.PredType.DEFAULT`.
 
         Warning:
             If the image is provided as :class:`numpy.ndarray`, make
@@ -82,7 +83,7 @@ class GlassesClassifier(BaseGlassesModel):
             as 3 grayscale images.
 
         Args:
-            image (ImgPath | PIL.Image.Image | numpy.ndarray | typing.Collection[ImgPath | PIL.Image.Image | numpy.ndarray]):
+            image (FilePath | PIL.Image.Image | numpy.ndarray | typing.Collection[FilePath | PIL.Image.Image | numpy.ndarray]):
                 The path(-s) to the image to generate the prediction for
                 or the image(-s) itself represented as
                 :class:`Image.Image` or as a :class:`numpy.ndarray`.

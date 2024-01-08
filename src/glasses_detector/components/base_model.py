@@ -1,7 +1,6 @@
-import os
 import warnings
 from abc import abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Callable, ClassVar, Collection, Self, overload, override
 
 import numpy as np
@@ -10,7 +9,7 @@ import torch.nn as nn
 from PIL import Image
 
 from .._data import ImageLoaderMixin
-from ..utils import ImgPath, is_image_path, is_url
+from ..utils import FilePath, is_path_type, is_url
 from .pred_interface import PredInterface
 from .pred_type import *
 
@@ -202,18 +201,24 @@ class BaseGlassesModel(nn.Module, PredInterface):
                 type from which this method was called for the provided
                 custom model.
         """
-        # Get the specified device or check the one from the model
-        device = kwargs.get("device", next(iter(model.parameters())).device)
+        # Set default values for class args
+        kwargs.setdefault("task", "custom")
+        kwargs.setdefault("kind", "custom")
+        kwargs.setdefault("size", "custom")
+        kwargs.setdefault("device", device := next(iter(model.parameters())).device)
+
+        # Weights will be handled after instantiation
+        pretrained = kwargs.get("pretrained", False)
+        kwargs["pretrained"] = False
+
+        # Filter out the arguments that are not for the model init
+        is_init = {f.name: f.init for f in fields(cls)}
+        kwargs = {k: v for k, v in kwargs.items() if is_init[k]}
 
         with warnings.catch_warnings():
-            # Ignore the warnings from the model init
-            glasses_model = cls(
-                task=kwargs.get("task", "custom"),
-                kind=kwargs.get("kind", "custom"),
-                size=kwargs.get("size", "custom"),
-                pretrained=False,
-                device=device,
-            )
+            # Ignore warnings from model init
+            warnings.simplefilter("ignore")
+            glasses_model = cls(**kwargs)
 
         # Assign the actual model
         glasses_model.model = model
@@ -229,13 +234,33 @@ class BaseGlassesModel(nn.Module, PredInterface):
 
     @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Performs forward pass.
+
+        Predicts raw scores for the given batch of input images. Scores
+        depend on :attr:`model` and typically are unbounded.
+
+        Note:
+            The default :meth:`predict` that uses this method assumes an
+            input is a batch of images of type :class:`~torch.Tensor`
+            and the output can be anything that is also of type
+            :class:`~torch.Tensor`.
+
+        Args:
+            x (torch.Tensor): Image batch of shape (N, C, H, W). Note
+                that pixel values are normalized and squeezed between
+                0 and 1.
+
+        Returns:
+            torch.Tensor: An output tensor with the first dimension of
+            size ``N``.
+        """
         return self.model(x)
 
     @override
     @overload
     def predict(
         self,
-        image: ImgPath | Image.Image | np.ndarray,
+        image: FilePath | Image.Image | np.ndarray,
         format: Callable[[torch.Tensor], Default] = lambda x: str(x),
     ) -> Default:
         ...
@@ -244,7 +269,7 @@ class BaseGlassesModel(nn.Module, PredInterface):
     @overload
     def predict(
         self,
-        image: Collection[ImgPath | Image.Image | np.ndarray],
+        image: Collection[FilePath | Image.Image | np.ndarray],
         format: Callable[[torch.Tensor], Default] = lambda x: str(x),
     ) -> list[Default]:
         ...
@@ -253,10 +278,10 @@ class BaseGlassesModel(nn.Module, PredInterface):
     @override
     def predict(
         self,
-        image: ImgPath
+        image: FilePath
         | Image.Image
         | np.ndarray
-        | Collection[ImgPath | Image.Image | np.ndarray],
+        | Collection[FilePath | Image.Image | np.ndarray],
         format: Callable[[torch.Tensor], Default] = lambda x: str(x),
     ) -> Default | list[Default]:
         """Predicts based on the model specified by the child class.
@@ -274,7 +299,7 @@ class BaseGlassesModel(nn.Module, PredInterface):
             as 3 grayscale images.
 
         Args:
-            image (ImgPath | PIL.Image.Image | numpy.ndarray | typing.Collection[ImgPath | PIL.Image.Image | numpy.ndarray]):
+            image (FilePath | PIL.Image.Image | numpy.ndarray | typing.Collection[FilePath | PIL.Image.Image | numpy.ndarray]):
                 The path(-s) to the image to generate the prediction for
                 or the image(-s) itself represented as
                 :class:`Image.Image` or as a :class:`numpy.ndarray`.
@@ -298,7 +323,7 @@ class BaseGlassesModel(nn.Module, PredInterface):
         xs, preds, is_multiple = [], [], True
 
         # Warning: if the image has shape (3, H, W), it will be interpreted as 3 grayscale images
-        if (is_image_path(image) or isinstance(image, Image.Image)) or (
+        if (is_path_type(image) or isinstance(image, Image.Image)) or (
             isinstance(image, np.ndarray)
             and (image.ndim == 2 or (image.ndim == 3 and image.shape[-1] in [1, 3]))
         ):
@@ -317,6 +342,31 @@ class BaseGlassesModel(nn.Module, PredInterface):
         return preds if is_multiple else preds[0]
 
     def load_weights(self, path_or_url: str | bool = True):
+        """Loads inner :attr:`model` weights.
+
+        Takes a path of a URL to the weights file, or ``True`` to
+        construct the URL automatically based on :attr:`model_info` and
+        loads the weights into :attr:`model`.
+
+        Note:
+            If the weights are already downloaded, they will be loaded
+            from the hub cache, which by default is
+            ``~/.cache/torch/hub/checkpoints``.
+
+        Warning:
+            If the fields in :attr:`model_info` are not recognized,
+            e.g., by providing an unrecognized :attr:`kind` or
+            :attr:`size` or by initializing with :meth:`from_model`,
+            this method will not be able to construct the URL (if
+            ``path_or_url`` is ``True``) and will raise a warning.
+
+        Args:
+            path_or_url (str | bool, optional): The path or the URL (it
+            will be inferred automatically) to the model weights
+            (``.pth`` file). It can also be :class:`bool`, in which case
+            ``True`` indicates to construct ``URL`` for the pre-trained
+            weights and ``False`` does nothing. Defaults to ``True``.
+        """
         if isinstance(path_or_url, bool) and path_or_url:
             try:
                 # Get model name and release version

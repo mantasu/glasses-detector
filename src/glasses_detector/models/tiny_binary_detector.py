@@ -9,6 +9,14 @@ class TinyBinaryDetector(nn.Module):
     parameters while maintaining a reasonable accuracy. It only has
     several sequential convolutional and pooling blocks (with
     batch-norm in between).
+
+    Note:
+        I tried varying the architecture, including activations,
+        convolution behavior (groups and stride), pooling, and layer
+        structure. This also includes residual and dense connections,
+        as well as combinations. Turns out, they do not perform as well
+        as the current architecture which is just a bunch of
+        CONV-RELU-BN-MAXPOOL blocks with no paddings.
     """
 
     def __init__(self):
@@ -16,18 +24,18 @@ class TinyBinaryDetector(nn.Module):
 
         # Several convolutional blocks
         self.features = nn.Sequential(
-            self._create_block(3, 5, 3),
-            self._create_block(5, 10, 3),
-            self._create_block(10, 15, 3),
-            self._create_block(15, 20, 3),
-            self._create_block(20, 25, 3),
-            self._create_block(25, 80, 3),
+            self._create_block(3, 6, 15),
+            self._create_block(6, 12, 7),
+            self._create_block(12, 24, 5),
+            self._create_block(24, 48, 3),
+            self._create_block(48, 96, 3),
+            self._create_block(96, 192, 3),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
         )
 
-        # FC for bounding box prediction
-        self.fc = nn.Linear(80, 4)
+        # Fully connected layer
+        self.fc = nn.Linear(192, 4)
 
     def _create_block(self, num_in, num_out, filter_size):
         return nn.Sequential(
@@ -44,6 +52,19 @@ class TinyBinaryDetector(nn.Module):
     ) -> dict[str, torch.Tensor] | list[dict[str, torch.Tensor]]:
         """Forward pass through the network.
 
+        This takes a list of images and returns a list of predictions
+        for each image or a loss dictionary if the targets are provided.
+        This is to match the API of the PyTorch *torchvision* models,
+        which specify that:
+
+        .. quote::
+
+            During training, returns a dictionary containing the
+            classification and regression losses for each image in the
+            batch. During inference, returns a list of dictionaries, one
+            for each input image. Each dictionary contains the predicted
+            boxes, labels, and scores for all detections in the image.
+
         Args:
             imgs (list[torch.Tensor]): A list of images.
             annotations (list[dict[str, torch.Tensor]], optional): A
@@ -54,12 +75,12 @@ class TinyBinaryDetector(nn.Module):
 
         Returns:
             dict[str, torch.Tensor] | list[dict[str, torch.Tensor]]:
-            During training, returns a dictionary containing the
-            classification and regression losses for each image in the
-            batch. During inference, returns a list of dictionaries, one
-            for each input image. Each dictionary contains the predicted
-            boxes, labels, and scores for all detections in the image.
+            A dictionary with only a single "regression" loss entry if
+            ``targets`` were specified. Otherwise, a list of
+            dictionaries with the predicted bounding boxes, labels, and
+            scores for all detections in each image.
         """
+        # Forward pass; insert a new dimension to indicate a single bbox
         preds = [*self.fc(self.features(torch.stack(imgs)))[:, None, :]]
 
         if targets is not None:
@@ -82,6 +103,10 @@ class TinyBinaryDetector(nn.Module):
     ) -> dict[str, torch.Tensor]:
         """Compute the loss for the predicted bounding boxes.
 
+        This computes the MSE loss between the predicted bounding boxes
+        and the target bounding boxes. The returned dictionary contains
+        only one key: "regression".
+
         Args:
             preds (list[torch.Tensor]): A list of predicted bounding
                 boxes for each image.
@@ -89,16 +114,17 @@ class TinyBinaryDetector(nn.Module):
                 for each image.
 
         Returns:
-            dict[str, torch.Tensor]: A dictionary of losses for each
-            image in the batch.
+            dict[str, torch.Tensor]: A dictionary with only one key:
+            "regression" which contains the regression MSE loss.
         """
-        criterion = nn.MSELoss()
-        loss_dict = {}
+        # Initialize criterion, loss dictionary, and device
+        criterion, loss_dict, device = nn.MSELoss(), {}, preds[0].device
 
         # Use to divide (x_min, y_min, x_max, y_max) by (w, h, w, h)
-        size = torch.tensor([[*size[::-1], *size[::-1]]], device=preds[0].device)
+        size = torch.tensor([[*size[::-1], *size[::-1]]], device=device)
 
         for i, pred in enumerate(preds):
+            # Compute the loss (normalize the coordinates before that)
             loss = criterion(pred / size, targets[i]["boxes"] / size)
             loss_dict[i] = loss
 

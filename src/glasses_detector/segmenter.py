@@ -11,7 +11,7 @@ from torchvision.models.segmentation.lraspp import LRASPPHead
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
 from .models import TinyBinarySegmenter
-from .utils import ImgPath
+from .utils import FilePath
 
 
 @dataclass
@@ -59,10 +59,10 @@ class GlassesSegmenter(BaseGlassesModel):
     @override
     def predict(
         self,
-        image: ImgPath
+        image: FilePath
         | Image.Image
         | np.ndarray
-        | Collection[ImgPath | Image.Image | np.ndarray],
+        | Collection[FilePath | Image.Image | np.ndarray],
         format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "img",
     ) -> Default | list[Default]:
         """Predicts which pixels in the image are positive.
@@ -84,7 +84,7 @@ class GlassesSegmenter(BaseGlassesModel):
             as 3 grayscale images.
 
         Args:
-            image (ImgPath | PIL.Image.Image | numpy.ndarray | typing.Collection[ImgPath | PIL.Image.Image | numpy.ndarray]):
+            image (FilePath | PIL.Image.Image | numpy.ndarray | typing.Collection[FilePath | PIL.Image.Image | numpy.ndarray]):
                 The path(-s) to the image to generate the prediction for
                 or the image(-s) itself represented as
                 :class:`Image.Image` or as a :class:`numpy.ndarray`.

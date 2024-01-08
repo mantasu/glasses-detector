@@ -6,8 +6,6 @@ from torchvision.models.detection import (
     fasterrcnn_resnet50_fpn_v2,
     ssdlite320_mobilenet_v3_large,
 )
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-from torchvision.models.detection.ssd import SSDHead
 
 from .components.base_model import BaseGlassesModel
 from .models import TinyBinaryDetector
@@ -47,8 +45,8 @@ class GlassesDetector(BaseGlassesModel):
             case "fasterrcnn_resnet50_fpn_v2":
                 m = fasterrcnn_resnet50_fpn_v2(
                     num_classes=2,
-                    detections_per_img=1,
-                    topk_candidates=10,
+                    box_detections_per_img=1,
+                    box_batch_size_per_image=10,
                 )
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
