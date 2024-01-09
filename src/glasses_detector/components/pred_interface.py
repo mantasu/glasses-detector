@@ -86,6 +86,9 @@ class PredInterface(ABC):
             pred (Default | dict[str, Default]): The single prediction
                 or a dictionary of predictions to save.
             filepath (FilePath): The path to save the prediction(-s) to.
+
+        Raises:
+            ValueError: If the file type is not supported.
         """
 
         def _standardize(pred) -> StandardDefault | dict[str, StandardDefault]:

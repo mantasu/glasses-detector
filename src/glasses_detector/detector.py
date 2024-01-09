@@ -1,14 +1,19 @@
 from dataclasses import dataclass, field
-from typing import ClassVar, override
+from typing import Any, Callable, ClassVar, Collection, override
 
+import numpy as np
+import torch
 import torch.nn as nn
+from PIL import Image, ImageDraw, ImageFont
 from torchvision.models.detection import (
     fasterrcnn_resnet50_fpn_v2,
     ssdlite320_mobilenet_v3_large,
 )
 
-from .components.base_model import BaseGlassesModel
+from .components import BaseGlassesModel
+from .components.pred_type import Default
 from .models import TinyBinaryDetector
+from .utils import FilePath
 
 
 @dataclass
@@ -52,3 +57,120 @@ class GlassesDetector(BaseGlassesModel):
                 raise ValueError(f"{model_name} is not a valid choice!")
 
         return m
+
+    @staticmethod
+    def draw_rects(
+        img: Image.Image,
+        bboxes: torch.Tensor | np.ndarray | list[list[int | float]],
+        labels: torch.Tensor | np.ndarray | list[int] | None = None,
+        label2color: dict[int, str] = {0: "red", 1: "green", 2: "blue"},
+        label2name: dict[int, str] = {},
+    ) -> Image.Image:
+        """Draw bounding boxes on an image."""
+        # Convert to numpy
+        if isinstance(bboxes, torch.Tensor):
+            bboxes = bboxes.cpu().numpy()
+        if isinstance(labels, torch.Tensor):
+            labels = labels.cpu().numpy()
+
+        # Convert to list
+        if isinstance(bboxes, np.ndarray):
+            bboxes = bboxes.tolist()
+        if isinstance(labels, np.ndarray):
+            labels = labels.tolist()
+
+        if labels is None:
+            # Match len for zipping
+            labels = [None] * len(bboxes)
+
+        if label2name == {}:
+            # Construct default label to name mapping
+            label2name = {i: str(i) for i in np.unique(labels)}
+
+        for bbox, label in zip(bboxes, labels):
+            # Draw the rectangle around the object
+            img = ImageDraw.Draw(img).rectangle(
+                bbox,
+                outline="red"
+                if label is None
+                else label2color[label % len(label2color)],
+                width=3,
+            )
+
+            if label is None:
+                continue
+
+            # Write down the label next to bbox
+            img = ImageDraw.Draw(img).text(
+                bbox[:2],
+                label2name[label],
+                fill=label2color[label % len(label2color)],
+                font=ImageFont.truetype("arial.ttf", 20),
+            )
+
+        return img
+
+    @override
+    def forward(self, x: torch.Tensor) -> list[dict[str, torch.Tensor]]:
+        return self.model([*x])
+
+    @override
+    def predict(
+        self,
+        image: FilePath
+        | Image.Image
+        | np.ndarray
+        | Collection[FilePath | Image.Image | np.ndarray],
+        format: Callable[[Any], Default]
+        | Callable[[Image.Image, Any], Default] = "img",
+        resize: tuple[int, int] | None = (256, 256),
+    ) -> Default | list[Default]:
+        def verify_bboxes(ori: Image.Image, boxes: torch.Tensor):
+            w, h = ori.size
+
+            if (w, h) != resize:
+                # Convert bboxes back to original size
+                boxes[:, 0] = boxes[:, 0] * w / resize[0]
+                boxes[:, 1] = boxes[:, 1] * h / resize[1]
+                boxes[:, 2] = boxes[:, 2] * w / resize[0]
+                boxes[:, 3] = boxes[:, 3] * h / resize[1]
+
+            return boxes
+
+        if isinstance(format, str):
+            match format:
+                case "int":
+
+                    def format_fn(ori, pred):
+                        pred["boxes"] = verify_bboxes(ori, pred["boxes"])
+                        return [list(map(int, b)) for b in pred["boxes"]]
+
+                case "float":
+
+                    def format_fn(ori, pred):
+                        pred["boxes"] = verify_bboxes(ori, pred["boxes"])
+                        return pred["boxes"]
+
+                case "str":
+
+                    def format_fn(ori, pred):
+                        pred["boxes"] = verify_bboxes(ori, pred["boxes"])
+                        return "BBoxes: " + "; ".join(
+                            [" ".join(map(int, b)) for b in pred["boxes"]]
+                        )
+
+                case "img":
+
+                    def format_fn(ori, pred):
+                        pred["boxes"] = verify_bboxes(ori, pred["boxes"])
+                        img = self.draw_rects(ori, pred["boxes"])
+
+                        return img
+
+                case _:
+                    raise ValueError(f"{format} is not a valid choice!")
+
+            # Convert to function
+            format = format_fn
+
+        return super().predict(image, format)

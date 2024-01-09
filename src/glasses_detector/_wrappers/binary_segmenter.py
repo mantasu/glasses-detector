@@ -85,8 +85,8 @@ class BinarySegmenter(pl.LightningModule):
         return self.test_loader
 
     def configure_optimizers(self):
+        # Initialize AdamW optimizer and Reduce On Plateau scheduler
         optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-2)
-        # scheduler = CosineAnnealingWarmRestarts(optimizer, 10, 2, 1e-6)
         scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10)
 
         return {

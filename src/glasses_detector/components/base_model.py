@@ -1,3 +1,4 @@
+import inspect
 import warnings
 from abc import abstractmethod
 from dataclasses import dataclass, field, fields
@@ -233,28 +234,33 @@ class BaseGlassesModel(nn.Module, PredInterface):
         return glasses_model
 
     @override
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, *args) -> Iterable[Any]:
         """Performs forward pass.
 
-        Predicts raw scores for the given batch of input images. Scores
-        depend on :attr:`model` and typically are unbounded.
+        Calls the forward method of the inner :attr:`model`, by passing
+        any inputs it can process (first argument is typically a batch
+        of images, i.e., a :class:`~torch.Tensor` of shape
+        ``(N, C, H, W)``.
 
         Note:
             The default :meth:`predict` that uses this method assumes an
             input is a batch of images of type :class:`~torch.Tensor`
-            and the output can be anything that is also of type
-            :class:`~torch.Tensor`.
+            and the output can be anything that is
+            :class:`~torch.Iterable`, e.g., a :class:`~torch.Tensor`.
 
         Args:
-            x (torch.Tensor): Image batch of shape (N, C, H, W). Note
-                that pixel values are normalized and squeezed between
+            *args: any inputs that can be passed to :attr:`model`.
+                Usually, it is just a single input, i.e., a batch of
+                images: a :class:`~torch.Tensor` of shape
+                ``(N, C, H, W)``. with normalized pixel values between
                 0 and 1.
 
         Returns:
-            torch.Tensor: An output tensor with the first dimension of
+            An iterable of predictions (one for each input). Usually,
+            it is a :class:`~torch.Tensor` with the first dimension of
             size ``N``.
         """
-        return self.model(x)
+        return self.model(*args)
 
     @override
     @overload
@@ -282,13 +288,21 @@ class BaseGlassesModel(nn.Module, PredInterface):
         | Image.Image
         | np.ndarray
         | Collection[FilePath | Image.Image | np.ndarray],
-        format: Callable[[torch.Tensor], Default] = lambda x: str(x),
+        format: Callable[[Any], Default]
+        | Callable[[Image.Image, Any], Default] = lambda x: str(x),
+        resize: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
         """Predicts based on the model specified by the child class.
 
         Takes a path or multiple paths to image files or the loaded
         images themselves and outputs a formatted prediction generated
         by the child class.
+
+        Note:
+            This method expects that :meth:`forward` always returns an
+            :class:`typing.Iterable` of any type of predictions
+            (typically, they would be of type :class:`~torch.Tensor`),
+            even if there is only one prediction.
 
         Warning:
             If the image is provided as :class:`numpy.ndarray`, make
@@ -307,11 +321,21 @@ class BaseGlassesModel(nn.Module, PredInterface):
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
-            format (typing.Callable[[torch.Tensor], Default], optional):
-                Format callback. This is a custom function that takes a
-                predicted tensor as input and outputs a formatted
-                prediction of type :attr:`Default`. Defaults
+            format (typing.Callable[[typing.Any], Default] | (typing.Callable[[Image.Image, typing.Any], Default], optional):
+                Format callback. This is a custom function that takes
+                a predicted elements from the iterable output of
+                :meth:`forward` (elements are usually of type
+                :class:`~torch.Tensor`) as input or the original image
+                and its prediction as inputs (it will be determined
+                automatically which function it is) and outputs a
+                formatted prediction of type :attr:`Default`. Defaults
                 to ``lambda x: str(x)``.
+            resize (tuple[int, int] | None, optional): The size (width,
+                height) to resize the image to before passing it through
+                the network. If ``None``, the image will not be resized.
+                It is recommended to resize it to the size the model was
+                trained on, which by default is ``(256, 256)``. Defaults
+                to ``None``.
 
         Returns:
             Default | typing.List[Default]: The
@@ -331,13 +355,30 @@ class BaseGlassesModel(nn.Module, PredInterface):
             image = [image]
             is_multiple = False
 
-        for img in image:
-            # Load the image and cast to device and append to batch
-            xs.append(ImageLoaderMixin.load_image(img).to(device))
+        if require_original := (len(inspect.signature(format).parameters) == 2):
+            # Init original images
+            original_images = []
 
-        for pred in self(torch.stack(xs)):
-            # Append formatted prediction
-            preds.append(format(pred))
+        for img in image:
+            if require_original:
+                # Keep track of original
+                original_images.append(
+                    Image.open(img)
+                    if isinstance(img, str)
+                    else Image.fromarray(img)
+                    if isinstance(img, np.ndarray)
+                    else img
+                )
+            # Load the image and cast to device and append to batch
+            xs.append(ImageLoaderMixin.load_image(img, resize=resize).to(device))
+
+        for i, pred in enumerate(self(torch.stack(xs))):
+            if require_original:
+                # Format prediction with original image
+                preds.append(format(original_images[i], pred))
+            else:
+                # Append formatted prediction
+                preds.append(format(pred))
 
         return preds if is_multiple else preds[0]
 

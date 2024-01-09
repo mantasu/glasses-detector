@@ -25,8 +25,6 @@ class BinaryDetector(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         # Forward propagate and compute loss
-        # imgs = [img for img in batch[0]]
-        # annotations = [{k: v for k, v in t.items()} for t in batch[1]]
         imgs = [*batch[0]]
         annotations = [
             {"boxes": b, "labels": l}
@@ -39,9 +37,6 @@ class BinaryDetector(pl.LightningModule):
 
     def eval_step(self, batch, prefix=""):
         # Forward pass and compute loss
-        # imgs = [img for img in batch[0]]
-        # annotations = [{k: v for k, v in t.items()} for t in batch[1]]
-
         imgs = [*batch[0]]
         annotations = [
             {"boxes": b, "labels": l}
@@ -100,7 +95,8 @@ class BinaryDetector(pl.LightningModule):
         return self.test_loader
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-3)
+        # Initialize AdamW optimizer and Reduce On Plateau scheduler
+        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-2)
         scheduler = ReduceLROnPlateau(optimizer, factor=0.3)
 
         return {

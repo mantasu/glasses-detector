@@ -69,7 +69,10 @@ class TinyBinaryDetector(nn.Module):
             imgs (list[torch.Tensor]): A list of images.
             annotations (list[dict[str, torch.Tensor]], optional): A
                 list of annotations for each image. Each annotation is a
-                dictionary that contains the bounding boxes and labels
+                dictionary that contains:
+
+                1. ``"boxes"``: the bounding boxes for each object
+                2. ``"labels"``: labels
                 for all objects in the image. If ``None``, the network
                 is in inference mode.
 
@@ -81,7 +84,15 @@ class TinyBinaryDetector(nn.Module):
             scores for all detections in each image.
         """
         # Forward pass; insert a new dimension to indicate a single bbox
-        preds = [*self.fc(self.features(torch.stack(imgs)))[:, None, :]]
+        preds = self.fc(self.features(torch.stack(imgs)))
+
+        # Convert to (x_min, y_min, x_max, y_max) and shape (N, 1, 4)
+        h, w = imgs[0].shape[-2:]
+        preds[:, 0] = torch.clamp(preds[:, 0], 0, 1) * w
+        preds[:, 1] = torch.clamp(preds[:, 1], 0, 1) * h
+        preds[:, 2] = torch.clamp(preds[:, 0] + preds[:, 2] * w, 0, w)
+        preds[:, 3] = torch.clamp(preds[:, 1] + preds[:, 3] * h, 0, h)
+        preds = [*preds[:, None, :]]
 
         if targets is not None:
             return self.compute_loss(preds, targets, imgs[0].size()[-2:])
