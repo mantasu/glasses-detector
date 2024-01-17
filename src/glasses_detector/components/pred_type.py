@@ -1,17 +1,20 @@
+from __future__ import annotations
+
 from enum import Enum, auto
-from typing import Any, Iterable, Self, TypeGuard, TypeVar
+from typing import Any, Iterable, Self, TypeGuard
 
 import numpy as np
 import torch
 from PIL import Image
 
+# TODO: document when sphinx supports type aliases
 type Scalar = bool | int | float | str | np.generic | np.ndarray | torch.Tensor
-type Tensor = Iterable[Scalar | Tensor] | Image.Image
+type Tensor = Iterable[PredType.Scalar | Tensor] | Image.Image
 type Default = Scalar | Tensor
 type StandardScalar = bool | int | float | str
 type StandardTensor = list[StandardScalar | StandardTensor]
 type StandardDefault = StandardScalar | StandardTensor
-type NonDefault = TypeVar("NonDefault", bound=Any)
+type NonDefault[T] = T
 type Anything = Default | NonDefault
 
 
@@ -117,11 +120,10 @@ class PredType(Enum):
             * :class:`torch.Tensor` with ``ndim == 0``
 
         Args:
-            pred (typing.Any): The value to check.
+            pred: The value to check.
 
         Returns:
-            typing.TypeGuard[Scalar]: ``True`` if the value is a scalar,
-            ``False`` otherwise.
+            ``True`` if the value is a scalar, ``False`` otherwise.
         """
         return isinstance(pred, (bool, int, float, str, np.generic)) or (
             isinstance(pred, (torch.Tensor, np.ndarray)) and pred.ndim == 0

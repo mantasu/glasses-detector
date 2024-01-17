@@ -10,9 +10,9 @@ from torchvision.models.detection import (
     ssdlite320_mobilenet_v3_large,
 )
 
+from .architectures import TinyBinaryDetector
 from .components import BaseGlassesModel
 from .components.pred_type import Default
-from .models import TinyBinaryDetector
 from .utils import FilePath
 
 
@@ -70,12 +70,14 @@ class GlassesDetector(BaseGlassesModel):
         # Convert to numpy
         if isinstance(bboxes, torch.Tensor):
             bboxes = bboxes.cpu().numpy()
+
         if isinstance(labels, torch.Tensor):
             labels = labels.cpu().numpy()
 
         # Convert to list
         if isinstance(bboxes, np.ndarray):
             bboxes = bboxes.tolist()
+
         if isinstance(labels, np.ndarray):
             labels = labels.tolist()
 

@@ -1,7 +1,7 @@
-Segmenters
+Classifier
 ==========
 
-.. automodule:: glasses_detector.segmenters
+.. automodule:: glasses_detector.classifier
    :members:
    :undoc-members:
    :show-inheritance:

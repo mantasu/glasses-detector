@@ -5,15 +5,16 @@
 
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath("../src"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Glasses Detector'
-copyright = '2023, Mantas Birškus'
-author = 'Mantas Birškus'
-release = '0.1.1'
+project = "Glasses Detector"
+copyright = "2024, Mantas Birškus"
+author = "Mantas Birškus"
+release = "1.0.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -37,12 +38,28 @@ intersphinx_mapping = {
     "torchvision": ("https://pytorch.org/vision/stable/", None),
 }
 
+# TODO: possibly remove when sphinx supports types
+autodoc_type_aliases = {
+    "FilePath": "str | bytes | os.PathLike",
+    "Scalar": "bool | int | float | str | numpy.generic | numpy.ndarray | torch.Tensor",
+    "Tensor": "typing.Iterable[bool | int | float | str | numpy.generic | numpy.ndarray | torch.Tensor | typing.Iterable[...]] | PIL.Image.Image",
+    "Default": "bool | int | float | str | numpy.generic | numpy.ndarray | torch.Tensor | typing.Iterable[bool | int | float | str | numpy.generic | numpy.ndarray | torch.Tensor | typing.Iterable[...]] | PIL.Image.Image",
+    "StandardScalar": "bool | int | float | str",
+    "StandardTensor": "list[bool | int | float | str | list[...]]",
+    "StandardDefault": "bool | int | float | str | list[bool | int | float | str | list[...]]",
+    "NonDefault[T]": "T",
+    "Anything": "typing.Any",
+}
+
+autodoc_typehints = "both"
+navigation_with_keys = False
 napoleon_use_param = True
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+html_theme = "pydata_sphinx_theme"
+html_static_path = ["_static"]
+# html_css_files = ["css/rtd_dark.css"]

@@ -7,32 +7,186 @@ import torch.nn as nn
 from PIL import Image
 from torchvision.models import efficientnet_v2_s, shufflenet_v2_x1_0
 
+from .architectures import TinyBinaryClassifier
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
-from .models import TinyBinaryClassifier
 from .utils import FilePath
 
 
 @dataclass
 class GlassesClassifier(BaseGlassesModel):
-    """Glasses classifier for people wearing spectacles."""
+    r"""Binary classifier to check if glasses are present.
 
-    task: str = field(default="classification", init=False)
+    This class allows to perform binary classification for images with
+    glasses, i.e., determines whether or not the glasses are present in
+    the image (primarily focus is on whether or not eyeglasses are worn
+    by a person). It is possible to specify only a particular kind of
+    glasses to focus on, e.g., sunglasses.
+
+    .. list-table:: Performance of the Pre-trained Classifiers
+        :header-rows: 1
+
+        * - Kind
+          - Size
+          - BCE :math:`\downarrow`
+          - F1 :math:`\uparrow`
+          - ROC-AUC :math:`\uparrow`
+          - PR-AUC :math:`\uparrow`
+        * - ``anyglasses``
+          - ``small``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``anyglasses``
+          - ``medium``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``anyglasses``
+          - ``large``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``eyeglasses``
+          - ``small``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``eyeglasses``
+          - ``medium``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``eyeglasses``
+          - ``large``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``sunglasses``
+          - ``small``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``sunglasses``
+          - ``medium``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``sunglasses``
+          - ``large``
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+
+    .. list-table:: Size Info of teh Pre-trained Classifiers
+        :header-rows: 1
+
+        * - Size
+          - Architecture
+          - Paper
+          - Params :math:`\downarrow`
+          - GFLOPs :math:`\downarrow`
+          - Memory :math:`\downarrow`
+          - Filesize :math:`\downarrow`
+        * - ``small``
+          - :class:`tinyclsnet_v1 <.architectures.TinyBinaryClassifier>`
+          - N/A
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``medium``
+          - :func:`~torchvision.models.shufflenet_v2_x1_0`
+          - `ShuffleNet V2: Practical Guidelines for Efficient CNN Architecture Design <https://arxiv.org/abs/1807.11164>`_
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+        * - ``large``
+          - :func:`~torchvision.models.efficientnet_v2_s`
+          - `EfficientNetV2: Smaller Models and Faster Training <https://arxiv.org/abs/2104.00298>`_
+          - TODO
+          - TODO
+          - TODO
+          - TODO
+
+    Args:
+        kind (str, optional): The kind of glasses to perform binary
+            classification for. Available options are:
+
+                * ``"anyglasses"`` - any kind glasses/googles/spectacles
+                * ``"eyeglasses"`` - transparent eyeglasses
+                * ``"sunglasses"`` - opaque and semi-transparent glasses
+
+            Each kind is only responsible for its category, e.g., if
+            ``kind`` is set to ``"sunglasses"``, then images with
+            transparent eyeglasses will not be identified as positive.
+            Defaults to ``"anyglasses"``.
+        size (str, optional): The size of the model to use. Available
+            options are:
+
+                * ``"small"`` - a tiny model with very few parameters
+                  but a lower accuracy.
+                * ``"medium"`` - a model with a balance between the
+                  number of parameters and the accuracy.
+                * ``"large"`` - a model with a large number of
+                  parameters but a higher accuracy.
+
+            Please check :attr:`DEFAULT_SIZE_MAP` to see which
+            architecture each size maps to and the details about the
+            number of parameters. Defaults to ``"medium"``.
+        pretrained (bool | str | None, optional): Whether to load
+            weights from a custom URL (or local file if they're already
+            downloaded) which will be inferred based on model's
+            :attr:`kind` and :attr:`size`. If a string is provided, it
+            will be used as a path or a URL (determined automatically)
+            to the model weights. Defaults to ``True``.
+    """
     kind: str = "anyglasses"
     size: str = "medium"
     pretrained: bool | str | None = field(default=True, repr=False)
+    task: str = field(default="classification", init=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinyclsnet_v1", "version": "v1.0.0"},
         "medium": {"name": "shufflenet_v2_x1_0", "version": "v1.0.0"},
         "large": {"name": "efficientnet_v2_s", "version": "v1.0.0"},
     }
+    """
+    typing.ClassVar[dict[str, dict[str, str]]]: The model info
+    dictionary mapping from the size of the model to the model info
+    dictionary which contains the name of the architecture and the
+    version of the release. This is just a helper component for
+    :attr:`DEFAULT_KIND_MAP` because each default kind has the same set
+    of default models.
+    """
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
         "anyglasses": DEFAULT_SIZE_MAP,
         "eyeglasses": DEFAULT_SIZE_MAP,
         "sunglasses": DEFAULT_SIZE_MAP,
     }
+    """
+    typing.ClassVar[dict[str, dict[str, dict[str, str]]]]: The model
+    info dictionary used to construct the URL to download the weights
+    from. It has 3 nested levels:
+
+        1. ``kind`` - the kind of the model, e.g., ``"sunglasses"``
+        2. ``size`` - the size of the model, e.g., ``"medium"``
+        3. ``info`` - the model info, i.e., ``"name"`` and ``"version"``
+    
+    For example, ``DEFAULT_KIND_MAP["sunglasses"]["medium"]`` would
+    return ``{"name": <arch-name>, "version": <release-version>}``.
+    """
 
     @staticmethod
     @override

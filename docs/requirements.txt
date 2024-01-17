@@ -1,4 +1,4 @@
 sphinx
 sphinx_toolbox
-sphinx_rtd_theme
 sphinx_copybutton
+sphinx-rtd-light-dark

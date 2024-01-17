@@ -89,8 +89,8 @@ class BaseGlassesModel(nn.Module, PredInterface):
         3. ``info`` - the model info, i.e., ``"name"`` and ``"version"``
 
     For example, ``DEFAULT_KIND_MAP["sunglasses"]["medium"]`` would
-    return ``{"name": <arch-name>, "version": <weight-version>}`` which
-    the expected format for :attr:`model_info`.
+    return ``{"name": <arch-name>, "version": <release-version>}`` which
+    is the expected format for :attr:`model_info`.
     """
 
     def __post_init__(self):
@@ -246,7 +246,7 @@ class BaseGlassesModel(nn.Module, PredInterface):
             The default :meth:`predict` that uses this method assumes an
             input is a batch of images of type :class:`~torch.Tensor`
             and the output can be anything that is
-            :class:`~torch.Iterable`, e.g., a :class:`~torch.Tensor`.
+            :class:`~typing.Iterable`, e.g., a :class:`~torch.Tensor`.
 
         Args:
             *args: any inputs that can be passed to :attr:`model`.
@@ -403,10 +403,11 @@ class BaseGlassesModel(nn.Module, PredInterface):
 
         Args:
             path_or_url (str | bool, optional): The path or the URL (it
-            will be inferred automatically) to the model weights
-            (``.pth`` file). It can also be :class:`bool`, in which case
-            ``True`` indicates to construct ``URL`` for the pre-trained
-            weights and ``False`` does nothing. Defaults to ``True``.
+                will be inferred automatically) to the model weights
+                (``.pth`` file). It can also be :class:`bool`, in which
+                case ``True`` indicates to construct ``URL`` for the
+                pre-trained weights and ``False`` does nothing. Defaults
+                to ``True``.
         """
         if isinstance(path_or_url, bool) and path_or_url:
             try:

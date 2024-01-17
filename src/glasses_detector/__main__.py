@@ -2,8 +2,6 @@ import argparse
 
 import torch
 
-from .old import classifiers, segmenters
-
 
 def parse_kwargs():
     parser = argparse.ArgumentParser(description="Processing files with models.")
@@ -151,14 +149,16 @@ def parse_kwargs():
 
     match kwargs["kind"].split("-")[-1]:
         # Delete unnecessary keys
-        case "classifier":
-            del kwargs["ext"]
-            del kwargs["mask_type"]
-            kwargs["model_cls"] = getattr(classifiers, model_cls_name)
-        case "segmenter":
-            del kwargs["sep"]
-            del kwargs["label_type"]
-            kwargs["model_cls"] = getattr(segmenters, model_cls_name)
+        # case "classifier":
+        #     del kwargs["ext"]
+        #     del kwargs["mask_type"]
+        #     kwargs["model_cls"] = getattr(classifiers, model_cls_name)
+        # case "segmenter":
+        #     del kwargs["sep"]
+        #     del kwargs["label_type"]
+        #     kwargs["model_cls"] = getattr(segmenters, model_cls_name)
+        case _:
+            print("TODO")
 
     # Delete kind key
     del kwargs["kind"]

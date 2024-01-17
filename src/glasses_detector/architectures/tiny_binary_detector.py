@@ -57,13 +57,11 @@ class TinyBinaryDetector(nn.Module):
         This is to match the API of the PyTorch *torchvision* models,
         which specify that:
 
-        .. quote::
-
-            During training, returns a dictionary containing the
+            "During training, returns a dictionary containing the
             classification and regression losses for each image in the
             batch. During inference, returns a list of dictionaries, one
             for each input image. Each dictionary contains the predicted
-            boxes, labels, and scores for all detections in the image.
+            boxes, labels, and scores for all detections in the image."
 
         Args:
             imgs (list[torch.Tensor]): A list of images.
@@ -73,8 +71,9 @@ class TinyBinaryDetector(nn.Module):
 
                 1. ``"boxes"``: the bounding boxes for each object
                 2. ``"labels"``: labels
-                for all objects in the image. If ``None``, the network
-                is in inference mode.
+                   for all objects in the image. If ``None``, the
+                   network is in inference mode.
+
 
         Returns:
             dict[str, torch.Tensor] | list[dict[str, torch.Tensor]]:

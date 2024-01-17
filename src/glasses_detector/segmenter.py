@@ -8,9 +8,9 @@ from PIL import Image
 from torchvision.models.segmentation import fcn_resnet101, lraspp_mobilenet_v3_large
 from torchvision.models.segmentation.lraspp import LRASPPHead
 
+from .architectures import TinyBinarySegmenter
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
-from .models import TinyBinarySegmenter
 from .utils import FilePath
 
 

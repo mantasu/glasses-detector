@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import imghdr
 import os
-from typing import Any, Iterable, TypeGuard, TypeVar
+from typing import Any, Iterable, TypeGuard
 from urllib.parse import urlparse
 
-T = TypeVar("T")
 type FilePath = str | bytes | os.PathLike
 
 
@@ -27,7 +28,7 @@ def is_url(x: str) -> bool:
         return False
 
 
-def flatten(items: T | Iterable[T | Iterable]) -> T | list[T]:
+def flatten[T](items: T | Iterable[T | Iterable]) -> T | list[T]:
     """Flatten a nested list.
 
     This function takes any nested iterable and returns a flat list.
