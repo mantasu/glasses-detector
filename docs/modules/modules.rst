@@ -33,3 +33,5 @@ Unique Architectures
    glasses_detector.architectures.tiny_binary_classifier
    glasses_detector.architectures.tiny_binary_detector
    glasses_detector.architectures.tiny_binary_segmenter
+
+.. _tqdm.tqdm: https://tqdm.github.io/

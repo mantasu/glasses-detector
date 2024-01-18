@@ -3,5 +3,5 @@ Detector
 
 .. automodule:: glasses_detector.detector
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

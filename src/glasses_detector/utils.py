@@ -1,5 +1,16 @@
-from __future__ import annotations
+"""
+.. class:: FilePath
 
+.. data:: FilePath
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: str | bytes | os.PathLike
+
+    Type alias for a file path.
+
+    Bound:
+        :class:`str` | :class:`bytes` | :class:`os.PathLike`
+"""
 import imghdr
 import os
 from typing import Any, Iterable, TypeGuard

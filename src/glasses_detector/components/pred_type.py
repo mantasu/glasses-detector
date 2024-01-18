@@ -1,5 +1,113 @@
-from __future__ import annotations
+"""
+.. class:: Scalar
 
+.. data:: Scalar
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: StandardScalar | numpy.generic | numpy.ndarray | torch.Tensor
+
+    Type alias for a scalar prediction. For more information, see
+    :attr:`PredType.SCALAR`.
+
+    Bound:
+        :class:`bool` | :class:`int` | :class:`float` | :class:`str`
+        | :class:`numpy.generic` | :class:`numpy.ndarray`
+        | :class:`torch.Tensor`
+
+.. class:: Tensor
+
+.. data:: Tensor
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: typing.Iterable[Scalar | Tensor] | PIL.Image.Image
+
+    Type alias for a tensor prediction. For more information, see
+    :attr:`PredType.TENSOR`.
+
+    Bound:
+        :class:`typing.Iterable` | :class:`PIL.Image.Image`
+
+.. class:: Default
+
+.. data:: Default
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: Scalar | Tensor
+
+    Type alias for a default prediction. For more information, see
+    :attr:`PredType.DEFAULT`.
+
+    Bound:
+        :class:`bool` | :class:`int` | :class:`float` | :class:`str`
+        | :class:`numpy.generic` | :class:`numpy.ndarray`
+        | :class:`torch.Tensor` | :class:`typing.Iterable`
+    
+.. class:: StandardScalar
+
+.. data:: StandardScalar
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: bool | int | float | str
+
+    Type alias for a standard scalar prediction. For more information,
+    see :attr:`PredType.STANDARD_SCALAR`.
+
+    Bound:
+        :class:`bool` | :class:`int` | :class:`float` | :class:`str`
+
+.. class:: StandardTensor
+
+.. data:: StandardTensor
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: list[StandardScalar | StandardTensor]
+
+    Type alias for a standard tensor prediction. For more information,
+    see :attr:`PredType.STANDARD_TENSOR`.
+
+    Bound:
+        :class:`list`
+
+.. class:: StandardDefault
+
+.. data:: StandardDefault
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: StandardScalar | StandardTensor
+
+    Type alias for a standard default prediction. For more information,
+    see :attr:`PredType.STANDARD_DEFAULT`.
+
+    Bound:
+        :class:`bool` | :class:`int` | :class:`float` | :class:`str`
+        | :class:`list`
+
+.. class:: NonDefault[T]
+
+.. data:: NonDefault[T]
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: T
+
+    Type alias for a non-default prediction. For more information, see
+    :attr:`PredType.NON_DEFAULT`.
+
+    Bound:
+        :data:`typing.Any`
+
+.. class:: Either
+
+.. data:: Either
+    :noindex:
+    :type: typing.TypeAliasType
+    :value: Default | NonDefault
+
+    Type alias for either default or non-default prediction, i.e., any
+    prediction.
+
+    Bound:
+        :data:`typing.Any`
+"""
 from enum import Enum, auto
 from typing import Any, Iterable, Self, TypeGuard
 
@@ -7,9 +115,8 @@ import numpy as np
 import torch
 from PIL import Image
 
-# TODO: document when sphinx supports type aliases
 type Scalar = bool | int | float | str | np.generic | np.ndarray | torch.Tensor
-type Tensor = Iterable[PredType.Scalar | Tensor] | Image.Image
+type Tensor = Iterable[Scalar | Tensor] | Image.Image
 type Default = Scalar | Tensor
 type StandardScalar = bool | int | float | str
 type StandardTensor = list[StandardScalar | StandardTensor]
@@ -50,19 +157,6 @@ class PredType(Enum):
        flexibility for model prediction outputs. In most of the cases,
        they can be converted to standard types via :meth:`standardize`.
 
-    Types
-    -----
-
-    The following prediction types/categories are defined in this class:
-
-        1. :attr:`SCALAR`: see :meth:`is_scalar`.
-        2. :attr:`TENSOR`: see :meth:`is_tensor`.
-        3. :attr:`DEFAULT`: see :meth:`is_default`.
-        4. :attr:`STANDARD_SCALAR`: see :meth:`is_standard_scalar`.
-        5. :attr:`STANDARD_TENSOR`: see :meth:`is_standard_tensor`.
-        6. :attr:`STANDARD_DEFAULT`: see :meth:`is_standard_default`.
-        7. :attr:`NON_DEFAULT`: see :meth:`check`.
-
     Examples
     --------
 
@@ -97,33 +191,102 @@ class PredType(Enum):
     """
 
     SCALAR = auto()
+    """
+    PredType: Scalar type. A prediction is considered to be a scalar if
+    it is one of the following types:
+
+        * :class:`bool`
+        * :class:`int`
+        * :class:`float`
+        * :class:`str`
+        * :class:`numpy.generic`
+        * :class:`numpy.ndarray` with ``ndim == 0``
+        * :class:`torch.Tensor` with ``ndim == 0``
+
+    :meta hide-value:
+    """
+
     TENSOR = auto()
+    """
+    PredType: Tensor type. A prediction is considered to be a tensor if
+    it is one of the following types:
+    
+        * :class:`PIL.Image.Image`
+        * :class:`~typing.Iterable` of scalars or tensors of any
+          iterable type, including :class:`list`, :class:`tuple`,
+          :class:`~typing.Collection`, :class:`numpy.ndarray` and
+          :class:`torch.Tensor` objects, and any other iterables.
+
+    :meta hide-value:
+    """
+
     DEFAULT = auto()
+    """
+    PredType: Default type. A prediction is considered to be a default
+    type if it is one of the following types:
+    
+        * Any of the types defined in :attr:`SCALAR`.
+        * Any of the types defined in :attr:`TENSOR`.
+    
+    :meta hide-value:
+    """
+
     STANDARD_SCALAR = auto()
+    """
+    PredType: Standard scalar type. A prediction is considered to be a
+    standard scalar if it is one of the following types:
+    
+        * :class:`bool`
+        * :class:`int`
+        * :class:`float`
+        * :class:`str`
+    
+    :meta hide-value:
+    """
+
     STANDARD_TENSOR = auto()
+    """
+    PredType: Standard tensor type. A prediction is considered to be a
+    standard tensor if it is one of the following types:
+        
+        * :class:`list` of standard scalars or standard tensors. No
+          other iterables than lists are allowed.
+    
+    :meta hide-value:
+    """
+
     STANDARD_DEFAULT = auto()
+    """
+    PredType: Standard default type. A prediction is considered to be a
+    standard default type if it is one of the following types:
+    
+        * Any of the types defined in :attr:`STANDARD_SCALAR`.
+        * Any of the types defined in :attr:`STANDARD_TENSOR`.
+    
+    :meta hide-value:
+    """
+
     NON_DEFAULT = auto()
+    """
+    PredType: Non-default type. A prediction is considered to be a
+    non-default type if it is not a default type, i.e., it is not any of
+    the types defined in :attr:`DEFAULT`.
+
+    :meta hide-value:
+    """
 
     @staticmethod
     def is_scalar(pred: Any) -> TypeGuard[Scalar]:
         """Check if the prediction is a scalar.
 
-        Checks if the given value is a scalar, i.e., one of the
-        following types:
-
-            * :class:`bool`
-            * :class:`int`
-            * :class:`float`
-            * :class:`str`
-            * :class:`numpy.generic`
-            * :class:`numpy.ndarray` with ``ndim == 0``
-            * :class:`torch.Tensor` with ``ndim == 0``
+        Checks if the given value is a *scalar*. See :attr:`SCALAR` for
+        more information.
 
         Args:
             pred: The value to check.
 
         Returns:
-            ``True`` if the value is a scalar, ``False`` otherwise.
+            ``True`` if the value is a *scalar*, ``False`` otherwise.
         """
         return isinstance(pred, (bool, int, float, str, np.generic)) or (
             isinstance(pred, (torch.Tensor, np.ndarray)) and pred.ndim == 0
@@ -133,20 +296,15 @@ class PredType(Enum):
     def is_standard_scalar(pred: Any) -> TypeGuard[StandardScalar]:
         """Check if the prediction is a standard scalar.
 
-        Checks if the given value is a standard scalar, i.e., one of the
-        following types:
-
-            * :class:`bool`
-            * :class:`int`
-            * :class:`float`
-            * :class:`str`
+        Checks if the given value is a *standard scalar*. See
+        :attr:`STANDARD_SCALAR` for more information.
 
         Args:
-            pred (typing.Any): The value to check.
+            pred: The value to check.
 
         Returns:
-            typing.TypeGuard[StandardScalar]: ``True`` if the value is a
-            standard scalar, ``False`` otherwise.
+            ``True`` if the value is a *standard scalar*, ``False``
+            otherwise.
         """
         return isinstance(pred, (bool, int, float, str))
 
@@ -154,20 +312,14 @@ class PredType(Enum):
     def is_tensor(cls, pred: Any) -> TypeGuard[Tensor]:
         """Check if the prediction is a tensor.
 
-        Checks if the given value is a tensor, i.e., one of the
-        following types:
-
-            * :class:`PIL.Image.Image`
-            * :class:`Iterable` of scalars or tensors, including lists,
-              tuples, :class:`numpy.ndarray` and :class:`torch.Tensor`
-              objects and other iterables.
+        Checks if the given value is a *tensor*. See :attr:`TENSOR` for
+        more information.
 
         Args:
-            pred (typing.Any): The value to check.
+            pred: The value to check.
 
         Returns:
-            typing.TypeGuard[Tensor]: ``True`` if the value is a tensor,
-            ``False`` otherwise.
+            ``True`` if the value is a *tensor*, ``False`` otherwise.
         """
         return isinstance(pred, Image.Image) or (
             isinstance(pred, Iterable)
@@ -179,18 +331,15 @@ class PredType(Enum):
     def is_standard_tensor(cls, pred: Any) -> TypeGuard[StandardTensor]:
         """Check if the prediction is a standard tensor.
 
-        Checks if the given value is a standard tensor, i.e., one of the
-        following types:
-
-            * :class:`list` of standard scalars or standard tensors. No
-              other iterables than lists are allowed.
+        Checks if the given value is a *standard tensor*. See
+        :attr:`STANDARD_TENSOR` for more information.
 
         Args:
-            pred (typing.Any): The value to check.
+            pred: The value to check.
 
         Returns:
-            typing.TypeGuard[StandardTensor]: ``True`` if the value is a
-            standard tensor, ``False`` otherwise.
+            ``True`` if the value is a *standard tensor*, ``False``
+            otherwise.
         """
         return isinstance(pred, list) and all(
             [cls.is_standard_scalar(p) or cls.is_standard_tensor(p) for p in pred]
@@ -200,18 +349,15 @@ class PredType(Enum):
     def is_default(cls, pred: Any) -> TypeGuard[Default]:
         """Check if the prediction is a default type.
 
-        Checks if the given value is a default type, i.e., one of the
-        following types:
-
-            * All the types defined in :meth:`is_scalar`.
-            * All the types defined in :meth:`is_tensor`.
+        Checks if the given value is a *default* type. See
+        :attr:`DEFAULT` for more information.
 
         Args:
-            pred (typing.Any): The value to check.
+            pred: The value to check.
 
         Returns:
-            typing.TypeGuard[Default]: ``True`` if the value is a
-            default type, ``False`` otherwise.
+            ``True`` if the value is a *default* type, ``False``
+            otherwise.
         """
         return cls.is_scalar(pred) or cls.is_tensor(pred)
 
@@ -219,18 +365,15 @@ class PredType(Enum):
     def is_standard_default(cls, pred: Any) -> TypeGuard[StandardDefault]:
         """Check if the prediction is a standard default type.
 
-        Checks if the given value is a standard default type, i.e., one
-        of the following types:
-
-            * All the types defined in :meth:`is_standard_scalar`.
-            * All the types defined in :meth:`is_standard_tensor`.
+        Checks if the given value is a *standard default* type. See
+        :attr:`STANDARD_DEFAULT` for more information.
 
         Args:
-            pred (typing.Any): The value to check.
+            pred: The value to check.
 
         Returns:
-            typing.TypeGuard[StandardDefault]: ``True`` if the value is
-            a standard default type, ``False`` otherwise.
+            ``True`` if the value is a *standard default* type,
+            ``False`` otherwise.
         """
         return cls.is_standard_scalar(pred) or cls.is_standard_tensor(pred)
 
@@ -251,12 +394,12 @@ class PredType(Enum):
             are subclasses of :attr:`DEFAULT`.
 
         Args:
-            pred (typing.Any): The value to check.
+            pred: The value to check.
 
         Returns:
-            typing.Self: The corresponding enum of the lowest type
-            category or :attr:`NON_DEFAULT` if no **default** category
-            is applicable.
+            The corresponding enum of the lowest type category or
+            :attr:`NON_DEFAULT` if no **default** category is
+            applicable.
         """
         if cls.is_standard_scalar(pred):
             return cls.STANDARD_SCALAR
@@ -293,17 +436,17 @@ class PredType(Enum):
               applying the previous rule to each element.
 
         Args:
-            pred (Default): The **default** prediction to standardize.
+            pred: The **default** prediction to standardize.
 
         Raises:
             ValueError: If the prediction cannot be standardized. This
-            can if a prediction is not **default** or if a class, such
-            as :class:`torch.Tensor` or :class:`numpy.ndarray` return
-            a scalar that is not of type defined in
-            :meth:`is_standard_scalar`.
+                can if a prediction is not **default** or if a class,
+                such as :class:`torch.Tensor` or :class:`numpy.ndarray`
+                return a scalar that is not of type defined in
+                :meth:`is_standard_scalar`.
 
         Returns:
-            StandardDefault: The standardized prediction.
+            The standardized prediction.
         """
         if isinstance(pred, (bool, int, float, str)):
             return pred

@@ -3,5 +3,5 @@ Base Model
 
 .. automodule:: glasses_detector.components.base_model
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

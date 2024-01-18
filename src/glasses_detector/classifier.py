@@ -150,6 +150,8 @@ class GlassesClassifier(BaseGlassesModel):
             :attr:`kind` and :attr:`size`. If a string is provided, it
             will be used as a path or a URL (determined automatically)
             to the model weights. Defaults to ``True``.
+        device (str | torch.device, optional): Device to cast the model
+            (once it is loaded) to. Defaults to ``"cpu"``.
     """
     kind: str = "anyglasses"
     size: str = "medium"

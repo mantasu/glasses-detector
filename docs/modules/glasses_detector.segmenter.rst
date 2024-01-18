@@ -3,5 +3,5 @@ Segmenter
 
 .. automodule:: glasses_detector.segmenter
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

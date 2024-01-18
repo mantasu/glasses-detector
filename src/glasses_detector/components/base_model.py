@@ -16,7 +16,7 @@ from .pred_type import *
 
 
 @dataclass
-class BaseGlassesModel(nn.Module, PredInterface):
+class BaseGlassesModel(PredInterface):
     """Base class for all glasses models.
 
     Base class with common functionality, i.e., prediction and weight
@@ -198,9 +198,8 @@ class BaseGlassesModel(nn.Module, PredInterface):
                 on.
 
         Returns:
-            typing.Self: The glasses model wrapper of the same class
-                type from which this method was called for the provided
-                custom model.
+            The glasses model wrapper of the same class type from which
+            this method was called for the provided custom model.
         """
         # Set default values for class args
         kwargs.setdefault("task", "custom")

@@ -13,7 +13,6 @@ lightning_logs
 dist
 build
 _build
-_static
 _templates
 __pycache__
 *.egg-info

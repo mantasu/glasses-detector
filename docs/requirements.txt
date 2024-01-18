@@ -1,4 +1,5 @@
 sphinx
 sphinx_toolbox
 sphinx_copybutton
-sphinx-rtd-light-dark
+pydata-sphinx-theme
+sphobjinv

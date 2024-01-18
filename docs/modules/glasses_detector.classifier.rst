@@ -3,5 +3,5 @@ Classifier
 
 .. automodule:: glasses_detector.classifier
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

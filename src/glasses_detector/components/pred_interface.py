@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import json
 import os
 import pickle
+import typing
 import warnings
 from abc import ABC, abstractmethod
 from typing import Collection, Iterable, overload
@@ -88,6 +87,9 @@ class PredInterface(ABC):
             pred (Default | dict[str, Default]): The single prediction
                 or a dictionary of predictions to save.
             filepath (FilePath): The path to save the prediction(-s) to.
+
+        Returns:
+            FilePath: This method does not return anything.
 
         Raises:
             ValueError: If the file type is not supported.
@@ -191,7 +193,7 @@ class PredInterface(ABC):
     @overload
     def predict(
         self,
-        image: Collection[FilePath],
+        image: typing.Collection[FilePath],
         **kwargs,
     ) -> list[Default]:
         ...
@@ -199,9 +201,9 @@ class PredInterface(ABC):
     @abstractmethod
     def predict(
         self,
-        image: FilePath | Collection[FilePath],
+        image,
         **kwargs,
-    ) -> Default | list[Default]:
+    ):
         """Generates a prediction for the given image(-s).
 
         Takes a path to an image or a list of paths to images and
@@ -232,8 +234,8 @@ class PredInterface(ABC):
     @overload
     def process_file(
         self,
-        input_path: Collection[FilePath],
-        output_path: Collection[FilePath] | None = None,
+        input_path: typing.Collection[FilePath],
+        output_path: typing.Collection[FilePath] | None = None,
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
@@ -257,10 +259,10 @@ class PredInterface(ABC):
         extension of the output path. The following cases are
         considered:
 
-        1. If ``output_path`` is ``None``, no predictions are saved. If
-           there are multiple output paths (one for each input path) and
-           some of the entries are ``None``, then only the outputs for
-           the corresponding predictions are not be saved.
+        1. If ``output_path`` is :data:`None`, no predictions are saved.
+           If there are multiple output paths (one for each input path)
+           and some of the entries are :data:`None`, then only the
+           outputs for the corresponding predictions are not be saved.
         2. If the output path is a single file, then the predictions are
            saved to that file. If there are multiple input paths, then
            the corresponding predictions are aggregated to a single
@@ -275,8 +277,8 @@ class PredInterface(ABC):
            predictions are saved to the corresponding output paths. If
            the number of input paths and output paths do not match, then
            the number of predictions are be truncated or expanded with
-           ``None`` to match the number of input paths and a warning is
-           raised. all the output paths are interpreted as files.
+           :data:`None` to match the number of input paths and a warning
+           is raised. all the output paths are interpreted as files.
 
         For more details on how each file type is saved, regardless if
         it is a single prediction or the aggregated predictions, see
@@ -292,27 +294,28 @@ class PredInterface(ABC):
 
         Note:
             If some input path does not lead to a valid image file,
-            e.g., does not exist, its prediction is set to ``None``.
+            e.g., does not exist, its prediction is set to :data:`None`.
             Also, if at least one prediction fails, then a all
-            predictions are set to ``None``. In both cases, a warning is
-            is raised and the files or the lines in the aggregated file
-            are skipped (not saved).
+            predictions are set to :data:`None`. In both cases, a
+            warning is is raised and the files or the lines in the
+            aggregated file are skipped (not saved).
 
         Args:
             input_path (FilePath | typing.Collection[FilePath]): The path
                 to an image or a list of paths to images to generate
                 predictions for.
             output_path (FilePath | typing.Collection[FilePath] | None, optional):
-                The path to save the prediction(-s) to. If ``None``, no
-                predictions are saved. If a single file, the predictions
-                are aggregated (if multiple) and saved to that file. If
-                a directory, the predictions are saved to that directory
-                with the names copied from inputs. Defaults to ``None``.
+                The path to save the prediction(-s) to. If :data:`None`,
+                no predictions are saved. If a single file, the
+                predictions are aggregated (if multiple) and saved to
+                that file. If a directory, the predictions are saved to
+                that directory with the names copied from inputs.
+                Defaults to :data:`None`.
             ext (str | None, optional): The extension to use for the
                 output file(-s). Only used when ``output_path`` is a
-                directory. If ``None``, the extension is set to ``.jpg``
-                for images and ``.txt`` for other predictions. Defaults
-                to ``None``.
+                directory. If :data:`None`, the extension is set to
+                ``.jpg`` for images and ``.txt`` for other predictions.
+                Defaults to :data:`None`.
             show (bool, optional): Whether to show the predictions.
                 Images will be shown using
                 :func:`matplotlib.pyplot.show` and other predictions
@@ -323,7 +326,7 @@ class PredInterface(ABC):
         Returns:
             Default | None | list[Default | None]: The prediction or a
             list of predictions for the given image(-s). Any failed
-            predictions will be set to ``None``.
+            predictions will be set to :data:`None`.
         """
         is_multiple = isinstance(input_path, Collection) and not isinstance(
             input_path, str
@@ -432,11 +435,11 @@ class PredInterface(ABC):
 
         Takes a path to a directory of images, optionally sub-groups to
         batches, generates the predictions for every image and returns
-        them if ``output_path`` is ``None`` or saves them to a specified
+        them if ``output_path`` is :data:`None` or saves them to a specified
         file or as files to a specified directory. The following cases
         are considered:
 
-        1. If ``output_path`` is ``None``, the predictions are returned
+        1. If ``output_path`` is :data:`None`, the predictions are returned
            as a dictionary of predictions where the keys are the names
            of the images and the values are the corresponding
            predictions.
@@ -468,15 +471,15 @@ class PredInterface(ABC):
             input_path (FilePath): The path to a directory of images to
                 generate predictions for.
             output_path (FilePath | None, optional): The path to save the
-                prediction(-s) to. If ``None``, the predictions are
+                prediction(-s) to. If :data:`None`, the predictions are
                 returned as a dictionary, if a single file, the
                 predictions are aggregated to a single file, and if a
                 directory, the predictions are saved to that directory
-                with the names copied from inputs. Defaults to ``None``.
+                with the names copied from inputs. Defaults to :data:`None`.
             ext (str | None, optional): The extension to use for the
                 output file(-s). Only used when ``output_path`` is a
-                directory. If ``None``, the behavior follows
-                :meth:`process_file`. Defaults to ``None``.
+                directory. If :data:`None`, the behavior follows
+                :meth:`process_file`. Defaults to :data:`None`.
             batch_size (int, optional): The batch size to use when
                 processing the images. This groups the files in the
                 specified directory to batches of size ``batch_size``
@@ -505,7 +508,7 @@ class PredInterface(ABC):
 
         Returns:
             dict[str, Default | None] | None: The dictionary of
-            predictions if ``output_path`` is ``None`` or ``None`` if
+            predictions if ``output_path`` is :data:`None` or :data:`None` if
             ``output_path`` is specified.
         """
         if isinstance(pbar, bool) and pbar:
