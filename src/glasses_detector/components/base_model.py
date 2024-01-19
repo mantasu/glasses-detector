@@ -2,7 +2,16 @@ import inspect
 import warnings
 from abc import abstractmethod
 from dataclasses import dataclass, field, fields
-from typing import Callable, ClassVar, Collection, Self, overload, override
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Collection,
+    Iterable,
+    Self,
+    overload,
+    override,
+)
 
 import numpy as np
 import torch
@@ -12,7 +21,7 @@ from PIL import Image
 from .._data import ImageLoaderMixin
 from ..utils import FilePath, is_path_type, is_url
 from .pred_interface import PredInterface
-from .pred_type import *
+from .pred_type import Default
 
 
 @dataclass
@@ -22,27 +31,27 @@ class BaseGlassesModel(PredInterface):
     Base class with common functionality, i.e., prediction and weight
     loading methods, that should be inherited by all glasses models.
     Child classes must implement :meth:`create_model` method which
-    should return the model architecture based on :meth:`model_info`
-    which is a dictionary containing the model name and release
+    should return the model architecture based on :attr:`model_info`
+    which is a dictionary containing the model name and the release
     version. The dictionary depends on the model's :attr:`kind` and
     :attr:`size`, both of which are used when creating an instance.
     An instance can be created by providing a custom model instead of
     creating a predefined one, see :meth:`from_model`.
 
     Note:
-        When ``pretrained`` is ``True``, the URL of the weights to be
-        downloaded from will be constructed in the background
-        (private method) when a pre-defined model is initialized.
-        According to :func:`~torch.hub.load_state_dict_from_url`, first,
+        When ``pretrained`` is :data:`True`, the URL of the weights to
+        be downloaded from will be constructed automatically based on
+        :attr:`model_info`. According to
+        :func:`~torch.hub.load_state_dict_from_url`, first,
         the corresponding weights will be checked if they are already
-        present in hub cache, which by default is
+        present in the hub cache, which by default is
         ``~/.cache/torch/hub/checkpoints``, and, if they are not,
         the weight will be downloaded there and then loaded.
 
-    Warning:
-        Any instance of this class should not be used for model training
-        directly - some properties are unhashable. Instead, retrieve
-        the model from the :attr:`model` attribute and train it instead.
+    Important:
+        To train the actual model parameters, i.e., the model of type
+        :class:`torch.nn.Module`, retrieve it using the :attr:`model`
+        attribute.
 
     Args:
         task (str): The task the model is built for. Used when
@@ -56,7 +65,8 @@ class BaseGlassesModel(PredInterface):
             downloaded) which will be inferred based on model's
             :attr:`task`, :attr:`kind`, and :attr:`size`. If a string
             is provided, it will be used as a path or a URL (determined
-            automatically) to the model weights. Defaults to ``False``.
+            automatically) to the model weights. Defaults to
+            :data:`False`.
         device (str | torch.device, optional): Device to cast the model
             (once it is loaded) to. Defaults to ``"cpu"``.
     """
@@ -84,9 +94,9 @@ class BaseGlassesModel(PredInterface):
     download the weights from. This nested dictionary has 3 levels which
     are expected to be as follows:
 
-        1. ``kind`` - the kind of the model, e.g., ``"sunglasses"``
-        2. ``size`` - the size of the model, e.g., ``"medium"``
-        3. ``info`` - the model info, i.e., ``"name"`` and ``"version"``
+    1. ``kind`` - the kind of the model, e.g., ``"sunglasses"``
+    2. ``size`` - the size of the model, e.g., ``"medium"``
+    3. ``info`` - the model info, i.e., ``"name"`` and ``"version"``
 
     For example, ``DEFAULT_KIND_MAP["sunglasses"]["medium"]`` would
     return ``{"name": <arch-name>, "version": <release-version>}`` which
@@ -121,7 +131,7 @@ class BaseGlassesModel(PredInterface):
 
         This contains the information about the model used (e.g.,
         architecture and weights). By default, it should have 2 fields:
-        `"name"` and `"version"`, both of which are used when
+        ``"name"`` and ``"version"``, both of which are used when
         initializing the architecture and looking for pretrained weights
         (see :meth:`load_weights`).
 
@@ -133,8 +143,8 @@ class BaseGlassesModel(PredInterface):
             custom dictionary.
 
         Returns:
-            dict[str,str]: The model info dictionary with 2 fields -
-            `"name"` and `"version"` which allow to construct model
+            dict[str, str]: The model info dictionary with 2 fields -
+            ``"name"`` and ``"version"`` which allow to construct model
             architecture and download the pretrained model weights, if
             present.
         """
@@ -168,10 +178,10 @@ class BaseGlassesModel(PredInterface):
         model: nn.Module,
         **kwargs,
     ) -> Self:
-        """Creates a glasses model from a custom model.
+        """Creates a glasses model from a custom :class:`torch.nn.Module`.
 
         Creates a glasses model wrapper for a custom provided
-        :class:`~torch.nn.Module`, instead of creating a predefined
+        :class:`torch.nn.Module`, instead of creating a predefined
         one based on :attr:`kind` and :attr:`size`.
 
         Note:
@@ -180,7 +190,7 @@ class BaseGlassesModel(PredInterface):
             for compatibility with :meth:`predict`.
 
         Warning:
-            :meth:`model_info` property will not be useful as it would
+            :attr:`model_info` property will not be useful as it would
             return an empty dictionary for custom specified :attr:`kind`
             and :attr:`size` (if specified at all).
 
@@ -228,40 +238,10 @@ class BaseGlassesModel(PredInterface):
             glasses_model.load_weights(path_or_url=pretrained)
 
         # Cast to device
-        glasses_model.to(device)
+        glasses_model.model.to(device)
 
         return glasses_model
 
-    @override
-    def forward(self, *args) -> Iterable[Any]:
-        """Performs forward pass.
-
-        Calls the forward method of the inner :attr:`model`, by passing
-        any inputs it can process (first argument is typically a batch
-        of images, i.e., a :class:`~torch.Tensor` of shape
-        ``(N, C, H, W)``.
-
-        Note:
-            The default :meth:`predict` that uses this method assumes an
-            input is a batch of images of type :class:`~torch.Tensor`
-            and the output can be anything that is
-            :class:`~typing.Iterable`, e.g., a :class:`~torch.Tensor`.
-
-        Args:
-            *args: any inputs that can be passed to :attr:`model`.
-                Usually, it is just a single input, i.e., a batch of
-                images: a :class:`~torch.Tensor` of shape
-                ``(N, C, H, W)``. with normalized pixel values between
-                0 and 1.
-
-        Returns:
-            An iterable of predictions (one for each input). Usually,
-            it is a :class:`~torch.Tensor` with the first dimension of
-            size ``N``.
-        """
-        return self.model(*args)
-
-    @override
     @overload
     def predict(
         self,
@@ -270,7 +250,6 @@ class BaseGlassesModel(PredInterface):
     ) -> Default:
         ...
 
-    @override
     @overload
     def predict(
         self,
@@ -299,7 +278,7 @@ class BaseGlassesModel(PredInterface):
 
         Note:
             This method expects that :meth:`forward` always returns an
-            :class:`typing.Iterable` of any type of predictions
+            :class:`~typing.Iterable` of any type of predictions
             (typically, they would be of type :class:`~torch.Tensor`),
             even if there is only one prediction.
 
@@ -320,7 +299,7 @@ class BaseGlassesModel(PredInterface):
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
-            format (typing.Callable[[typing.Any], Default] | (typing.Callable[[Image.Image, typing.Any], Default], optional):
+            format (typing.Callable[[typing.Any], Default] | (typing.Callable[[PIL.Image.Image, typing.Any], Default], optional):
                 Format callback. This is a custom function that takes
                 a predicted elements from the iterable output of
                 :meth:`forward` (elements are usually of type
@@ -331,15 +310,15 @@ class BaseGlassesModel(PredInterface):
                 to ``lambda x: str(x)``.
             resize (tuple[int, int] | None, optional): The size (width,
                 height) to resize the image to before passing it through
-                the network. If ``None``, the image will not be resized.
-                It is recommended to resize it to the size the model was
-                trained on, which by default is ``(256, 256)``. Defaults
-                to ``None``.
+                the network. If :data:`None`, the image will not be
+                resized. It is recommended to resize it to the size the
+                model was trained on, which by default is
+                ``(256, 256)``. Defaults to :data:`None`.
 
         Returns:
-            Default | typing.List[Default]: The
-            formatted prediction or a list of formatted predictions if
-            multiple images were provided.
+            Default | typing.List[Default]: The formatted prediction or
+            a list of formatted predictions if multiple images were
+            provided.
         """
         # Get the device from the model and init vars
         device = next(iter(self.parameters())).device
@@ -381,10 +360,38 @@ class BaseGlassesModel(PredInterface):
 
         return preds if is_multiple else preds[0]
 
+    def forward(self, *args) -> Iterable[Any]:
+        """Performs forward pass.
+
+        Calls the forward method of the inner :attr:`model`, by passing
+        any inputs it can process (first argument is typically a batch
+        of images, i.e., a :class:`~torch.Tensor` of shape
+        ``(N, C, H, W)``.
+
+        Note:
+            The default :meth:`predict` that uses this method assumes an
+            input is a batch of images of type :class:`~torch.Tensor`
+            and the output can be anything that is
+            :class:`~typing.Iterable`, e.g., a :class:`~torch.Tensor`.
+
+        Args:
+            *args: any inputs that can be passed to :attr:`model`.
+                Usually, it is just a single input, i.e., a batch of
+                images: a :class:`~torch.Tensor` of shape
+                ``(N, C, H, W)``. with normalized pixel values between
+                0 and 1.
+
+        Returns:
+            An iterable of predictions (one for each input). Usually,
+            it is a :class:`~torch.Tensor` with the first dimension of
+            size ``N``.
+        """
+        return self.model(*args)
+
     def load_weights(self, path_or_url: str | bool = True):
         """Loads inner :attr:`model` weights.
 
-        Takes a path of a URL to the weights file, or ``True`` to
+        Takes a path of a URL to the weights file, or :data:`True` to
         construct the URL automatically based on :attr:`model_info` and
         loads the weights into :attr:`model`.
 
@@ -398,15 +405,15 @@ class BaseGlassesModel(PredInterface):
             e.g., by providing an unrecognized :attr:`kind` or
             :attr:`size` or by initializing with :meth:`from_model`,
             this method will not be able to construct the URL (if
-            ``path_or_url`` is ``True``) and will raise a warning.
+            ``path_or_url`` is :data:`True`) and will raise a warning.
 
         Args:
             path_or_url (str | bool, optional): The path or the URL (it
                 will be inferred automatically) to the model weights
                 (``.pth`` file). It can also be :class:`bool`, in which
-                case ``True`` indicates to construct ``URL`` for the
-                pre-trained weights and ``False`` does nothing. Defaults
-                to ``True``.
+                case :data:`True` indicates to construct ``URL`` for the
+                pre-trained weights and :data:`False` does nothing.
+                Defaults to :data:`True`.
         """
         if isinstance(path_or_url, bool) and path_or_url:
             try:
@@ -445,8 +452,8 @@ class BaseGlassesModel(PredInterface):
         self.model.load_state_dict(weights)
 
         if self.device is not None:
-            # Cast self to device
-            self.to(self.device)
+            # Cast model to device
+            self.model.to(self.device)
 
     def _model_info_warning(self, message: str = ""):
         warnings.warn(

@@ -1,8 +1,8 @@
-Glasses Detector API
-====================
+API
+===
 
-Model Categories
-----------------
+Models
+------
 
 .. toctree::
    :maxdepth: 1
@@ -12,8 +12,8 @@ Model Categories
    glasses_detector.segmenter
 
 
-Base Building Blocks
---------------------
+Components
+----------
 
 .. toctree::
    :maxdepth: 1
@@ -24,8 +24,8 @@ Base Building Blocks
    glasses_detector.utils
 
 
-Unique Architectures
---------------------
+Architectures
+-------------
 
 .. toctree::
    :maxdepth: 1
@@ -33,5 +33,3 @@ Unique Architectures
    glasses_detector.architectures.tiny_binary_classifier
    glasses_detector.architectures.tiny_binary_detector
    glasses_detector.architectures.tiny_binary_segmenter
-
-.. _tqdm.tqdm: https://tqdm.github.io/

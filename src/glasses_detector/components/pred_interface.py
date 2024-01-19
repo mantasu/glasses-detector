@@ -1,7 +1,6 @@
 import json
 import os
 import pickle
-import typing
 import warnings
 from abc import ABC, abstractmethod
 from typing import Collection, Iterable, overload
@@ -25,71 +24,76 @@ class PredInterface(ABC):
     files.
 
     Any class that inherits from this interface must implement the
-    ``predict`` method. This method should take a single image path
+    :meth:`predict` method. This method should take a single image path
     or a list of image paths and return a single prediction or a list
     of predictions, respectively.
     """
 
     @staticmethod
     def save(pred: Default | dict[str, Default], filepath: FilePath):
-        """Save a prediction to a file.
+        """Saves a prediction to a file.
 
         This method saves a prediction or a dictionary of named
         predictions to the provided file. The type of the file will be
         inferred automatically from the extension and will be saved
         accordingly.
 
-        The supported file types and their expected formats are:
+        .. list-table:: Supported File Types
+            :header-rows: 1
 
-            * ``.txt``: For a single prediction, it is flattened and
-              saved as a single line separated by spaces. For a
-              dictionary of predictions, each row contains the name
-              of teh prediction followed by the flattened prediction
-              values separated by spaces (no header!).
-            * ``.csv``: For a single prediction, it is flattened and
-              saved as a single line separated by commas. For a
-              dictionary of predictions, each row contains the name
-              of teh prediction followed by the flattened prediction
-              values separated by commas (no header!).
-            * ``.json``: For a single prediction, it is saved as a
-              single JSON object. For a dictionary of predictions, each
-              prediction is saved as a separate JSON object with the
-              name of the prediction as the key.
-            * ``.yml`` or ``.yaml``: For a single prediction, it is
-              saved as a single YAML object. For a dictionary of
-              predictions, each prediction is saved as a separate YAML
-              object with the name of the prediction as the key.
-            * ``.pkl``: For a single prediction, it is saved as a
-              single pickle object. For a dictionary of predictions,
-              each prediction is saved as a separate pickle object
-              with the name of the prediction as the key.
-            * ``.npy`` or ``.npz``: For a single prediction, it is saved
-              as a single numpy array or scalar. For a dictionary of
-              predictions, it is flattened to a 2D matrix where each
-              row contains the name of the prediction followed by the
-              flattened prediction values. For ``.npy``,
-              :func:`numpy.save` is used and for ``.npz``,
-              :func:`numpy.savez_compressed` is used.
-            * ``.dat``: For a single prediction, it is saved as a
-              single numpy array or scalar using
-              :meth:`numpy.ndarray.tofile`. For a dictionary of
-              predictions, they are first flattened to a 2D matrix
-              before saving.
-            * ``.jpg``, ``.jpeg``, ``.png``, ``.bmp``, ``.pgm``, or
-              ``.webp``: For a single prediction, it is saved as an
-              image. For a dictionary of predictions, each prediction
-              is saved as a separate image with the name of the
-              prediction as the file name. In the case of multiple
-              predictions, all images are saved under directory
-              called ``filepath``, just without an extension.
+            * - Extension
+              - Format
+            * - ``.txt``
+              - For a single prediction, it is flattened and saved
+                as a single line separated by spaces. For a dictionary
+                of predictions, each row contains the name of the
+                prediction followed by the flattened prediction values
+                separated by spaces (no header!).
+            * - ``.csv``
+              - For a single prediction, it is flattened and saved
+                as a single line separated by commas. For a dictionary of
+                predictions, each row contains the name of the prediction
+                followed by the flattened prediction values separated by
+                commas (no header!).
+            * - ``.json``
+              - For a single prediction, it is saved as a single
+                JSON object. For a dictionary of predictions, each prediction
+                is saved as a separate JSON object with the name of the
+                prediction as the key.
+            * - ``.yml``, ``.yaml``
+              - For a single prediction, it is saved as
+                a single YAML object. For a dictionary of predictions, each
+                prediction is saved as a separate YAML object with the name of
+                the prediction as the key.
+            * - ``.pkl``
+              - For a single prediction, it is saved as a single
+                pickle object. For a dictionary of predictions, each
+                prediction is saved as a separate pickle object with the name
+                of the prediction as the key.
+            * - ``.npy``, ``.npz``
+              - For a single prediction, it is saved as
+                a single numpy array or scalar. For a dictionary of
+                predictions, it is flattened to a 2D matrix where each row
+                contains the name of the prediction followed by the flattened
+                prediction values. For ``.npy``, :func:`numpy.save` is used
+                and for ``.npz``, :func:`numpy.savez_compressed` is used.
+            * - ``.dat``
+              - For a single prediction, it is saved as a single
+                numpy array or scalar using :meth:`numpy.ndarray.tofile`. For
+                a dictionary of predictions, they are first flattened to a 2D
+                matrix before saving.
+            * - ``.jpg``, ``.jpeg``, ``.png``, ``.bmp``, ``.pgm``, ``.webp``
+              - For a single prediction, it is saved as an image.
+                For a dictionary of predictions, each prediction is saved as a
+                separate image with the name of the prediction as the file
+                name. In the case of multiple predictions, all images are
+                saved under directory called ``filepath``, just without an
+                extension.
 
         Args:
-            pred (Default | dict[str, Default]): The single prediction
-                or a dictionary of predictions to save.
-            filepath (FilePath): The path to save the prediction(-s) to.
-
-        Returns:
-            FilePath: This method does not return anything.
+            pred: The single prediction or a dictionary of predictions
+                to save.
+            filepath: The path to save the prediction(-s) to.
 
         Raises:
             ValueError: If the file type is not supported.
@@ -193,7 +197,7 @@ class PredInterface(ABC):
     @overload
     def predict(
         self,
-        image: typing.Collection[FilePath],
+        image: Collection[FilePath],
         **kwargs,
     ) -> list[Default]:
         ...
@@ -201,7 +205,7 @@ class PredInterface(ABC):
     @abstractmethod
     def predict(
         self,
-        image,
+        image: FilePath | Collection[FilePath],
         **kwargs,
     ):
         """Generates a prediction for the given image(-s).
@@ -213,6 +217,8 @@ class PredInterface(ABC):
             image (FilePath | typing.Collection[FilePath]): The path to
                 an image or a list of paths to images to generate
                 predictions for.
+            **kwargs: Additional keyword arguments to pass to the
+                prediction method.
 
         Returns:
             Default | list[Default]: The prediction or a list of
@@ -234,8 +240,8 @@ class PredInterface(ABC):
     @overload
     def process_file(
         self,
-        input_path: typing.Collection[FilePath],
-        output_path: typing.Collection[FilePath] | None = None,
+        input_path: Collection[FilePath],
+        output_path: Collection[FilePath] | None = None,
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
@@ -255,7 +261,7 @@ class PredInterface(ABC):
         Takes a path to the image or a list of paths to images,
         generates the prediction(-s), and returns them, based on how
         :meth:`predict` behaves. If the output path is specified, the
-        prediction(-s) will be saved to the given path(s) based on the
+        prediction(-s) will be saved to the given path(-s) based on the
         extension of the output path. The following cases are
         considered:
 
@@ -301,9 +307,9 @@ class PredInterface(ABC):
             aggregated file are skipped (not saved).
 
         Args:
-            input_path (FilePath | typing.Collection[FilePath]): The path
-                to an image or a list of paths to images to generate
-                predictions for.
+            input_path (FilePath | typing.Collection[FilePath]): The
+                path to an image or a list of paths to images to
+                generate predictions for.
             output_path (FilePath | typing.Collection[FilePath] | None, optional):
                 The path to save the prediction(-s) to. If :data:`None`,
                 no predictions are saved. If a single file, the
@@ -319,7 +325,7 @@ class PredInterface(ABC):
             show (bool, optional): Whether to show the predictions.
                 Images will be shown using
                 :func:`matplotlib.pyplot.show` and other predictions
-                will be printed to stdout. Defaults to ``False``.
+                will be printed to stdout. Defaults to :data:`False`.
             **pred_kwargs: Additional keyword arguments to pass to
                 :meth:`predict`.
 
@@ -328,8 +334,8 @@ class PredInterface(ABC):
             list of predictions for the given image(-s). Any failed
             predictions will be set to :data:`None`.
         """
-        is_multiple = isinstance(input_path, Collection) and not isinstance(
-            input_path, str
+        is_multiple = not isinstance(input_path, str) and isinstance(
+            input_path, Collection
         )
         input_paths = input_path if is_multiple else [input_path]
         safe_paths = []
@@ -363,7 +369,7 @@ class PredInterface(ABC):
         if output_path is None:
             # Output is None or a single file for multiple inputs
             output_paths = [None] * len(input_paths)
-        elif isinstance(output_path, Collection) and not isinstance(output_path, str):
+        elif not isinstance(output_path, str) and isinstance(output_path, Collection):
             # Output is a list of paths
             output_paths = output_path
         elif is_multiple and os.path.splitext(output_path)[1] != "":
@@ -475,7 +481,8 @@ class PredInterface(ABC):
                 returned as a dictionary, if a single file, the
                 predictions are aggregated to a single file, and if a
                 directory, the predictions are saved to that directory
-                with the names copied from inputs. Defaults to :data:`None`.
+                with the names copied from inputs. Defaults to
+                :data:`None`.
             ext (str | None, optional): The extension to use for the
                 output file(-s). Only used when ``output_path`` is a
                 directory. If :data:`None`, the behavior follows
@@ -490,26 +497,28 @@ class PredInterface(ABC):
                 Images will be shown using
                 :func:`matplotlib.pyplot.show` and other predictions
                 will be printed to stdout. It is not recommended to set
-                this to ``True`` as it might spam your stdout. Defaults
-                to ``False``.
+                this to :data:`True` as it might spam your stdout.
+                Defaults to :data:`False`.
             pbar (bool | str | tqdm.tqdm, optional): Whether to show a
-                progress bar. If ``True``, a progress bar with no
+                progress bar. If :data:`True`, a progress bar with no
                 description is shown. If :class:`str`, a progress bar
                 with the given description is shown. If an instance of
                 :class:`tqdm.tqdm`, it is used as is. Defaults to
-                ``True``.
+                :data:`True`.
             update_total (bool, optional): Whether to update the total
                 number of files in the progress bar. This is only
                 relevant if ``pbar`` is an instance of
                 :class:`~tqdm.tqdm`. For example, if the number of total
                 files is already known and captured by
                 :attr:`tqdm.tqdm.total`, then there is no need to update
-                it. Defaults to ``True``.
+                it. Defaults to :data:`True`.
+            **pred_kwargs: Additional keyword arguments to pass to
+                :meth:`predict`.
 
         Returns:
             dict[str, Default | None] | None: The dictionary of
-            predictions if ``output_path`` is :data:`None` or :data:`None` if
-            ``output_path`` is specified.
+            predictions if ``output_path`` is :data:`None` or
+            :data:`None` if ``output_path`` is specified.
         """
         if isinstance(pbar, bool) and pbar:
             pbar = ""

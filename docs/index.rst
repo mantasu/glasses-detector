@@ -25,7 +25,6 @@ Please see :doc:`content/references` section for more details about which models
    content/examples
    content/cli
    modules/modules
-   content/support
    content/references
    content/citation
 

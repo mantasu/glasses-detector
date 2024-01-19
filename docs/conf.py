@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 sys.path.insert(0, os.path.abspath("../src"))
 
@@ -46,35 +46,15 @@ intersphinx_mapping = {
         "https://docs.python.org/3",
         "_static/inv/builtin_constants.inv",
     ),
+    "overloads": ("", "_static/inv/overloads.inv"),
 }
 
-# TODO: possibly remove when sphinx supports types
-autodoc_type_aliases = {
-    "FilePath": "glasses_detector.utils.FilePath",
-    "Scalar": "glasses_detector.components.pred_type.Scalar",
-    "Tensor": "glasses_detector.components.pred_type.Tensor",
-    "Default": "glasses_detector.components.pred_type.Default",
-    "StandardScalar": "glasses_detector.components.pred_type.StandardScalar",
-    "StandardTensor": "glasses_detector.components.pred_type.StandardTensor",
-    "StandardDefault": "glasses_detector.components.pred_type.StandardDefault",
-    "NonDefault[T]": "glasses_detector.components.pred_type.NonDefault",
-    "Either": "glasses_detector.components.pred_type.Either",
-}
-
-autodoc_long_signature_ids = [
-    "glasses_detector.utils.flatten",
-    "glasses_detector.components.pred_interface.PredInterface.process_file",
-    "glasses_detector.components.pred_interface.PredInterface.process_dir",
-    "glasses_detector.components.base_model.BaseGlassesModel",
-    "glasses_detector.components.base_model.BaseGlassesModel.predict",
-    "glasses_detector.components.base_model.BaseGlassesModel.process_dir",
-    "glasses_detector.components.base_model.BaseGlassesModel.process_file",
-]
-
+# -- Options for napaleon/autosummary/autodoc output -------------------------
+napoleon_use_param = True
+autosummary_generate = True
 autodoc_typehints = "both"
 autodoc_member_order = "bysource"
-autosummary_generate = False
-napoleon_use_param = True
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
@@ -83,67 +63,79 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
+    "logo": {
+        "alt_text": "Glasses Detector - Home",
+        "text": f"Glasses Detector {release}",
+        "image_light": "_static/img/logo-light.png",
+        "image_dark": "_static/img/logo-dark.png",
+    },
     "github_url": "https://github.com/mantasu/glasses-detector",
     "show_toc_level": 2,
     "navigation_with_keys": False,
+    "header_links_before_dropdown": 7,
+}
+html_context = {
+    "github_user": "mantasu",
+    "github_repo": "glasses-detector",
+    "github_version": "main",
+    "doc_path": "docs",
 }
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+html_title = f"Glasses Detector {release}"
+html_favicon = "_static/img/logo-light.png"
 
 # -- Custom Template Functions -----------------------------------------------
 # https://www.sphinx-doc.org/en/master/development/theming.html#defining-custom-template-functions
 
+TYPE_ALIASES = {
+    "FilePath": "glasses_detector.utils.",
+    "Scalar": "glasses_detector.components.pred_type.",
+    "Tensor": "glasses_detector.components.pred_type.",
+    "Default": "glasses_detector.components.pred_type.",
+    "StandardScalar": "glasses_detector.components.pred_type.",
+    "StandardTensor": "glasses_detector.components.pred_type.",
+    "StandardDefault": "glasses_detector.components.pred_type.",
+    "NonDefault": "glasses_detector.components.pred_type.",
+    "Either": "glasses_detector.components.pred_type.",
+}
+
+LONG_SIGNATURE_IDS = [
+    "glasses_detector.utils.flatten",
+    "glasses_detector.components.pred_type.PredType",
+    "glasses_detector.components.pred_interface.PredInterface.process_file",
+    "glasses_detector.components.pred_interface.PredInterface.process_dir",
+    "glasses_detector.components.base_model.BaseGlassesModel",
+    "glasses_detector.components.base_model.BaseGlassesModel.predict",
+    "glasses_detector.components.base_model.BaseGlassesModel.process_dir",
+    "glasses_detector.components.base_model.BaseGlassesModel.process_file",
+]
+
 
 def keep_only_data(soup: BeautifulSoup):
-    data_dict, class_dict = {}, {}
+    def has_children(tag: Tag, txt1: str, txt2: str):
+        if tag.name != "dt":
+            return False
 
-    for alias, id in autodoc_type_aliases.items():
-        for dl in soup.find_all("dl"):
-            if dl["class"] != ["py", "data"] and dl["class"] != ["py", "class"]:
-                continue
+        # Get the prename and name elements of the signature
+        ch1 = tag.select_one("span.sig-prename.descclassname span.pre")
+        ch2 = tag.select_one("span.sig-name.descname span.pre")
 
-            # Get the prename and name elements of the signature
-            prename = dl.find("span", class_="sig-prename descclassname")
-            name = dl.find("span", class_="sig-name descname")
+        return ch1 and ch2 and ch1.string == txt1 and ch2.string == txt2
 
-            if prename is None or name is None:
-                continue
-
-            prename = prename.find("span", class_="pre")
-            name = name.find("span", class_="pre")
-
-            if prename is None or name is None:
-                continue
-
-            if prename.string != ".".join(id.split(".")[:-1] + [""]):
-                continue
-
-            if name.string != id.split(".")[-1]:
-                continue
-
-            if dl["class"] == ["py", "data"]:
-                data_dict[alias] = dl
-                continue
-
-            if dl["class"] == ["py", "class"]:
-                class_dict[alias] = dl
-                continue
-
-    for alias, id in autodoc_type_aliases.items():
-        if alias not in data_dict or alias not in class_dict:
+    for alias, module in TYPE_ALIASES.items():
+        if dt := soup.find("dt", id=f"{module}{alias}"):
+            # Copy class directive's a
+            a = dt.find("a").__copy__()
+            dt.parent.decompose()
+        else:
             continue
 
-        # Get the dt element of the data
-        dt = data_dict[alias].find("dt")
-
-        # Add ID to dt
-        dt["id"] = id
-
-        # Copy a from class dt to data dt
-        dt.append(class_dict[alias].find("a"))
-
-        # Remove class dt
-        class_dict[alias].decompose()
+        if dt := soup.find(lambda tag: has_children(tag, module, alias)):
+            # ID and a for data directive
+            dt["id"] = f"{module}{alias}"
+            dt.append(a)
+            dt.find("span", class_="sig-prename descclassname").decompose()
 
 
 def process_in_page_toc(soup: BeautifulSoup):
@@ -154,13 +146,17 @@ def process_in_page_toc(soup: BeautifulSoup):
 
 
 def break_long_signatures(soup: BeautifulSoup):
-    for id in autodoc_long_signature_ids:
+    for id in LONG_SIGNATURE_IDS:
         if not (dt := soup.find("dt", id=id)):
             continue
 
-        for dt in dt.parent.find_all("dt"):
-            for sig_param in dt.find_all("em", class_="sig-param"):
-                # Add long-sig (for overrides, i.e., sibling dt, too)
+        for sig_param in dt.find_all("em", class_="sig-param"):
+            # Add long-sig to the identified sig-param ems
+            sig_param["class"].append("long-sig")
+
+        for dt_sibling in dt.find_next_siblings("dt"):
+            for sig_param in dt_sibling.find_all("em", class_="sig-param"):
+                # Add long-sig for overrides, i.e., sibling dts, too
                 sig_param["class"].append("long-sig")
 
 

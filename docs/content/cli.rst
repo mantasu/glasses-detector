@@ -1,5 +1,5 @@
-Command Line Options
-====================
+CLI
+===
 
 These flags allow you to define the kind of task and the model to process your image or a directory with images. Check out how to use them in :ref:`command-line`.
 
