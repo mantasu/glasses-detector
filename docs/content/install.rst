@@ -1,9 +1,7 @@
 Installation
 ============
 
-The packages requires at least *Python 3.10*. You may also want to set up *PyTorch* in advance from `here <https://pytorch.org/get-started/locally/>`_. 
-
-To install the package via `pip <https://pypi.org/project/pip/>`_, simply run:
+The packages requires at least `Python 3.12 <https://www.python.org/downloads/release/python-3120/>`_. To install the package via `pip <https://pypi.org/project/pip/>`_, simply run:
 
 .. code-block:: bash
 
@@ -15,6 +13,10 @@ Or, to install it from source, run:
 
     git clone https://github.com/mantasu/glasses-detector
     cd glasses-detector && pip install .
+
+.. tip::
+
+    You may want to set up `PyTorch <https://pytorch.org/get-started/locally/>`_ in advance (use *Nightly* version for compatibility with *Python* :math:`\ge` *3.12*).
 
 .. note::
 

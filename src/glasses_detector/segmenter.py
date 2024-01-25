@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Callable, ClassVar, Collection, override
+from typing import Callable, ClassVar, Collection, overload, override
 
 import numpy as np
 import torch
@@ -16,7 +16,166 @@ from .utils import FilePath
 
 @dataclass
 class GlassesSegmenter(BaseGlassesModel):
-    """Glasses segmenter for glasses and their parts."""
+    r"""**Binary** segmenter for glasses and their parts.
+
+    This class allows to perform binary segmentation of glasses or their
+    particular parts, e.g., frames, lenses, legs, shadows, etc.
+    Specifically, it allows to generate a mask of the same size as the
+    input image where each pixel is mapped to a value indicating whether
+    it belongs to the positive category (e.g., glasses) or not.
+
+    ----
+
+    .. collapse:: Performance of the Pre-trained Segmenters
+        :name: Performance of the Pre-trained Segmenters
+
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | Kind           | Size       | BCE :math:`\downarrow`  | F1 :math:`\uparrow` | Dice :math:`\uparrow`    | IoU :math:`\uparrow`    |
+        +================+============+=========================+=====================+==========================+=========================+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``frames``     | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``full``       | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``legs``       | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``lenses``     | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``shadows``    | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``smart``      | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+
+    .. collapse:: Size Information of the Pre-trained Segmenters
+        :name: Size Information of the Pre-trained Segmenters
+
+        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        | Size           | Architecture                                                                                                 | Params :math:`\downarrow` | GFLOPs :math:`\downarrow` | Memory :math:`\downarrow` | Filesize :math:`\downarrow` |
+        +================+==============================================================================================================+===========================+===========================+===========================+=============================+
+        | ``small``      | :class:`tinysegnet_v1<.architectures.tiny_binary_segmenter.TinyBinarySegmenter>`                             | TODO                      | TODO                      | TODO                      | TODO                        |
+        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        | ``medium``     | :func:`~torchvision.models.segmentation.lraspp_mobilenet_v3_large` :cite:p:`howard2019searching`             | TODO                      | TODO                      | TODO                      | TODO                        |
+        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        | ``large``      | :func:`~torchvision.models.segmentation.fcn_resnet101` :cite:p:`long2015fully,he2016deep`                    | TODO                      | TODO                      | TODO                      | TODO                        |
+        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+
+    Examples
+    --------
+
+    Let's instantiate the segmenter with default parameters:
+
+          >>> from glasses_detector import GlassesSegmenter
+          >>> seg = GlassesSegmenter()
+
+    First, we can perform a raw prediction on an image expressed as
+    either a path, a :class:`PIL Image<PIL.Image.Image>` or a
+    :class:`numpy array<numpy.ndarray>`. See :meth:`predict` for more
+    details.
+
+        >>> seg(np.random.randint(0, 256, size=(2, 2, 3), dtype=np.uint8), format="bool")
+        tensor([[False, False],
+                [False, False]])
+        >>> type(seg(["path/to/image1.jpg", "path/to/image2.jpg"], format="img")[0])
+        <class 'PIL.Image.Image'>
+
+    We can also use a more specific method :meth:`process_file` which
+    allows to save the results to a file:
+
+        >>> seg.process_file("path/to/img.jpg", "path/to/pred.jpg", show=True)
+        ... # opens a new image window with overlaid mask
+        >>> seg.process_file(["img1.jpg", "img2.jpg"], "preds.npy", format="proba")
+        >>> np.load("preds.npy").shape
+        (2, 256, 256)
+
+    Finally, we can also use :meth:`process_dir` to process all images
+    in a directory and save the predictions to a file or a directory:
+
+        >>> seg.process_dir("path/to/dir", "path/to/preds.csv", format="logit")
+        >>> subprocess.run(["cat", "path/to/preds.csv"])
+        path/to/dir/img1.jpg,-0.234,-1.23,0.123,0.123,1.435,...
+        path/to/dir/img2.jpg,0.034,-0.23,2.123,-1.123,0.435,...
+        ...
+        >>> seg.process_dir("path/to/dir", "path/to/pred_dir", ext=".jpg", format="mask")
+        >>> subprocess.run(["ls", "path/to/pred_dir"])
+        img1.jpg img2.jpg ...
+
+    Args:
+        kind (str, optional): The kind of glasses/parts to perform
+            binary segmentation for. Available options are:
+
+            +-------------------+---------------------------------------------------------------------+
+            |                   |                                                                     |
+            +-------------------+---------------------------------------------------------------------+
+            | ``"frames"``      | Frames (including legs) of any glasses                              |
+            +-------------------+---------------------------------------------------------------------+
+            | ``"full"``        | Frames (including legs) and lenses of any glasses                   |
+            +-------------------+---------------------------------------------------------------------+
+            | ``"legs"``        | Legs of any glasses                                                 |
+            +-------------------+---------------------------------------------------------------------+
+            | ``"lenses"``      | Lenses of any glasses                                               |
+            +-------------------+---------------------------------------------------------------------+
+            | ``"shadows"``     | Cast shadows on the skin of glasses frames only                     |
+            +-------------------+---------------------------------------------------------------------+
+            | ``"smart"``       | Like ``"full"`` but does not segment lenses if they are transparent |
+            +-------------------+---------------------------------------------------------------------+
+
+            Defaults to ``"smart"``.
+        size (str, optional): The size of the model to use. Available
+            options are:
+
+            +--------------+-------------------------------------------------------------+
+            |              |                                                             |
+            +--------------+-------------------------------------------------------------+
+            | ``"small"``  | Very few parameters but lower accuracy                      |
+            +--------------+-------------------------------------------------------------+
+            | ``"medium"`` | A balance between the number of parameters and the accuracy |
+            +--------------+-------------------------------------------------------------+
+            | ``"large"``  | Large number of parameters but higher accuracy              |
+            +--------------+-------------------------------------------------------------+
+
+            Please check:
+
+            * `Performance of the Pre-trained Segmenters`_: to see the
+              results of the pre-trained models for each size depending
+              on :attr:`kind`.
+            * `Size Information of the Pre-trained Segmenters`_: to see
+              which architecture each size maps to and the details
+              about the number of parameters.
+
+            Defaults to ``"medium"``.
+        pretrained (bool | str | None, optional): Whether to load
+            weights from a custom URL (or a local file if they're
+            already downloaded) which will be inferred based on model's
+            :attr:`kind` and :attr:`size`. If a string is provided, it
+            will be used as a custom path or a URL (determined
+            automatically) to the model weights. Defaults to
+            :data:`True`.
+        device (str | torch.device, optional): Device to cast the model
+            (once it is loaded) to. Defaults to ``"cpu"``.
+    """
 
     task: str = field(default="segmentation", init=False)
     kind: str = "smart"
@@ -56,6 +215,74 @@ class GlassesSegmenter(BaseGlassesModel):
 
         return m
 
+    @staticmethod
+    def draw_mask(
+        img: Image.Image,
+        mask: torch.Tensor | np.ndarray | Image.Image,
+        color: str | tuple[int, int, int] = "red",
+        alpha: float = 0.5,
+    ) -> Image.Image:
+        """Draws a mask over an image.
+
+        Takes the original image and a mask and overlays the mask over
+        the image with a specified color and transparency.
+
+        Args:
+            img (PIL.Image.Image): The image to draw the mask over.
+            mask (torch.Tensor | numpy.ndarray | PIL.Image.Image): The
+                mask to draw over the image. It should be of the same
+                size as the image. If it is a :class:`torch.Tensor` or
+                a :class:`numpy.ndarray`, it should be of shape
+                ``(H, W)``, contain values between ``0`` and ``255``,
+                and be of type :data:`torch.uint8` or
+                :data:`numpy.uint8` respectively.
+            color (str | tuple[int, int, int], optional): The color of
+                the overlaid mask. Defaults to ``"red"``.
+            alpha (float, optional): The transparency of the mask.
+                Defaults to ``0.5``.
+
+        Returns:
+            PIL.Image.Image: The RGB image with the mask drawn over it.
+        """
+        if isinstance(mask, torch.Tensor):
+            # Convert to numpy array
+            mask = mask.numpy(force=True)
+
+        if isinstance(mask, np.ndarray):
+            # Convert to PIL Image
+            mask = Image.fromarray(mask)
+
+        # Overlay the mask on the image
+        mask = mask.convert("L").point(lambda p: p * alpha)
+        colored_mask = Image.new("RGB", mask.size, color)
+        img.paste(colored_mask, mask=mask)
+
+        return img
+
+    @overload
+    def predict(
+        self,
+        image: FilePath | Image.Image | np.ndarray,
+        format: str
+        | dict[bool, Default]
+        | Callable[[torch.Tensor], Default]
+        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        resize: tuple[int, int] | None = (256, 256),
+    ) -> Default:
+        ...
+
+    @overload
+    def predict(
+        self,
+        image: Collection[FilePath | Image.Image | np.ndarray],
+        format: str
+        | dict[bool, Default]
+        | Callable[[torch.Tensor], Default]
+        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        resize: tuple[int, int] | None = (256, 256),
+    ) -> list[Default]:
+        ...
+
     @override
     def predict(
         self,
@@ -63,17 +290,19 @@ class GlassesSegmenter(BaseGlassesModel):
         | Image.Image
         | np.ndarray
         | Collection[FilePath | Image.Image | np.ndarray],
-        format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "img",
+        format: str
+        | dict[bool, Default]
+        | Callable[[torch.Tensor], Default]
+        | Callable[[Image.Image, torch.Tensor], Default] = "img",
     ) -> Default | list[Default]:
         """Predicts which pixels in the image are positive.
 
         Takes a path or multiple paths to image files or the loaded
-        images themselves and outputs a formatted prediction (typically
-        a 2D mask of type :class:`torch.tensor`, e.g., with values of
-        either 255 (white) indicating pixels under positive category or
-        0 (black) indicating the rest of the pixels). In general, the
-        prediction could be converted to any :attr:`Default`
-        type.
+        images themselves and outputs a formatted prediction indicating
+        the semantic mask of the present glasses or their specific
+        part(-s). The format of the prediction, i.e., the prediction
+        type is :data:`~glasses_detector.components.pred_type.Default`
+        type which corresponds to :attr:`~.PredType.DEFAULT`.
 
         Warning:
             If the image is provided as :class:`numpy.ndarray`, make
@@ -87,49 +316,49 @@ class GlassesSegmenter(BaseGlassesModel):
             image (FilePath | PIL.Image.Image | numpy.ndarray | typing.Collection[FilePath | PIL.Image.Image | numpy.ndarray]):
                 The path(-s) to the image to generate the prediction for
                 or the image(-s) itself represented as
-                :class:`Image.Image` or as a :class:`numpy.ndarray`.
+                :class:`~PIL.Image.Image` or as :class:`~numpy.ndarray`.
                 Note that the image should have values between 0 and 255
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
             format (str | dict[bool, Default] | typing.Callable[[torch.Tensor], Default], optional):
                 The string specifying the way to map the predictions
-                (pixel scores) to masks. These are the following
-                options:
+                (pixel scores) to outputs (masks) of specific format.
+                These are the following options (if ``image`` is a
+                :class:`~typing.Collection`, then the output will be a
+                :class:`list` of corresponding items of **output type**):
 
-                * "bool" - maps image pixels to ``True`` (those
-                  predicted as positive) and to ``False`` (those
-                  predicted as negative).
-                * "int" - maps image pixels to ``1`` (those predicted
-                  as positive) and to ``0`` (those predicted as
-                  negative).
-                * "img" - maps image pixels to ``255`` (those predicted
-                  as positive) and to ``0`` (those predicted as
-                  negative). The returned type is :class:`Image.Image`
-                  of mode "L" (grayscale).
-                * "logit" - maps image pixels to raw scores (real
-                  numbers) of them being positive.
-                * "proba" - maps image pixels to probabilities (numbers
-                  between 0 and 1) of them being positive.
+                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                | **format**    | **output type**                                                         | **prediction mapping**                                                                    |
+                +===============+=========================================================================+===========================================================================================+
+                | ``"bool"``    | :class:`torch.Tensor` of type :data:`torch.bool` of shape ``(H, W)``    | :data:`True` for positive pixels, :data:`False` for negative pixels                       |
+                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                | ``"int"``     | :class:`torch.Tensor` of type :data:`torch.int64` of shape ``(H, W)``   | ``1`` for positive pixels, ``0`` for negative pixels                                      |
+                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                | ``"logit"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Raw score (real number) of being a positive pixel                                         |
+                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                | ``"proba"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Probability (a number between 0 and 1) of being a positive pixel                          |
+                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                | ``"mask"``    | :class:`PIL.Image.Image` of mode ``"L"`` (grayscale)                    | *White* for positive pixels, *black* for negative pixels                                  |
+                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                | ``"img"``     | :class:`PIL.Image.Image` of mode ``"RGB"`` (RGB)                        | The original image with the mask overlaid on it using default values in :meth:`draw_mask` |
+                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 
                 It is also possible to provide a a dictionary with 2
-                keys: ``True`` and ``False``, each mapping to values
-                corresponding to what to output if the predicted pixel
-                is positive or negative. Further, a custom callback
-                function can be provided which specifies how to map a
-                raw :class:`torch.Tensor` output of type
-                ``torch.float32`` of shape ``(H, W)`` to a mask.
-                Defaults to "img".
+                keys: :data:`True` and :data:`False`, each mapping to
+                values corresponding to what to output if the predicted
+                pixel is positive or negative. Further, a custom
+                callback function is also possible that specifies how to
+                map the original image (:class:`~PIL.Image.Image`) and
+                the mask prediction (:class:`~torch.Tensor` of type
+                :data:`torch.float32` of shape ``(H, W)``), or just the
+                predictions to a formatted
+                :data:`~glasses_detector.components.pred_type.Default`
+                output. Defaults to "img".
 
         Returns:
-            Default | list[Default]: The formatted
-            prediction(s) of type :attr:`Default`. In most
-            cases the output is a mask of type :class:`torch.Tensor`
-            and of shape (H, W)  with each pixel mapped to some ranged
-            value or to a binary value. But it can also be a grayscale
-            mask image of type :class:`Image.Image` or any other
-            :attr:`Default` type, depending on the ``format``
-            argument.
+            Default | list[Default]: The formatted prediction or a list
+            of formatted predictions if multiple images were provided.
 
         Raises:
             ValueError: If the specified ``format`` as a string is
@@ -142,15 +371,23 @@ class GlassesSegmenter(BaseGlassesModel):
                     format = {True: True, False: False}
                 case "int":
                     format = {True: 1, False: 0}
+                case "logit":
+                    format = lambda x: x
+                case "proba":
+                    format = lambda x: x.sigmoid()
                 case "img":
                     format = lambda x: Image.fromarray(
                         ((x > 0) * 255).to(torch.uint8),
                         mode="L",
                     )
-                case "logit":
-                    format = lambda x: x
-                case "proba":
-                    format = lambda x: x.sigmoid()
+                case "overlay":
+                    format = lambda img, x: self.draw_mask(
+                        img,
+                        Image.fromarray(
+                            (x * 255).to(torch.uint8),
+                            mode="L",
+                        ),
+                    )
                 case _:
                     raise ValueError(f"Invalid format: {format}")
 

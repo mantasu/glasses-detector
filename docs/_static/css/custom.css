@@ -4,6 +4,12 @@
     white-space: pre;
 }
 
+/* Newlines (\a) and spaces (\20) before each parameter separator */
+span.long-sig::before {
+    content: "\a\20\20\20\20\20\20\20\20";
+    white-space: pre;
+}
+
 /* Newline after the last parameter (so the closing bracket is on a new line) */
 dt em.long-sig.sig-param:last-of-type::after {
     content: "\a";

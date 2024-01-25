@@ -24,9 +24,8 @@ Please see :doc:`content/references` section for more details about which models
    content/features
    content/examples
    content/cli
-   modules/modules
-   content/references
-   content/citation
+   modules/api
+   content/credits
 
 
 Indices and tables

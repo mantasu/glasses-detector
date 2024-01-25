@@ -32,6 +32,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx_toolbox.collapse",
     "sphinx_copybutton",
+    "sphinxcontrib.bibtex",
 ]
 
 intersphinx_mapping = {
@@ -46,7 +47,6 @@ intersphinx_mapping = {
         "https://docs.python.org/3",
         "_static/inv/builtin_constants.inv",
     ),
-    "overloads": ("", "_static/inv/overloads.inv"),
 }
 
 # -- Options for napaleon/autosummary/autodoc output -------------------------
@@ -56,6 +56,7 @@ autodoc_typehints = "both"
 autodoc_member_order = "bysource"
 
 templates_path = ["_templates"]
+bibtex_bibfiles = ["_static/bib/references.bib"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
@@ -101,7 +102,6 @@ TYPE_ALIASES = {
 }
 
 LONG_SIGNATURE_IDS = [
-    "glasses_detector.utils.flatten",
     "glasses_detector.components.pred_type.PredType",
     "glasses_detector.components.pred_interface.PredInterface.process_file",
     "glasses_detector.components.pred_interface.PredInterface.process_dir",
@@ -109,7 +109,40 @@ LONG_SIGNATURE_IDS = [
     "glasses_detector.components.base_model.BaseGlassesModel.predict",
     "glasses_detector.components.base_model.BaseGlassesModel.process_dir",
     "glasses_detector.components.base_model.BaseGlassesModel.process_file",
+    "glasses_detector.classifier.GlassesClassifier",
+    "glasses_detector.classifier.GlassesClassifier.predict",
+    "glasses_detector.classifier.GlassesClassifier.process_dir",
+    "glasses_detector.classifier.GlassesClassifier.process_file",
+    "glasses_detector.detector.GlassesDetector",
+    "glasses_detector.detector.GlassesDetector.draw_rects",
+    "glasses_detector.detector.GlassesDetector.predict",
+    "glasses_detector.detector.GlassesDetector.process_dir",
+    "glasses_detector.detector.GlassesDetector.process_file",
+    "glasses_detector.segmenter.GlassesSegmenter",
+    "glasses_detector.segmenter.GlassesSegmenter.draw_mask",
+    "glasses_detector.segmenter.GlassesSegmenter.predict",
+    "glasses_detector.segmenter.GlassesSegmenter.process_dir",
+    "glasses_detector.segmenter.GlassesSegmenter.process_file",
 ]
+
+LONG_PARAMETER_IDS = {
+    "glasses_detector.classifier.GlassesClassifier.predict": ["format"],
+    "glasses_detector.detector.GlassesDetector.predict": ["format"],
+    "glasses_detector.segmenter.GlassesSegmenter.predict": ["format"],
+}
+
+
+def align_rowspans(soup: BeautifulSoup):
+    if tds := soup.find_all("td", rowspan=True):
+        for td in tds:
+            td["valign"] = "middle"
+
+
+def add_collapse_ids(soup: BeautifulSoup):
+    if details := soup.find_all("details"):
+        for detail in details:
+            if detail.has_attr("name"):
+                detail["id"] = "-".join(detail["name"].split())
 
 
 def keep_only_data(soup: BeautifulSoup):
@@ -146,6 +179,27 @@ def process_in_page_toc(soup: BeautifulSoup):
 
 
 def break_long_signatures(soup: BeautifulSoup):
+    def break_long_params(id, sig_param):
+        if (params := LONG_PARAMETER_IDS.get(id)) is None:
+            return
+
+        is_opened = False
+
+        for span in sig_param.find_all("span", class_="pre"):
+            if span.string == "[":
+                is_opened = True
+            elif span.string == "]":
+                is_opened = False
+
+            if (
+                span.string == "|"
+                and not is_opened
+                and span.parent.parent.parent.find("span", class_="pre").string
+                in params
+            ):
+                # Add long-sig to spans with |
+                span["class"].append("long-sig")
+
     for id in LONG_SIGNATURE_IDS:
         if not (dt := soup.find("dt", id=id)):
             continue
@@ -153,11 +207,13 @@ def break_long_signatures(soup: BeautifulSoup):
         for sig_param in dt.find_all("em", class_="sig-param"):
             # Add long-sig to the identified sig-param ems
             sig_param["class"].append("long-sig")
+            break_long_params(id, sig_param)
 
         for dt_sibling in dt.find_next_siblings("dt"):
             for sig_param in dt_sibling.find_all("em", class_="sig-param"):
                 # Add long-sig for overrides, i.e., sibling dts, too
                 sig_param["class"].append("long-sig")
+                break_long_params(id, sig_param)
 
 
 def edit_html(app, exception):
@@ -172,7 +228,9 @@ def edit_html(app, exception):
             # Parse HTML using BeautifulSoup html parser
             soup = BeautifulSoup(f.read(), "html.parser")
 
+            align_rowspans(soup)
             keep_only_data(soup)
+            add_collapse_ids(soup)
             process_in_page_toc(soup)
             break_long_signatures(soup)
 

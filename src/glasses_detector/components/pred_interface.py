@@ -51,44 +51,47 @@ class PredInterface(ABC):
                 separated by spaces (no header!).
             * - ``.csv``
               - For a single prediction, it is flattened and saved
-                as a single line separated by commas. For a dictionary of
-                predictions, each row contains the name of the prediction
-                followed by the flattened prediction values separated by
-                commas (no header!).
+                as a single line separated by commas. For a dictionary
+                of predictions, each row contains the name of the
+                prediction followed by the flattened prediction values
+                separated by commas (no header!).
             * - ``.json``
               - For a single prediction, it is saved as a single
-                JSON object. For a dictionary of predictions, each prediction
-                is saved as a separate JSON object with the name of the
-                prediction as the key.
+                JSON object. For a dictionary of predictions, each
+                prediction is saved as a separate JSON object with the
+                name of the prediction as the key.
             * - ``.yml``, ``.yaml``
               - For a single prediction, it is saved as
-                a single YAML object. For a dictionary of predictions, each
-                prediction is saved as a separate YAML object with the name of
-                the prediction as the key.
+                a single YAML object. For a dictionary of predictions,
+                each prediction is saved as a separate YAML object with
+                the name of the prediction as the key.
             * - ``.pkl``
               - For a single prediction, it is saved as a single
                 pickle object. For a dictionary of predictions, each
-                prediction is saved as a separate pickle object with the name
-                of the prediction as the key.
+                prediction is saved as a separate pickle object with the
+                name of the prediction as the key.
             * - ``.npy``, ``.npz``
               - For a single prediction, it is saved as
                 a single numpy array or scalar. For a dictionary of
-                predictions, it is flattened to a 2D matrix where each row
-                contains the name of the prediction followed by the flattened
-                prediction values. For ``.npy``, :func:`numpy.save` is used
-                and for ``.npz``, :func:`numpy.savez_compressed` is used.
+                predictions, it is flattened to a 2D matrix where each
+                row contains the name of the prediction followed by the
+                flattened prediction values. For ``.npy``,
+                :func:`numpy.save` is used and for ``.npz``,
+                :func:`numpy.savez_compressed` is used.
             * - ``.dat``
               - For a single prediction, it is saved as a single
-                numpy array or scalar using :meth:`numpy.ndarray.tofile`. For
-                a dictionary of predictions, they are first flattened to a 2D
-                matrix before saving.
-            * - ``.jpg``, ``.jpeg``, ``.png``, ``.bmp``, ``.pgm``, ``.webp``
-              - For a single prediction, it is saved as an image.
-                For a dictionary of predictions, each prediction is saved as a
-                separate image with the name of the prediction as the file
-                name. In the case of multiple predictions, all images are
-                saved under directory called ``filepath``, just without an
-                extension.
+                numpy array or scalar using
+                :meth:`numpy.ndarray.tofile`. For a dictionary of
+                predictions, they are first flattened to a 2D matrix
+                before saving.
+            * - ``.jpg``, ``.jpeg``, ``.png``, ``.bmp``, ``.pgm``,
+                ``.webp``
+              - For a single prediction, it is saved as an image. For a
+                dictionary of predictions, each prediction is saved as a
+                separate image with the name of the prediction as the
+                file name. In the case of multiple predictions, all
+                images are saved under directory called ``filepath``,
+                just without an extension.
 
         Args:
             pred: The single prediction or a dictionary of predictions
@@ -260,7 +263,7 @@ class PredInterface(ABC):
 
         Takes a path to the image or a list of paths to images,
         generates the prediction(-s), and returns them, based on how
-        :meth:`predict` behaves. If the output path is specified, the
+        :meth:`.predict` behaves. If the output path is specified, the
         prediction(-s) will be saved to the given path(-s) based on the
         extension of the output path. The following cases are
         considered:
@@ -288,12 +291,12 @@ class PredInterface(ABC):
 
         For more details on how each file type is saved, regardless if
         it is a single prediction or the aggregated predictions, see
-        :meth:`save`.
+        :meth:`.save`
 
         Tip:
             If multiple images are provided (as a list of input paths),
             they are likely to be loaded into a single batch for a
-            faster prediction (see :meth:`predict` for more details),
+            faster prediction (see :meth:`.predict` for more details),
             thus more memory is required than if they were processed
             individually. For this reason, consider not to pass too many
             images at once (e.g., <200).
@@ -320,14 +323,16 @@ class PredInterface(ABC):
             ext (str | None, optional): The extension to use for the
                 output file(-s). Only used when ``output_path`` is a
                 directory. If :data:`None`, the extension is set to
-                ``.jpg`` for images and ``.txt`` for other predictions.
-                Defaults to :data:`None`.
+                ``".jpg"`` for images and ``".txt"`` for other
+                predictions (depends on what is returned by
+                :meth:`.predict` returns) For available options, refer
+                to :meth:`.save`. Defaults to :data:`None`.
             show (bool, optional): Whether to show the predictions.
                 Images will be shown using
                 :func:`matplotlib.pyplot.show` and other predictions
                 will be printed to stdout. Defaults to :data:`False`.
             **pred_kwargs: Additional keyword arguments to pass to
-                :meth:`predict`.
+                :meth:`.predict`.
 
         Returns:
             Default | None | list[Default | None]: The prediction or a
@@ -455,11 +460,11 @@ class PredInterface(ABC):
            to that directory. For each input path, a corresponding file
            is created in the specified output directory with the same
            name as the input. The extension, if not provided as ``ext``,
-           is set automatically as explained in :meth:`process_file`.
+           is set automatically as explained in :meth:`.process_file`.
 
         For more details on how each file type is saved, regardless if
         it is a single prediction or the aggregated predictions, see
-        :meth:`save`.
+        :meth:`.save`.
 
         Tip:
             For *very large* directories, consider specifying
@@ -471,7 +476,7 @@ class PredInterface(ABC):
             Any files in the input directory that are not valid images
             or those for which the prediction fails for any reason are
             are simply skipped and a warning is raised - for more
-            details, see :meth:`process_file`.
+            details, see :meth:`.process_file`.
 
         Args:
             input_path (FilePath): The path to a directory of images to
@@ -485,8 +490,10 @@ class PredInterface(ABC):
                 :data:`None`.
             ext (str | None, optional): The extension to use for the
                 output file(-s). Only used when ``output_path`` is a
-                directory. If :data:`None`, the behavior follows
-                :meth:`process_file`. Defaults to :data:`None`.
+                directory. The extension should include a leading dot,
+                e.g., ``".txt"``, ``".npy"``, ``".jpg"`` etc
+                (see :meth:`save`). If :data:`None`, the behavior
+                follows :meth:`.process_file`. Defaults to :data:`None`.
             batch_size (int, optional): The batch size to use when
                 processing the images. This groups the files in the
                 specified directory to batches of size ``batch_size``
@@ -503,7 +510,7 @@ class PredInterface(ABC):
                 progress bar. If :data:`True`, a progress bar with no
                 description is shown. If :class:`str`, a progress bar
                 with the given description is shown. If an instance of
-                :class:`tqdm.tqdm`, it is used as is. Defaults to
+                :class:`~tqdm.tqdm`, it is used as is. Defaults to
                 :data:`True`.
             update_total (bool, optional): Whether to update the total
                 number of files in the progress bar. This is only
@@ -513,7 +520,7 @@ class PredInterface(ABC):
                 :attr:`tqdm.tqdm.total`, then there is no need to update
                 it. Defaults to :data:`True`.
             **pred_kwargs: Additional keyword arguments to pass to
-                :meth:`predict`.
+                :meth:`.predict`.
 
         Returns:
             dict[str, Default | None] | None: The dictionary of

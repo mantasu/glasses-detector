@@ -19,6 +19,7 @@ class BinaryDetector(pl.LightningModule):
         # Initialize some metrics to monitor the performance
         self.label_metric = torchmetrics.F1Score(task="binary")
         self.boxes_metric = torchmetrics.R2Score(num_outputs=4)
+        self.loss_metric = torchmetrics.MeanSquaredError(num_outputs=4)
 
     def forward(self, *args):
         return self.model(*args)
@@ -67,6 +68,7 @@ class BinaryDetector(pl.LightningModule):
         # Compute metrics
         f1_score = self.label_metric(y_hat_labels, y_labels)
         r1_score = self.boxes_metric(y_hat_boxes.squeeze(1), y_boxes.squeeze(1))
+        mse_loss = self.loss_metric(y_hat_boxes.squeeze(1), y_boxes.squeeze(1))
         ious = [
             box_iou(pred_box, target_box)
             for pred_box, target_box in zip(y_hat_boxes, y_boxes)
@@ -75,6 +77,7 @@ class BinaryDetector(pl.LightningModule):
 
         # Log the loss and the metrics
         self.log(f"{prefix}_loss", loss, prog_bar=True)
+        self.log(f"{prefix}_mse", mse_loss, prog_bar=True)
         self.log(f"{prefix}_f1", f1_score, prog_bar=True)
         self.log(f"{prefix}_r1", r1_score, prog_bar=True)
         self.log(f"{prefix}_iou", mean_iou, prog_bar=True)

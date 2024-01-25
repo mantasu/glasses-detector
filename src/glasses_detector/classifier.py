@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Callable, ClassVar, Collection, override
+from typing import Any, Callable, ClassVar, Collection, overload, override
 
 import numpy as np
 import torch
@@ -10,122 +10,111 @@ from torchvision.models import efficientnet_v2_s, shufflenet_v2_x1_0
 from .architectures import TinyBinaryClassifier
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
-from .utils import FilePath
+from .utils import FilePath, copy_signature
 
 
 @dataclass
 class GlassesClassifier(BaseGlassesModel):
-    r"""Binary classifier to check if glasses are present.
+    r"""**Binary** classifier to check if glasses are present.
 
     This class allows to perform binary classification for images with
     glasses, i.e., determines whether or not the glasses are present in
     the image (primarily focus is on whether or not eyeglasses are worn
-    by a person). It is possible to specify only a particular kind of
-    glasses to focus on, e.g., sunglasses.
+    by a person). It is possible to specify a particular kind of glasses
+    to focus on, e.g., sunglasses.
 
-    .. list-table:: Performance of the Pre-trained Classifiers
-        :header-rows: 1
+    ----
 
-        * - Kind
-          - Size
-          - BCE :math:`\downarrow`
-          - F1 :math:`\uparrow`
-          - ROC-AUC :math:`\uparrow`
-          - PR-AUC :math:`\uparrow`
-        * - ``anyglasses``
-          - ``small``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``anyglasses``
-          - ``medium``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``anyglasses``
-          - ``large``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``eyeglasses``
-          - ``small``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``eyeglasses``
-          - ``medium``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``eyeglasses``
-          - ``large``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``sunglasses``
-          - ``small``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``sunglasses``
-          - ``medium``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``sunglasses``
-          - ``large``
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+    .. collapse:: Performance of the Pre-trained Classifiers
+        :name: Performance of the Pre-trained Classifiers
 
-    .. list-table:: Size Info of teh Pre-trained Classifiers
-        :header-rows: 1
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | Kind           | Size       | BCE :math:`\downarrow`  | F1 :math:`\uparrow` | ROC-AUC :math:`\uparrow` | PR-AUC :math:`\uparrow` |
+        +================+============+=========================+=====================+==========================+=========================+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``anyglasses`` | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``eyeglasses`` | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``sunglasses`` | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
 
-        * - Size
-          - Architecture
-          - Paper
-          - Params :math:`\downarrow`
-          - GFLOPs :math:`\downarrow`
-          - Memory :math:`\downarrow`
-          - Filesize :math:`\downarrow`
-        * - ``small``
-          - :class:`tinyclsnet_v1 <.architectures.TinyBinaryClassifier>`
-          - N/A
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``medium``
-          - :func:`~torchvision.models.shufflenet_v2_x1_0`
-          - `ShuffleNet V2: Practical Guidelines for Efficient CNN Architecture Design <https://arxiv.org/abs/1807.11164>`_
-          - TODO
-          - TODO
-          - TODO
-          - TODO
-        * - ``large``
-          - :func:`~torchvision.models.efficientnet_v2_s`
-          - `EfficientNetV2: Smaller Models and Faster Training <https://arxiv.org/abs/2104.00298>`_
-          - TODO
-          - TODO
-          - TODO
-          - TODO
+    .. collapse:: Size Information of the Pre-trained Classifiers
+        :name: Size Information of the Pre-trained Classifiers
+
+        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        | Size           | Architecture                                                                         | Params :math:`\downarrow` | GFLOPs :math:`\downarrow` | Memory :math:`\downarrow` | Filesize :math:`\downarrow` |
+        +================+======================================================================================+===========================+===========================+===========================+=============================+
+        | ``small``      | :class:`tinyclsnet_v1<.architectures.tiny_binary_classifier.TinyBinaryClassifier>`   | TODO                      | TODO                      | TODO                      | TODO                        |
+        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        | ``medium``     | :func:`~torchvision.models.shufflenet_v2_x1_0` :cite:p:`ma2018shufflenet`            | TODO                      | TODO                      | TODO                      | TODO                        |
+        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        | ``large``      | :func:`~torchvision.models.efficientnet_v2_s` :cite:p:`tan2021efficientnetv2`        | TODO                      | TODO                      | TODO                      | TODO                        |
+        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+
+    Examples
+    --------
+
+    Let's instantiate the classifier with default parameters:
+
+          >>> from glasses_detector import GlassesClassifier
+          >>> clf = GlassesClassifier()
+
+    First, we can perform a raw prediction on an image expressed as
+    either a path, a :class:`PIL Image<PIL.Image.Image>` or a
+    :class:`numpy array<numpy.ndarray>`. See :meth:`predict` for more
+    details.
+
+        >>> clf(np.random.randint(0, 256, size=(224, 224, 3), dtype=np.uint8))
+        'not_present'
+        >>> clf(["path/to/image1.jpg", "path/to/image2.jpg"], format="bool")
+        [True, False]
+
+    We can also use a more specific method :meth:`process_file` which
+    allows to save the results to a file:
+
+        >>> clf.process_file("path/to/img.jpg", "path/to/pred.txt", show=True)
+        'present'
+        >>> clf.process_file(["img1.jpg", "img2.jpg"], "preds.npy", format="proba")
+        >>> np.load("preds.npy")
+        array([0.96, 0.81562], dtype=float32)
+
+    Finally, we can also use :meth:`process_dir` to process all images
+    in a directory and save the predictions to a file or a directory:
+
+        >>> clf.process_dir("path/to/dir", "path/to/preds.csv", format="str")
+        >>> subprocess.run(["cat", "path/to/preds.csv"])
+        path/to/dir/img1.jpg,present
+        path/to/dir/img2.jpg,not_present
+        ...
+        >>> clf.process_dir("path/to/dir", "path/to/pred_dir", ext=".txt")
+        >>> subprocess.run(["ls", "path/to/pred_dir"])
+        img1.txt img2.txt ...
 
     Args:
         kind (str, optional): The kind of glasses to perform binary
             classification for. Available options are:
 
-                * ``"anyglasses"`` - any kind glasses/googles/spectacles
-                * ``"eyeglasses"`` - transparent eyeglasses
-                * ``"sunglasses"`` - opaque and semi-transparent glasses
+            +-------------------+-------------------------------------+
+            |                   |                                     |
+            +-------------------+-------------------------------------+
+            | ``"anyglasses"``  | Any kind glasses/googles/spectacles |
+            +-------------------+-------------------------------------+
+            | ``"eyeglasses"``  | Transparent eyeglasses              |
+            +-------------------+-------------------------------------+
+            | ``"sunglasses"``  | Opaque and semi-transparent glasses |
+            +-------------------+-------------------------------------+
 
             Each kind is only responsible for its category, e.g., if
             ``kind`` is set to ``"sunglasses"``, then images with
@@ -134,22 +123,33 @@ class GlassesClassifier(BaseGlassesModel):
         size (str, optional): The size of the model to use. Available
             options are:
 
-                * ``"small"`` - a tiny model with very few parameters
-                  but a lower accuracy.
-                * ``"medium"`` - a model with a balance between the
-                  number of parameters and the accuracy.
-                * ``"large"`` - a model with a large number of
-                  parameters but a higher accuracy.
+            +--------------+-------------------------------------------------------------+
+            |              |                                                             |
+            +--------------+-------------------------------------------------------------+
+            | ``"small"``  | Very few parameters but lower accuracy                      |
+            +--------------+-------------------------------------------------------------+
+            | ``"medium"`` | A balance between the number of parameters and the accuracy |
+            +--------------+-------------------------------------------------------------+
+            | ``"large"``  | Large number of parameters but higher accuracy              |
+            +--------------+-------------------------------------------------------------+
 
-            Please check :attr:`DEFAULT_SIZE_MAP` to see which
-            architecture each size maps to and the details about the
-            number of parameters. Defaults to ``"medium"``.
+            Please check:
+
+            * `Performance of the Pre-trained Classifiers`_: to see the
+              results of the pre-trained models for each size depending
+              on :attr:`kind`.
+            * `Size Information of the Pre-trained Classifiers`_: to see
+              which architecture each size maps to and the details
+              about the number of parameters.
+
+            Defaults to ``"medium"``.
         pretrained (bool | str | None, optional): Whether to load
-            weights from a custom URL (or local file if they're already
-            downloaded) which will be inferred based on model's
+            weights from a custom URL (or a local file if they're
+            already downloaded) which will be inferred based on model's
             :attr:`kind` and :attr:`size`. If a string is provided, it
-            will be used as a path or a URL (determined automatically)
-            to the model weights. Defaults to ``True``.
+            will be used as a custom path or a URL (determined
+            automatically) to the model weights. Defaults to
+            :data:`True`.
         device (str | torch.device, optional): Device to cast the model
             (once it is loaded) to. Defaults to ``"cpu"``.
     """
@@ -163,32 +163,12 @@ class GlassesClassifier(BaseGlassesModel):
         "medium": {"name": "shufflenet_v2_x1_0", "version": "v1.0.0"},
         "large": {"name": "efficientnet_v2_s", "version": "v1.0.0"},
     }
-    """
-    typing.ClassVar[dict[str, dict[str, str]]]: The model info
-    dictionary mapping from the size of the model to the model info
-    dictionary which contains the name of the architecture and the
-    version of the release. This is just a helper component for
-    :attr:`DEFAULT_KIND_MAP` because each default kind has the same set
-    of default models.
-    """
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
         "anyglasses": DEFAULT_SIZE_MAP,
         "eyeglasses": DEFAULT_SIZE_MAP,
         "sunglasses": DEFAULT_SIZE_MAP,
     }
-    """
-    typing.ClassVar[dict[str, dict[str, dict[str, str]]]]: The model
-    info dictionary used to construct the URL to download the weights
-    from. It has 3 nested levels:
-
-        1. ``kind`` - the kind of the model, e.g., ``"sunglasses"``
-        2. ``size`` - the size of the model, e.g., ``"medium"``
-        3. ``info`` - the model info, i.e., ``"name"`` and ``"version"``
-    
-    For example, ``DEFAULT_KIND_MAP["sunglasses"]["medium"]`` would
-    return ``{"name": <arch-name>, "version": <release-version>}``.
-    """
 
     @staticmethod
     @override
@@ -207,6 +187,24 @@ class GlassesClassifier(BaseGlassesModel):
 
         return m
 
+    @overload
+    def predict(
+        self,
+        image: FilePath | Image.Image | np.ndarray,
+        format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
+        resize: tuple[int, int] | None = (256, 256),
+    ) -> Default:
+        ...
+
+    @overload
+    def predict(
+        self,
+        image: Collection[FilePath | Image.Image | np.ndarray],
+        format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
+        resize: tuple[int, int] | None = (256, 256),
+    ) -> list[Default]:
+        ...
+
     @override
     def predict(
         self,
@@ -214,21 +212,18 @@ class GlassesClassifier(BaseGlassesModel):
         | Image.Image
         | np.ndarray
         | Collection[FilePath | Image.Image | np.ndarray],
-        format: str
-        | dict[bool, Default]
-        | Callable[[torch.Tensor], Default] = {
-            True: "wears",
-            False: "does_not_wear",
-        },
+        format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
+        resize: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
         """Predicts whether the positive class is present.
 
         Takes a path or multiple paths to image files or the loaded
         images themselves and outputs a formatted prediction for each
-        image indicating whether the it belongs to a positive class,
-        e.g., *"anyglasses"*, or not. The format of the prediction,
-        i.e., the prediction type is :attr:`Default` type which
-        corresponds to :attr:`~.PredType.DEFAULT`.
+        image indicating whether it belongs to a positive class, e.g.,
+        *"anyglasses"*, or not. The format of the prediction,
+        i.e., the prediction type is
+        :data:`~glasses_detector.components.pred_type.Default` type
+        which corresponds to :attr:`~.PredType.DEFAULT`.
 
         Warning:
             If the image is provided as :class:`numpy.ndarray`, make
@@ -242,40 +237,49 @@ class GlassesClassifier(BaseGlassesModel):
             image (FilePath | PIL.Image.Image | numpy.ndarray | typing.Collection[FilePath | PIL.Image.Image | numpy.ndarray]):
                 The path(-s) to the image to generate the prediction for
                 or the image(-s) itself represented as
-                :class:`Image.Image` or as a :class:`numpy.ndarray`.
+                :class:`~PIL.Image.Image` or as :class:`~numpy.ndarray`.
                 Note that the image should have values between 0 and 255
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
             format (str | dict[bool, Default] | typing.Callable[[torch.Tensor], Default], optional):
                 The string specifying the way to map the predictions to
-                labels. These are the following options:
+                labels. These are the following options (if ``image`` is
+                a :class:`~typing.Collection`, then the output will be a
+                :class:`lis` of corresponding items of **output type**):
 
-                * "bool" - maps image to ``True`` (if predicted as
-                  positive) and to ``False`` (if predicted as negative).
-                * "int" - maps image to ``1`` (if predicted as positive)
-                  and to ``0`` (if predicted as negative).
-                * "str" - maps image to ``"present"`` (if predicted as
-                  positive) and to ``"not_present"`` (if predicted as
-                  negative).
-                * "logit" - maps image to a raw score (real number) of
-                  a positive class.
-                * "proba" - maps image to a probability (a number
-                  between 0 and 1) of a positive class.
+                +------------+---------------------+------------------------------------------------------------+
+                | **format** | **output type**     | **prediction mapping**                                     |
+                +============+=====================+============================================================+
+                | ``"bool"`` | :class:`bool`       | :data:`True` if positive, :data:`False` if negative        |
+                +------------+---------------------+------------------------------------------------------------+
+                | ``"int"``  | :class:`int`        | ``1`` if positive, ``0`` if negative                       |
+                +------------+---------------------+------------------------------------------------------------+
+                | ``"str"``  | :class:`str`        | ``"present"`` if positive, ``"not_present"`` if negative   |
+                +------------+---------------------+------------------------------------------------------------+
+                | ``"logit"``| :class:`float`      | Raw score (real number) of a positive class                |
+                +------------+---------------------+------------------------------------------------------------+
+                | ``"proba"``| :class:`float`      | Probability (a number between 0 and 1) of a positive class |
+                +------------+---------------------+------------------------------------------------------------+
 
                 It is also possible to provide a dictionary with 2 keys:
-                ``True`` and ``False``, each mapping to values
+                :data:`True` and :data:`False`, each mapping to values
                 corresponding to what to output if the predicted label
                 is positive or negative. Further, a custom callback
                 function is also possible that specifies how to map a
                 raw :class:`torch.Tensor` score of type
                 ``torch.float32`` of shape ``(1,)`` to a label. Defaults
-                to ``{True: "wears", False: "does_not_wear"}``.
+                to ``"str"``.
+            resize (tuple[int, int] | None, optional): The size (width,
+                height) to resize the image to before passing it through
+                the network. If :data:`None`, the image will not be
+                resized. It is recommended to resize it to the size the
+                model was trained on, which by default is
+                ``(256, 256)``. Defaults to ``(256, 256)``.
 
         Returns:
-            Default | list[Default]: The formatted
-            prediction or a list of formatted predictions if multiple
-            images were provided.
+            Default | list[Default]: The formatted prediction or a list
+            of formatted predictions if multiple images were provided.
 
         Raises:
             ValueError: If the specified ``format`` as a string is
@@ -301,4 +305,13 @@ class GlassesClassifier(BaseGlassesModel):
             # If the format was specified as dictionary
             format = lambda x: d[(x > 0).item()]
 
-        return super().predict(image, format)
+        return super().predict(image, format, resize)
+
+    @override
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return super().forward(x)
+
+    @override
+    @copy_signature(predict)
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)

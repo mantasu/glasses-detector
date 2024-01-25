@@ -19,7 +19,7 @@ import torch.nn as nn
 from PIL import Image
 
 from .._data import ImageLoaderMixin
-from ..utils import FilePath, is_path_type, is_url
+from ..utils import FilePath, copy_signature, eval_infer_mode, is_path_type, is_url
 from .pred_interface import PredInterface
 from .pred_type import Default
 
@@ -85,22 +85,45 @@ class BaseGlassesModel(PredInterface):
     typing.ClassVar[str]: The base URL to download the weights from.
     """
 
-    DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
-        "kind": {"size": {"name": "", "version": ""}},
+    DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
+        "<size>": {"name": "<architecture-name>", "version": "<version>"}
     }
     """
-    typing.ClassVar[dict[str, dict[str, dict[str, str]]]]: The template
-    for the model info. The model info is used to construct the URL to
-    download the weights from. This nested dictionary has 3 levels which
+    typing.ClassVar[dict[str, dict[str, str]]]: The default size map
+    from the size of the model to the model info dictionary which
+    contains the name of the architecture and the version of the weights
+    release. This is just a helper component for
+    :attr:`DEFAULT_KIND_MAP` because each default kind has the same set
+    of default models.
+
+    Example:
+
+        >>> [info["name"] for info in DEFAULT_SIZE_MAP.values()]
+        # list of all the available architectures
+
+    :meta hide-value:
+    """
+
+    DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
+        "<kind>": DEFAULT_SIZE_MAP,
+    }
+    """
+    typing.ClassVar[dict[str, dict[str, dict[str, str]]]]: The default
+    map from model :attr:`kind` and :attr:`size` to the model info
+    dictionary. The model info is used to construct the URL to download
+    the weights from. The nested dictionary has 3 levels which
     are expected to be as follows:
 
-    1. ``kind`` - the kind of the model, e.g., ``"sunglasses"``
-    2. ``size`` - the size of the model, e.g., ``"medium"``
+    1. ``kind`` - the kind of the model
+    2. ``size`` - the size of the model
     3. ``info`` - the model info, i.e., ``"name"`` and ``"version"``
 
-    For example, ``DEFAULT_KIND_MAP["sunglasses"]["medium"]`` would
-    return ``{"name": <arch-name>, "version": <release-version>}`` which
-    is the expected format for :attr:`model_info`.
+    Example:
+
+        >>> DEFAULT_KIND_MAP["<kind>"]["<size>"]
+        {"name": "<architecture-name>", "version": "<release-version>"}
+
+    :meta hide-value:
     """
 
     def __post_init__(self):
@@ -160,7 +183,9 @@ class BaseGlassesModel(PredInterface):
 
         Args:
             model_name (str): The name of the model architecture to
-                create, for example, ``"efficientnet_v2_s"``.
+                create. For available architectures, see the class
+                description (**Size Information** table) or
+                :attr:`DEFAULT_SIZE_MAP`.
 
         Returns:
             torch.nn.Module: The model instance with the corresponding
@@ -197,19 +222,19 @@ class BaseGlassesModel(PredInterface):
         Args:
             model (torch.nn.Module): The custom model that will be
                 assigned as :attr:`model`.
-            **kwargs: Keyword arguments to pass to the constructor, see
-                :class:`BaseGlassesModel` for more details. If
-                ``task``, ``kind``, and ``size`` are not provided, they
-                will be set to ``"custom"``. If the model architecture
-                is custom, you may still specify the path to the
-                pretrained wights via ``pretrained`` argument. Finally,
-                if ``device`` is not provided, the wrapper will be cast
-                to the the same one as the provided model is currently
-                on.
+            **kwargs: Keyword arguments to pass to the constructor,
+                check the documentation of this class for more details.
+                If ``task``, ``kind``, and ``size`` are not provided,
+                they will be set to ``"custom"``. If the model
+                architecture is custom, you may still specify the path
+                to the pretrained wights via ``pretrained`` argument.
+                Finally, if ``device`` is not provided, the model will
+                remain on the same device as is.
 
         Returns:
-            The glasses model wrapper of the same class type from which
-            this method was called for the provided custom model.
+            typing.Self: The glasses model wrapper of the same class
+            type from which this method was called for the provided
+            custom model.
         """
         # Set default values for class args
         kwargs.setdefault("task", "custom")
@@ -246,7 +271,9 @@ class BaseGlassesModel(PredInterface):
     def predict(
         self,
         image: FilePath | Image.Image | np.ndarray,
-        format: Callable[[torch.Tensor], Default] = lambda x: str(x),
+        format: Callable[[Any], Default]
+        | Callable[[Image.Image, Any], Default] = lambda x: str(x),
+        resize: tuple[int, int] | None = (256, 256),
     ) -> Default:
         ...
 
@@ -254,11 +281,12 @@ class BaseGlassesModel(PredInterface):
     def predict(
         self,
         image: Collection[FilePath | Image.Image | np.ndarray],
-        format: Callable[[torch.Tensor], Default] = lambda x: str(x),
+        format: Callable[[Any], Default]
+        | Callable[[Image.Image, Any], Default] = lambda x: str(x),
+        resize: tuple[int, int] | None = (256, 256),
     ) -> list[Default]:
         ...
 
-    @torch.inference_mode()
     @override
     def predict(
         self,
@@ -280,15 +308,22 @@ class BaseGlassesModel(PredInterface):
             This method expects that :meth:`forward` always returns an
             :class:`~typing.Iterable` of any type of predictions
             (typically, they would be of type :class:`~torch.Tensor`),
-            even if there is only one prediction.
+            even if there is only one prediction. Likewise,
+            :class:`~torch.Tensor` representing a batch of loaded images
+            is passed to :meth:`forward` when generating those
+            predictions.
 
-        Warning:
+        Important:
             If the image is provided as :class:`numpy.ndarray`, make
             sure the last dimension specifies the channels, i.e., last
             dimension should be of size ``1`` or ``3``. If it is
             anything else, e.g., if the shape is ``(3, H, W)``, where
             ``W`` is neither ``1`` nor ``3``, this would be interpreted
             as 3 grayscale images.
+
+        .. seealso::
+
+            :meth:`forward`
 
         Args:
             image (FilePath | PIL.Image.Image | numpy.ndarray | typing.Collection[FilePath | PIL.Image.Image | numpy.ndarray]):
@@ -301,7 +336,7 @@ class BaseGlassesModel(PredInterface):
                 through the network.
             format (typing.Callable[[typing.Any], Default] | (typing.Callable[[PIL.Image.Image, typing.Any], Default], optional):
                 Format callback. This is a custom function that takes
-                a predicted elements from the iterable output of
+                the predicted elements from the iterable output of
                 :meth:`forward` (elements are usually of type
                 :class:`~torch.Tensor`) as input or the original image
                 and its prediction as inputs (it will be determined
@@ -313,12 +348,11 @@ class BaseGlassesModel(PredInterface):
                 the network. If :data:`None`, the image will not be
                 resized. It is recommended to resize it to the size the
                 model was trained on, which by default is
-                ``(256, 256)``. Defaults to :data:`None`.
+                ``(256, 256)``. Defaults to ``(256, 256)``.
 
         Returns:
-            Default | typing.List[Default]: The formatted prediction or
-            a list of formatted predictions if multiple images were
-            provided.
+            Default | list[Default]: The formatted prediction or a list
+            of formatted predictions if multiple images were provided.
         """
         # Get the device from the model and init vars
         device = next(iter(self.parameters())).device
@@ -350,7 +384,11 @@ class BaseGlassesModel(PredInterface):
             # Load the image and cast to device and append to batch
             xs.append(ImageLoaderMixin.load_image(img, resize=resize).to(device))
 
-        for i, pred in enumerate(self(torch.stack(xs))):
+        with eval_infer_mode(self.model):
+            # Perform forward pass without grad
+            pred = self.forward(torch.stack(xs))
+
+        for i, pred in enumerate(pred):
             if require_original:
                 # Format prediction with original image
                 preds.append(format(original_images[i], pred))
@@ -360,13 +398,17 @@ class BaseGlassesModel(PredInterface):
 
         return preds if is_multiple else preds[0]
 
-    def forward(self, *args) -> Iterable[Any]:
+    def forward(self, x: torch.Tensor) -> Iterable[Any]:
         """Performs forward pass.
 
         Calls the forward method of the inner :attr:`model`, by passing
-        any inputs it can process (first argument is typically a batch
-        of images, i.e., a :class:`~torch.Tensor` of shape
-        ``(N, C, H, W)``.
+        a batch of images as its first argument.
+
+        Tip:
+            If this method is used during inference, make sure to set
+            the model to evaluation mode and enable
+            :class:`~torch.inference_mode`, e.g., via
+            :class:`eval_infer_mode` decorator/context manager.
 
         Note:
             The default :meth:`predict` that uses this method assumes an
@@ -374,19 +416,28 @@ class BaseGlassesModel(PredInterface):
             and the output can be anything that is
             :class:`~typing.Iterable`, e.g., a :class:`~torch.Tensor`.
 
+        Warning:
+            In case of a custom inner :attr:`model` (e.g., if the
+            instance was created using :meth:`from_model`) that does not
+            accept a tensor representing a batch of images as its first
+            argument, this method will not work, in which case
+            :meth:`predict` will also not work.
+
+        .. seealso::
+
+            :meth:`predict`
+
         Args:
-            *args: any inputs that can be passed to :attr:`model`.
-                Usually, it is just a single input, i.e., a batch of
-                images: a :class:`~torch.Tensor` of shape
-                ``(N, C, H, W)``. with normalized pixel values between
-                0 and 1.
+            x: A batch of images - a :class:`~torch.Tensor` of shape
+                ``(N, C, H, W)`` with normalized pixel values between
+                ``0`` and ``1``.
 
         Returns:
-            An iterable of predictions (one for each input). Usually,
-            it is a :class:`~torch.Tensor` with the first dimension of
-            size ``N``.
+            An iterable of predictions (one for each input). Usually, it
+            is a :class:`~torch.Tensor` with the first dimension of size
+            ``N`` which is the batch size of the original input.
         """
-        return self.model(*args)
+        return self.model(x)
 
     def load_weights(self, path_or_url: str | bool = True):
         """Loads inner :attr:`model` weights.
@@ -467,3 +518,7 @@ class BaseGlassesModel(PredInterface):
             f"via `self.model` attribute, for instance, create a custom model "
             f"using `GlassesModel.create_model` and assign it."
         )
+
+    @copy_signature(predict)
+    def __call__(self, *args, **kwargs):
+        return self.predict(*args, **kwargs)
