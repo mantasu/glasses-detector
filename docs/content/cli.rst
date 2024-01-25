@@ -3,58 +3,84 @@ CLI
 
 These flags allow you to define the kind of task and the model to process your image or a directory with images. Check out how to use them in :ref:`command-line`.
 
-.. option:: -i <path/to/dir_or_file>, --input-path <path/to/dir_or_file>
+.. option:: -i path/to/dir/or/file, --input-path path/to/dir/or/file
 
     Path to the input image or the directory with images.
 
-.. option:: -o <path/to/dir_or_file>, --output-path <path/to/dir_or_file>
+.. option:: -o path/to/dir/or/file, --output-path path/to/dir/or/file
 
-    For classification, it is the path to a file, e.g., txt or csv, to which to write the predictions. If not provided, the prediction will be either printed (if input is a file) or written to a default file (if input is a dir). For segmentation, it is a path to a mask file, e.g., jpg or png, (if input is a file) or a path to a directory where the masks should be saved (if input is a dir). If not provided, default output paths will be generated.
+    Path to the output file or the directory. If not provided, then, if input is a file, the prediction will be printed (or shown if it is an image), otherwise, if input is a directory, the predictions will be written to a directory with the same name with an added suffix ``_preds``. If provided as a file, then the prediction(-s) will be saved to this file (supported extensions include: ``.txt``, ``.csv``, ``.json``, ``.npy``, ``.pkl``, ``.jpg``, ``.png``). If provided as a directory, then the predictions will be saved to this directory use ``--extension`` flag to specify the file extensions in that directory.
     
     **Default:** ``None``
 
-.. option:: -k <kind-of-model>, --kind <kind-of-model>
+.. option:: -e <ext>, --extension <ext>
 
-    The kind of model to use to process the files. One of 'eyeglasses-classifier', 'sunglasses-classifier', 'glasses-classifier', 'full-glasses-segmenter', 'full-eyeglasses-segmenter', 'full-sunglasses-segmenter', 'full-anyglasses-segmenter', 'glass-frames-segmenter', 'eyeglasses-frames-segmenter', 'sunglasses-frames-segmenter', 'anyglasses-frames-segmenter'.
-
-.. option:: -s <arch-name>, --size <arch-name>
-
-    The model architecture name (model size). One of 'tiny', 'small', 'medium', 'large', 'huge'.
-    
-    **Default:** ``'small'``
-
-.. option:: -l <label-type>, --label-type <label-type>
-
-    Only used if ``kind`` is classifier. It is the string specifying the way to map the predictions to labels. For instance, if specified as 'int', positive labels will be 1 and negative will be 0. If specified as 'proba', probabilities of being positive will be shown. One of 'bool', 'int', 'str', 'logit', 'proba'. 
-
-    **Default:** ``'int'``
-
-.. option:: -sep <sep>, --separator <sep>
-
-    Only used if ``kind`` is classifier. It is the separator to use to separate image file names and the predictions.
-    
-    **Default:** ``','``
-
-.. option:: -m <mask-type>, --mask-type <mask-type>
-
-    Only used if ``kind`` is segmenter. The type of mask to generate. For example, a mask could be a black and white image, in which case 'img' should be specified. A mask could be a matrix of raw scores in npy format, in which case 'logit' should be specified. One of 'bool', 'int', 'img', 'logit', 'proba'.
-    
-    **Default:** ``'img'``
-
-.. option:: -ext <ext>, --extension <ext>
-
-    Only used if ``kind`` is segmenter. The extension to use to save masks. Specifying it will overwrite the extension existing as part of ``output_path`` (if it is specified as a path to file). If ``mask-type`` is 'img', then possible extensions are 'jpg', 'png', 'bmp' etc. If ``mask-type`` is some value, e.g., 'bool' or 'proba', then possible extensions are 'npy', 'pkl', 'dat' etc. If not specified, it will be inferred form ``output-path`` (if it is given and is a path to a file), otherwise 'jpg' or 'npy' will be used, depending on ``mask-type``.
+    Only used if ``--output-path`` is a directory. The extension to use to save the predictions as files. Common extensions include: ``.txt``, ``.csv``, ``.json``, ``.npy``, ``.pkl``, ``.jpg``, ``.png``. If not specified, it will be set automatically to ``.jpg`` for image predictions and to ``.txt`` for all other formats.
     
     **Default:** ``None``
 
-.. option:: -pbd <pbar-desc> --pbar-desc <pbar-desc>
+.. option:: -f <format>, --format <format>
 
-    Only used if input path leads to a directory of images. It is the description that is used for the progress bar. If specified as ``''`` (empty string), no progress bar is shown.
+    The format to use to map the raw prediction to.
+
+    * For *classification*, common formats are ``bool``, ``proba``, ``str`` - check :meth:`Classifier.predict<glasses_detector.classifier.GlassesClassifier.predict>` for more details
+    * For *detection*, common formats are ``bool``, ``int``, ``img`` - check :meth:`Detector.predict<glasses_detector.detector.GlassesDetector.predict>` for more details
+    * For *segmentation*, common formats are ``proba``, ``img``, ``mask`` - check :meth:`Segmenter.predict<glasses_detector.segmenter.GlassesSegmenter.predict>` for more details
+
+    If not specified, it will be set automatically to ``str``, ``img``, ``mask`` for *classification*, *detection*, *segmentation* respectively.
     
-    **Default:** ``'Processing'``
+    **Default:** ``None``
 
-.. option:: -d <device> --device <device>
+.. option:: -t <task-name>, --task <task-name>
+
+    The kind of task the model should perform. One of
+
+    * ``classification``
+    * ``classification:anyglasses``
+    * ``classification:sunglasses``
+    * ``classification:eyeglasses``
+    * ``detection``
+    * ``detection:eyes``
+    * ``detection:standalone``
+    * ``detection:worn``
+    * ``segmentation``
+    * ``segmentation:frames``
+    * ``segmentation:full``
+    * ``segmentation:legs``
+    * ``segmentation:lenses``
+    * ``segmentation:shadows``
+    * ``segmentation:smart``
+
+    If specified only as ``classification``, ``detection``, or ``segmentation``, the subcategories ``anyglasses``, ``worn``, and ``smart`` will be chosen, respectively.
+
+    **Default:** ``classification:anyglasses``
+
+.. option:: -s <model-size>, --size <model-size>
+
+    The model size which determines architecture type. One of ``small``, ``medium``, ``large``.
+    
+    **Default:** ``medium``
+
+.. option:: -b <batch-size>, --batch-size <batch-size>
+
+    Only used if ``--input-path`` is a directory. The batch size to use when processing the images. This groups the files in the input directory to batches of size ``batch_size`` before processing them. In some cases, larger batch sizes can speed up the processing at the cost of more memory usage.
+    
+    **Default:** ``1``
+
+.. option:: -p <pbar-desc>, --pbar <pbar-desc>
+
+    Only used if ``--input-path`` is a directory. It is the description that is used for the progress bar. If specified as ``""`` (empty string), no progress bar is shown.
+    
+    **Default:** ``"Processing"``
+
+.. option:: -w path/to/weights.pth, --weights-path path/to/weights.pth
+
+    Path to custom weights to load into the model. If not specified, weights will be loaded from the default location (and automatically downloaded there if needed).
+    
+    **Default:** ``None``
+
+.. option:: -d <device>, --device <device>
 
     The device on which to perform inference. If not specified, it will be automatically checked if CUDA or MPS is supported.
     
-    **Default:** ``''``
+    **Default:** ``None``

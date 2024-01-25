@@ -528,13 +528,16 @@ class PredInterface(ABC):
             :data:`None` if ``output_path`` is specified.
         """
         if isinstance(pbar, bool) and pbar:
+            # No desc
             pbar = ""
 
         if isinstance(pbar, str):
+            # Create a progress bar with the given description
             pbar = tqdm(desc=pbar, total=0, unit="file")
             update_total = True
 
         if isinstance(pbar, tqdm) and update_total:
+            # Update the total number of files in pbar
             pbar.total += len(os.listdir(input_path))
 
         # Check if the predictions should be aggregated to

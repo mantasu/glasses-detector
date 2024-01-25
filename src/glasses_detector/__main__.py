@@ -1,6 +1,10 @@
 import argparse
+import os
+import typing
 
 import torch
+
+from . import GlassesClassifier, GlassesDetector, GlassesSegmenter
 
 
 def parse_kwargs():
@@ -9,7 +13,7 @@ def parse_kwargs():
     parser.add_argument(
         "-i",
         "--input-path",
-        metavar="<path/to/dir_or_file>",
+        metavar="path/to/dir/or/file",
         type=str,
         required=True,
         help="Path to the input image or the directory with images.",
@@ -17,176 +21,201 @@ def parse_kwargs():
     parser.add_argument(
         "-o",
         "--output-path",
-        metavar="<path/to/dir_or_file>",
-        type=str,
+        metavar="path/to/dir/or/file",
+        type=typing.Union[str, None],
         default=None,
-        help=f"For classification, it is the path to a file, e.g., txt or "
-        f"csv, to which to write the predictions. If not provided, the "
-        f"prediction will be either printed (if input is a file) or "
-        f"written to a default file (if input is a dir). For segmentation, "
-        f"it is a path to a mask file, e.g., jpg or png, (if input is a "
-        f"file) or a path to a directory where the masks should be saved "
-        f"(if input is a dir). If not provided, default output paths will "
-        f"be generated. Defaults to None.",
+        help=f"Path to the output file or the directory. If not provided, "
+        f"then, if input is a file, the prediction will be printed (or shown "
+        f"if it is an image), otherwise, if input is a directory, the "
+        f"predictions will be written to a directory with the same name with "
+        f"an added suffix '_preds'. If provided as a file, then the "
+        f"prediction(-s) will be saved to this file (supported extensions "
+        f"include: .txt, .csv, .json, .npy, .pkl, .jpg, .png). If provided as "
+        f"a directory, then the predictions will be saved to this directory "
+        f"use `--extension` flag to specify the file extensions in that "
+        f"directory. Defaults to None.",
     )
     parser.add_argument(
-        "-k",
-        "--kind",
-        metavar="<kind-of-model>",
+        "-e",
+        "--extension",
+        metavar="<ext>",
+        type=typing.Union[str, None],
+        default=None,
+        choices=(ch := [".txt", ".csv", ".json", ".npy", ".pkl", ".jpg", ".png"]),
+        help=f"Only used if `--output-path` is a directory. The extension to "
+        f"use to save the predictions as files. Common extensions include: "
+        f"{", ".join([f"{c}" for c in ch])}. If not specified, it will be set "
+        f"automatically to .jpg for image predictions and to .txt for all "
+        f"other formats. Defaults to None.",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        metavar="<format>",
+        type=typing.Union[str, None],
+        default=None,
+        help=f"The format to use to map the raw prediction to. For "
+        f"classification, common formats are bool, proba, str, for detection, "
+        f"common formats are bool, int, img, for segmentation, common formats "
+        f"are proba, img, mask. If not specified, it will be set "
+        f"automatically to str, img, mask for classification, detection, "
+        f"segmentation respectively. Check API documentation for more "
+        f"details. Defaults to None.",
+    )
+    parser.add_argument(
+        "-t",
+        "--task",
+        metavar="<task-name>",
         type=str,
-        required=True,
-        choices=[
-            "eyeglasses-classifier",
-            "sunglasses-classifier",
-            "anyglasses-classifier",
-            "full-glasses-segmenter",
-            "full-eyeglasses-segmenter",
-            "full-sunglasses-segmenter",
-            "full-anyglasses-segmenter",
-            "glass-frames-segmenter",
-            "eyeglasses-frames-segmenter",
-            "sunglasses-frames-segmenter",
-            "anyglasses-frames-segmenter",
-        ],
-        help=f"The kind of model to use to process the files. One of "
-        f"'eyeglasses-classifier', 'sunglasses-classifier', "
-        f"'anyglasses-classifier', 'full-glasses-segmenter', "
-        f"'full-eyeglasses-segmenter', 'full-sunglasses-segmenter', "
-        f"'full-anyglasses-segmenter', 'glass-frames-segmenter', "
-        f"'eyeglasses-frames-segmenter', 'sunglasses-frames-segmenter', "
-        f"'anyglasses-frames-segmenter'.",
+        default="classification:anyglasses",
+        choices=(ch := [
+            "classification",
+            "classification:anyglasses",
+            "classification:sunglasses",
+            "classification:eyeglasses",
+            "detection",
+            "detection:eyes",
+            "detection:standalone",
+            "detection:worn",
+            "segmentation",
+            "segmentation:frames",
+            "segmentation:full",
+            "segmentation:legs",
+            "segmentation:lenses",
+            "segmentation:shadows",
+            "segmentation:smart",
+        ]),
+        help=f"The kind of task the model should perform. One of "
+        f"{", ".join([f"{c}" for c in ch])}. If specified only as "
+        f"classification, detection, or segmentation, the subcategories "
+        f"anyglasses, worn, and smart will be chosen, respectively. Defaults "
+        f"to classification:anyglasses.",
     )
     parser.add_argument(
         "-s",
         "--size",
-        metavar="<arch-name>",
+        metavar="<model-size>",
         type=str,
-        default="small",
-        choices=["tiny", "small", "medium", "large", "huge"],
-        help=f"The model architecture name (model size). One of 'tiny', "
-        f"'small', 'medium', 'large', 'huge'. Defaults to 'small'.",
+        default="medium",
+        choices=["small", "medium", "large"],
+        help=f"The model size which determines architecture type. One of "
+        f"'small', 'medium', 'large'. Defaults to 'medium'.",
     )
     parser.add_argument(
-        "-l",
-        "--label-type",
-        type=str,
-        metavar="<label-type>",
-        default="int",
-        choices=["bool", "int", "str", "logit", "proba"],
-        help=f"Only used if `kind` is classifier. It is the string "
-        f"specifying the way to map the predictions to labels. For "
-        f"instance, if specified as 'int', positive labels will be 1 and "
-        f"negative will be 0. If specified as 'proba', probabilities of "
-        f"being positive will be shown. One of 'bool', 'int', 'str', "
-        f"'logit', 'proba'. Defaults to 'int'.",
+        "-b",
+        "--batch-size",
+        metavar="<batch-size>",
+        type=int,
+        default=1,
+        help=f"Only used if `--input-path` is a directory. The batch size to "
+        f"use when processing the images. This groups the files in the input "
+        f"directory to batches of size `batch_size` before processing them. "
+        f"In some cases, larger batch sizes can speed up the processing at "
+        f"the cost of more memory usage. Defaults to 1."
     )
     parser.add_argument(
-        "-sep",
-        "--separator",
-        type=str,
-        metavar="<sep>",
-        default=",",
-        help=f"Only used if `kind` is classifier. It is the separator "
-        f"to use to separate image file names and the predictions. "
-        f"Defaults to ','.",
-    )
-    parser.add_argument(
-        "-m",
-        "--mask-type",
-        type=str,
-        metavar="<mask-type>",
-        default="img",
-        choices=["bool", "int", "img", "logit", "proba"],
-        help=f"Only used if `kind` is segmenter. The type of mask to "
-        f"generate. For example, a mask could be a black and white image, "
-        f"in which case 'img' should be specified. A mask could be a "
-        f"matrix of raw scores in npy format, in which case 'logit' "
-        f"should be specified. One of 'bool', 'int', 'img', 'logit', "
-        f"'proba'. Defaults to 'img'.",
-    )
-    parser.add_argument(
-        "-ext",
-        "--extension",
-        type=str,
-        metavar="<ext>",
-        default=None,
-        help=f"Only used if `kind` is segmenter. The extension to use to save "
-        f"masks. Specifying it will overwrite the extension existing as "
-        f"part of ``output_path`` (if it is specified as a path to file). "
-        f"If ``mask-type`` is 'img', then possible extensions are 'jpg', "
-        f"'png', 'bmp' etc. If ``mask-type`` is some value, e.g., 'bool' "
-        f"or 'proba', then possible extensions are 'npy', 'pkl', 'dat' "
-        f"etc. If not specified, it will be inferred form ``output-path`` "
-        f"(if it is given and is a path to a file), otherwise 'jpg' or "
-        f"'npy' will be used, depending on ``mask-type``. Defaults to "
-        f"None.",
-    )
-    parser.add_argument(
-        "-pbd",
-        "--pbar-desc",
+        "-p",
+        "--pbar",
         type=str,
         metavar="<pbar-desc>",
         default="Processing",
-        help=f"Only used if input path leads to a directory of images. It is "
-        f"the description that is used for the progress bar. If specified "
+        help=f"Only used if `--input-path` is a directory. It is the "
+        f"description that is used for the progress bar. If specified "
         f"as '' (empty string), no progress bar is shown. Defaults to "
         f"'Processing'.",
     )
     parser.add_argument(
+        "-w",
+        "--weights-path",
+        metavar="path/to/weights.pth",
+        type=typing.Union[str, None],
+        default=None,
+        help=f"Path to custom weights to load into the model. If not "
+        f"specified, weights will be loaded from the default location (and "
+        f"automatically downloaded there if needed). Defaults to None.",
+    )
+    parser.add_argument(
         "-d",
         "--device",
-        type=str,
+        type=typing.Union[str, None],
         metavar="<device>",
-        default="",
+        default=None,
         help=f"The device on which to perform inference. If not specified, it "
         f"will be automatically checked if CUDA or MPS is supported. "
-        f"Defaults to ''.",
+        f"Defaults to None.",
     )
 
-    # Parse kwargs, create class name
-    kwargs = vars(parser.parse_args())
-    model_cls_name = "".join(map(str.capitalize, kwargs["kind"].split("-")))
+    return vars(parser.parse_args())
 
-    match kwargs["kind"].split("-")[-1]:
-        # Delete unnecessary keys
-        # case "classifier":
-        #     del kwargs["ext"]
-        #     del kwargs["mask_type"]
-        #     kwargs["model_cls"] = getattr(classifiers, model_cls_name)
-        # case "segmenter":
-        #     del kwargs["sep"]
-        #     del kwargs["label_type"]
-        #     kwargs["model_cls"] = getattr(segmenters, model_cls_name)
-        case _:
-            print("TODO")
+def prepare_kwargs(kwargs):
+    # Define the keys to use when calling process and init methods
+    process_keys = ["is_file", "input_path", "output_path", "ext", "batch_size", "show", "pbar"]
+    model_keys = ["task", "kind", "size", "pretrained", "device"]
 
-    # Delete kind key
-    del kwargs["kind"]
+    # Add "is_file" key to check which process method to call
+    kwargs["is_file"] = os.path.splitext(kwargs["input_path"])[-1] != ""
 
-    return kwargs
+    if not kwargs["is_file"] and kwargs["output_path"] is None:
+        # Input is a directory but no output path is specified
+        kwargs["output_path"] = os.path.splitext(kwargs["input_path"])[0] + "_preds"
+    
+    if kwargs["is_file"] and kwargs["output_path"] is None:
+        # Input is a file and no output path is specified
+        kwargs["show"] = True
+    
+    if kwargs["pbar"] == "":
+        # No progress bar
+        kwargs["pbar"] = None
+    
+    if len(splits := kwargs["task"].split(":")) == 2:
+        # Task is specified as "task:kind"
+        kwargs["task"] = splits[0]
+        kwargs["kind"] = splits[1]
+    
+    if kwargs["weights_path"] is not None:
+        # Custom weights path is specified
+        kwargs["pretrained"] = kwargs["weights_path"]
+    
+    if kwargs["device"] is None and torch.cuda.is_available():
+        # CUDA device is available
+        kwargs["device"] = torch.device("cuda")
+    elif kwargs["device"] is None and torch.backends.mps.is_available():
+        # MPS device is available
+        kwargs["device"] = torch.device("mps")
+    elif kwargs["device"] is None:
+        # CPU device is used by default
+        kwargs["device"] = torch.device("cpu")
+
+    # Get the kwargs for the process and init methods
+    process_kwargs = {k: kwargs[k] for k in process_keys if k in kwargs}
+    model_kwargs = {k: kwargs[k] for k in model_keys if k in kwargs}
+    
+    return process_kwargs, model_kwargs
 
 
 def main():
-    # Get the cli kwargs
-    kwargs = parse_kwargs()
+    # Parse CLI args; prepare to create model and process images
+    process_kwargs, model_kwargs = prepare_kwargs(parse_kwargs())
+    is_file = process_kwargs.pop("is_file")
+    task = model_kwargs.pop("task")
 
-    # Pop out model-based kwargs
-    model_cls = kwargs.pop("model_cls")
-    base_model = kwargs.pop("size")
-    device = kwargs.pop("device")
+    # Create model
+    match task:
+        case "classification":
+            model = GlassesClassifier(**model_kwargs)
+        case "detection":
+            model = GlassesDetector(**model_kwargs)
+        case "segmentation":
+            model = GlassesSegmenter(**model_kwargs)
+        case _:
+            raise ValueError(f"Unknown task '{task}'.")
 
-    # Automatically determine the device
-    if device == "" and torch.cuda.is_available():
-        device = torch.device("cuda")
-    elif device == "" and torch.backends.mps.is_available():
-        device = torch.device("mps")
-    elif device == "":
-        device = torch.device("cpu")
-
-    # Instantiate model and process the input path
-    model = model_cls(base_model=base_model, pretrained=True).to(device).eval()
-    model.process(**kwargs)
-
+    if is_file:
+        # Process a single image file
+        model.process_file(**process_kwargs)
+    else:
+        # Process a directory of images
+        model.process_dir(**process_kwargs)
 
 if __name__ == "__main__":
     main()
