@@ -5,13 +5,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
-from torchvision.models.segmentation import fcn_resnet101, lraspp_mobilenet_v3_large
+from torchvision.models.segmentation import (
+    deeplabv3_resnet50,
+    fcn_resnet101,
+    lraspp_mobilenet_v3_large,
+)
 from torchvision.models.segmentation.lraspp import LRASPPHead
 
 from .architectures import TinyBinarySegmenter
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
-from .utils import FilePath
+from .utils import FilePath, copy_signature
 
 
 @dataclass
@@ -185,7 +189,7 @@ class GlassesSegmenter(BaseGlassesModel):
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinysegnet_v1", "version": "v1.0.0"},
         "medium": {"name": "lraspp_mobilenet_v3_large", "version": "v1.0.0"},
-        "large": {"name": "fcn_resnet101", "version": "v1.0.0"},
+        "large": {"name": "deeplabv3_resnet50", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
@@ -204,11 +208,15 @@ class GlassesSegmenter(BaseGlassesModel):
             case "tinysegnet_v1":
                 m = TinyBinarySegmenter()
             case "lraspp_mobilenet_v3_large":
-                m = lraspp_mobilenet_v3_large()
-                m.classifier = LRASPPHead(40, 960, 1, 128)
+                m = lraspp_mobilenet_v3_large(num_classes=1)
+                # m.classifier = LRASPPHead(40, 960, 1, 128)
             case "fcn_resnet101":
                 m = fcn_resnet101()
                 m.classifier[-1] = nn.Conv2d(512, 1, 1)
+                m.aux_classifier = None
+            case "deeplabv3_resnet50":
+                m = deeplabv3_resnet50(num_classes=1)
+                # m.classifier[-1] = nn.Conv2d(256, 1, 1)
                 m.aux_classifier = None
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
@@ -396,3 +404,12 @@ class GlassesSegmenter(BaseGlassesModel):
             format = lambda x: torch.where((x > 0), d[True], d[False])
 
         return super().predict(image, format)
+
+    @override
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)["out"]
+
+    @override
+    @copy_signature(predict)
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)

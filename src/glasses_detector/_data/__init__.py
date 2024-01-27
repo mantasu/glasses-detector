@@ -1,4 +1,5 @@
-from .classification_dataset import ImageClassificationDataset
-from .detection_dataset import ImageDetectionDataset
-from .mixins import DataLoaderMixin, ImageLoaderMixin
-from .segmentation_dataset import ImageSegmentationDataset
+from .augmenter_mixin import AugmenterMixin
+from .base_categorized_dataset import BaseCategorizedDataset
+from .binary_classification_dataset import BinaryClassificationDataset
+from .binary_detection_dataset import BinaryDetectionDataset
+from .binary_segmentation_dataset import BinarySegmentationDataset

@@ -3,8 +3,9 @@ import sys
 
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.cli import LightningCLI
+from pytorch_lightning.tuner import Tuner
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_KINDS = {
@@ -18,9 +19,9 @@ torch.set_float32_matmul_precision("medium")
 
 from glasses_detector import GlassesClassifier, GlassesDetector, GlassesSegmenter
 from glasses_detector._data import (
-    ImageClassificationDataset,
-    ImageDetectionDataset,
-    ImageSegmentationDataset,
+    BinaryClassificationDataset,
+    BinaryDetectionDataset,
+    BinarySegmentationDataset,
 )
 from glasses_detector._wrappers import BinaryClassifier, BinaryDetector, BinarySegmenter
 
@@ -41,25 +42,25 @@ class RunCLI(LightningCLI):
             "--task",
             metavar="<task-name>",
             type=str,
-            default="classification-anyglasses",
+            default="classification:anyglasses",
             choices=(ch := [
                 "classification",
-                "classification-anyglasses",
-                "classification-sunglasses",
-                "classification-eyeglasses",
+                "classification:anyglasses",
+                "classification:sunglasses",
+                "classification:eyeglasses",
                 "detection",
-                "detection-eyes",
-                "detection-standalone",
-                "detection-worn",
+                "detection:eyes",
+                "detection:standalone",
+                "detection:worn",
                 "segmentation",
-                "segmentation-frames",
-                "segmentation-full",
-                "segmentation-legs",
-                "segmentation-lenses",
-                "segmentation-shadows",
-                "segmentation-smart",
+                "segmentation:frames",
+                "segmentation:full",
+                "segmentation:legs",
+                "segmentation:lenses",
+                "segmentation:shadows",
+                "segmentation:smart",
             ]),
-            help=f"The kind of task to train/test the model for. One of {[f"'{c}'" for c in ch]}. If specified only as 'classification', 'detection', or 'segmentation', the subcategories 'anyglasses', 'worn', and 'smart' will be chosen, respectively. Defaults to 'classification-anyglasses'.",
+            help=f"The kind of task to train/test the model for. One of {", ".join([f"'{c}'" for c in ch])}. If specified only as 'classification', 'detection', or 'segmentation', the subcategories 'anyglasses', 'worn', and 'smart' will be chosen, respectively. Defaults to 'classification:anyglasses'.",
         )
         parser.add_argument(
             "-s",
@@ -94,7 +95,14 @@ class RunCLI(LightningCLI):
             default=None,
             help="Path to weights to load into the model. Defaults to None.",
         )
+        parser.add_argument(
+            "-f",
+            "--find-lr",
+            action="store_true",
+            help="Whether to run the learning rate finder before training. Defaults to False.",
+        )
         parser.add_lightning_class_args(ModelCheckpoint, "checkpoint")
+        parser.add_lightning_class_args(EarlyStopping, "early_stopping")
 
         # Checkpoint and trainer defaults
         parser.set_defaults(
@@ -103,7 +111,11 @@ class RunCLI(LightningCLI):
                 "checkpoint.save_last": False,
                 "checkpoint.monitor": "val_loss",
                 "checkpoint.mode": "min",
+                "early_stopping.monitor": "val_loss",
+                "early_stopping.mode": "min",
+                "early_stopping.patience": 15,
                 "trainer.max_epochs": 300,
+                "trainer.min_epochs": 300,
             }
         )
 
@@ -119,11 +131,17 @@ class RunCLI(LightningCLI):
         if self.config.fit.checkpoint.filename is None:
             # Update default filename for checkpoint saver callback
             self.model_name = (
-                self.config.fit.model.task + "-" + self.config.fit.model.size
+                self.config.fit.model.task.replace(":", "-") + "-" + self.config.fit.model.size
             )
             self.trainer.callbacks[-1].filename = (
                 self.model_name + "-{epoch:02d}-{val_loss:.3f}"
             )
+        
+        if self.config.fit.find_lr:
+            # Run learning rate finder
+            tuner = Tuner(self.trainer)
+            lr_finder = tuner.lr_find(self.model, min_lr=1e-5, max_lr=1e-1, num_training=500)
+            self.model.lr = lr_finder.suggestion()
 
     def after_fit(self):
         # Get the best checkpoint path and load it
@@ -148,16 +166,15 @@ def create_wrapper_callback(
 ) -> pl.LightningModule:
     
     # Get task and kind
-    
-    task_and_kind = task.split("-", maxsplit=1)
+    task_and_kind = task.split(":")
     task = task_and_kind[0]
     kind = DEFAULT_KINDS[task] if len(task_and_kind) == 1 else task_and_kind[1]
 
     # Get model and dataset classes
     model_cls, data_cls = {
-        "classification": (GlassesClassifier, ImageClassificationDataset),
-        "detection": (GlassesDetector, ImageDetectionDataset),
-        "segmentation": (GlassesSegmenter, ImageSegmentationDataset),
+        "classification": (GlassesClassifier, BinaryClassificationDataset),
+        "detection": (GlassesDetector, BinaryDetectionDataset),
+        "segmentation": (GlassesSegmenter, BinarySegmentationDataset),
     }[task]
 
     # Set-up wrapper initialization kwargs
@@ -169,7 +186,7 @@ def create_wrapper_callback(
 
     # Update wrapper initialization kwargs and set the initializer class
     if task == "classification":
-        kwargs["label_type"] = {kind: 1, "no_" + kind: 0}
+        kwargs["cat2idx_fn"] = {"no_" + kind: 0, kind: 1}
         wrapper_cls = BinaryClassifier
     elif task == "detection":
         wrapper_cls = BinaryDetector
@@ -178,10 +195,6 @@ def create_wrapper_callback(
 
     # Initialize model architecture and load weights if needed
     model = model_cls(kind=kind, size=size, pretrained=weights_path).model
-
-    # if weights_path is not None:
-    #     # Load weights if the path is specified to them
-    #     model.load_state_dict(torch.load(weights_path))
 
     return wrapper_cls(model, *data_cls.create_loaders(**kwargs))
 

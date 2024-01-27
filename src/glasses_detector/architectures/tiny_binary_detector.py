@@ -85,12 +85,23 @@ class TinyBinaryDetector(nn.Module):
         # Forward pass; insert a new dimension to indicate a single bbox
         preds = self.fc(self.features(torch.stack(imgs)))
 
-        # Convert to (x_min, y_min, x_max, y_max) and shape (N, 1, 4)
+        # Get width and height
         h, w = imgs[0].shape[-2:]
-        preds[:, 0] = torch.clamp(preds[:, 0], 0, 1) * w
-        preds[:, 1] = torch.clamp(preds[:, 1], 0, 1) * h
-        preds[:, 2] = torch.clamp(preds[:, 0] + preds[:, 2] * w, 0, w)
-        preds[:, 3] = torch.clamp(preds[:, 1] + preds[:, 3] * h, 0, h)
+
+        # Convert to (x_min, y_min, x_max, y_max)
+        preds[:, 0] = preds[:, 0] * w
+        preds[:, 1] = preds[:, 1] * h
+        preds[:, 2] = preds[:, 0] + preds[:, 2] * w
+        preds[:, 3] = preds[:, 1] + preds[:, 3] * h
+
+        if targets is None:
+            # Clamp the coordinates to the image size
+            preds[:, 0] = torch.clamp(preds[:, 0], 0, w)
+            preds[:, 1] = torch.clamp(preds[:, 1], 0, h)
+            preds[:, 2] = torch.clamp(preds[:, 2], 0, w)
+            preds[:, 3] = torch.clamp(preds[:, 3], 0, h)
+
+        # Convert to shape (N, 1, 4)
         preds = [*preds[:, None, :]]
 
         if targets is not None:
@@ -135,7 +146,7 @@ class TinyBinaryDetector(nn.Module):
 
         for i, pred in enumerate(preds):
             # Compute the loss (normalize the coordinates before that)
-            loss = criterion(pred / size, targets[i]["boxes"] / size)
+            loss = criterion(pred / size, targets[i]["boxes"][:1] / size)
             loss_dict[i] = loss
 
         return loss_dict

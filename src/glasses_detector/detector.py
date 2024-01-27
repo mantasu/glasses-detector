@@ -1,12 +1,15 @@
 from dataclasses import dataclass, field
-from typing import Any, Callable, ClassVar, Collection, overload, override
+from typing import Callable, ClassVar, Collection, overload, override
 
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image, ImageDraw, ImageFont
 from torchvision.models.detection import (
+    fasterrcnn_mobilenet_v3_large_fpn,
     fasterrcnn_resnet50_fpn_v2,
+    fcos_resnet50_fpn,
+    retinanet_resnet50_fpn_v2,
     ssdlite320_mobilenet_v3_large,
 )
 
@@ -189,7 +192,7 @@ class GlassesDetector(BaseGlassesModel):
     DEFAULT_SIZE_MAP: ClassVar[dict[str, int]] = {
         "small": {"name": "tinydetnet_v1", "version": "v1.0.0"},
         "medium": {"name": "ssdlite320_mobilenet_v3_large", "version": "v1.0.0"},
-        "large": {"name": "fasterrcnn_resnet50_fpn_v2", "version": "v1.0.0"},
+        "large": {"name": "fcos_resnet50_fpn", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, str]] = {
@@ -216,6 +219,25 @@ class GlassesDetector(BaseGlassesModel):
                     box_detections_per_img=1,
                     box_batch_size_per_image=10,
                 )
+            case "retinanet_resnet50_fpn_v2":
+                m = retinanet_resnet50_fpn_v2(
+                    num_classes=2,
+                    detections_per_img=1,
+                    topk_candidates=10,
+                )
+            case "fcos_resnet50_fpn":
+                m = fcos_resnet50_fpn(
+                    num_classes=2,
+                    detections_per_img=1,
+                    topk_candidates=10,
+                )
+            case "fasterrcnn_mobilenet_v3_large_fpn":
+                m = fasterrcnn_mobilenet_v3_large_fpn(
+                    num_classes=2,
+                    box_detections_per_img=1,
+                    box_batch_size_per_image=10,
+                )
+
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 

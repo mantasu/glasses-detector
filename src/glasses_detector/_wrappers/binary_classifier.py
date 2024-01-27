@@ -3,6 +3,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torchmetrics
+import tqdm
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -16,9 +17,11 @@ class BinaryClassifier(pl.LightningModule):
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
+        self.lr = 1e-3
 
         # Create loss function and account for imbalance of classes
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
+        self.val_loss = torchmetrics.MeanMetric()
 
         # Create F1 score and ROC-AUC metrics to monitor
         self.metrics = torchmetrics.MetricCollection(
@@ -36,9 +39,9 @@ class BinaryClassifier(pl.LightningModule):
             return None
 
         # Calculate the positive weight to account for class imbalance
-        targets = np.array([y for _, y in iter(self.train_loader.dataset.data)])
-        pos_count = targets.sum()
-        neg_count = len(targets) - pos_count
+        iterator = tqdm.tqdm(self.train_loader, desc="Computing pos_weight")
+        pos_count = sum(y.sum().item() for _, y in iterator)
+        neg_count = len(self.train_loader.dataset) - pos_count
 
         return torch.tensor(neg_count / pos_count)
 
@@ -47,32 +50,42 @@ class BinaryClassifier(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         # Forward propagate and compute loss
-        x, y = batch
-        y_hat = self(x)
-        loss = self.criterion(y_hat, y)
+        loss = self.criterion(self(batch[0]), batch[1].to(torch.float32))
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
-    def eval_step(self, batch, prefix=""):
+    def eval_step(self, batch):
         # Forward pass
         x, y = batch
         y_hat = self(x)
 
         # Compute the loss and the metrics
-        loss = self.criterion(y_hat, y)
-        metrics = self.metrics(y_hat, y.long())
+        self.val_loss.update(self.criterion(y_hat, y.to(torch.float32)))
+        self.metrics.update(y_hat.sigmoid(), y)
+
+    def on_eval_epoch_end(self, prefix=""):
+        # Compute total loss and metrics
+        loss = self.val_loss.compute()
+        metrics = self.metrics.compute()
 
         # Log the loss and the metrics
         self.log(f"{prefix}_loss", loss, prog_bar=True)
         self.log(f"{prefix}_f1", metrics["BinaryF1Score"], prog_bar=True)
         self.log(f"{prefix}_roc_auc", metrics["BinaryAUROC"], prog_bar=True)
         self.log(f"{prefix}_pr_auc", metrics["BinaryAveragePrecision"], prog_bar=True)
+        self.log("lr", self.optimizers().param_groups[0]["lr"], prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
-        self.eval_step(batch, prefix="val")
+        self.eval_step(batch)
+
+    def on_validation_epoch_end(self):
+        self.on_eval_epoch_end(prefix="val")
 
     def test_step(self, batch, batch_idx):
-        self.eval_step(batch, prefix="test")
+        self.eval_step(batch)
+
+    def on_test_epoch_end(self):
+        self.on_eval_epoch_end(prefix="test")
 
     def train_dataloader(self):
         return self.train_loader
@@ -85,7 +98,7 @@ class BinaryClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Reduce On Plateau scheduler
-        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=0.1)
+        optimizer = AdamW(self.parameters(), lr=self.lr, weight_decay=0.1)
         scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10)
 
         return {

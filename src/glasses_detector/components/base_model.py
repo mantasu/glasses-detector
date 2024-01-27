@@ -18,7 +18,7 @@ import torch
 import torch.nn as nn
 from PIL import Image
 
-from .._data import ImageLoaderMixin
+from .._data import AugmenterMixin
 from ..utils import FilePath, copy_signature, eval_infer_mode, is_path_type, is_url
 from .pred_interface import PredInterface
 from .pred_type import Default
@@ -146,7 +146,7 @@ class BaseGlassesModel(PredInterface):
             self.load_weights(path_or_url=self.pretrained)
 
         # Cast to device
-        self.to(self.device)
+        self.model.to(self.device)
 
     @property
     def model_info(self) -> dict[str, str]:
@@ -382,7 +382,7 @@ class BaseGlassesModel(PredInterface):
                     else img
                 )
             # Load the image and cast to device and append to batch
-            xs.append(ImageLoaderMixin.load_image(img, resize=resize).to(device))
+            xs.append(AugmenterMixin.load_transform(img, resize=resize).to(device))
 
         with eval_infer_mode(self.model):
             # Perform forward pass without grad
