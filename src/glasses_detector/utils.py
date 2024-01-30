@@ -45,6 +45,9 @@ class copy_signature[F]:
             return f(*args, **kwargs)
 
         reveal_type(test)  # 'def (x: bool, *extra: int) -> str'
+
+    Args:
+        target: The function whose signature to copy.
     """
 
     def __init__(self, target: F) -> None:

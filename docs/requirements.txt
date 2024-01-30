@@ -1,6 +1,6 @@
 sphinx
-sphinx_toolbox
-sphinx_copybutton
+sphinx-design
+sphinx-copybutton
 sphinxcontrib-bibtex
 pydata-sphinx-theme
 sphobjinv

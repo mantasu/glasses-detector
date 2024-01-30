@@ -10,66 +10,114 @@ You can run predictions via the command line. For example, classification of a s
 
 .. code-block:: bash
 
-    glasses-detector -i path/to/img --kind sunglasses-classifier # Prints 1 or 0
-    glasses-detector -i path/to/dir --kind sunglasses-classifier # Generates CSV
+    glasses-detector -i path/to/img.jpg --task classification     # Prints "present" or "absent"
+    glasses-detector -i path/to/dir --output path/to/output.csv   # Generates CSV (default --task is classification)
 
 
-Running segmentation is similar, just change the ``kind`` argument:
+It is possible to specify the **kind** of ``--task`` in the following format ``<task>:<kind>``, for example, we may want to classify only *sunglasses* (only glasses with opaque lenses). Further, more options can be specified, like ``--format``, ``--size``, ``--batch-size``, ``--device``, etc:
+
+.. code-block:: bash
+    
+    glasses-detector -i path/to/img.jpg -t classification:sunglasses -f proba # Prints probability of sunglasses
+    glasses-detector -i path/to/dir -o preds.pkl -s large -b 64 -d cuda       # Fast and accurate image processing
+
+Running *detection* and *segmentation* is similar, though we may want to generate a folder of predictions when processing a directory (but we can also squeeze all the predictions into a single file, such as ``.npy``):
 
 .. code-block:: bash
 
-    glasses-detector -i path/to/img -k glasses-segmenter # Generates img_mask file
-    glasses-detector -i path/to/dir -k glasses-segmenter # Generates dir with masks
+    glasses-detector -i path/to/img.jpg -t detection                          # Shows image with bounding boxes
+    glasses-detector -i path/to/dir -t segmentation -f mask -e .jpg           # Generates dir with masks
 
+.. tip::
 
-.. note:: 
-    You can also specify things like ``--output-path``, ``--label-type``, ``--size``, ``--device`` etc. Use ``--glasses-detector -h`` for more details or check the :doc:`cli`.
+    For a more exhaustive explanation of the available options use ``glasses-detector --help`` or check :doc:`cli`.
 
 
 Python Script
 -------------
 
-You can import the package and its models via the python script for more flexibility. Here is an example of how to classify people wearing sunglasses (will generate an output file where each line will contain the name of the image and the predicted label, e.g., `some_image.jpg,1`):
+The most straightforward way to perform a prediction on a single file (or a list of files) is to use :meth:`~glasses_detector.components.pred_interface.PredInterface.process_file`. Although, the prediction(-s) can be saved to a file or a directory of files, in most cases, this is useful to immediately show the prediction result(-s).
 
 .. code-block:: python
+    :linenos:
 
-    from glasses_detector import SunglassesClassifier
+    from glasses_detector import GlassesClassifier, GlassesDetector
 
-    classifier = SunglassesClassifier(base_model="small", pretrained=True).eval()
+    # Print either '1' or '0'
+    classifier = GlassesClassifier()
+    classifier.process_file(
+        input_path="path/to/img.jpg",     # can be a list of paths
+        format={True: "1", False: "0"},   # similar to format="int"
+        show=True,                        # to print the prediction
+    )
 
-    classifier.predict(
-        input_path="path/to/dir", 
-        output_path="path/to/output.csv",
-        label_type="int",
+    # Opens a plot in a new window
+    detector = GlassesDetector()
+    detector.process_file(
+        image="path/to/img.jpg",          # can be a list of paths
+        format="img",                     # to return the image with drawn bboxes
+        show=True,                        # to show the image using matplotlib
+    )
+
+A more useful method is :meth:`~glasses_detector.components.pred_interface.PredInterface.process_dir` which goes through all the images in the directory and generates the predictions into a single file or a directory of files. Also note how we can specify task ``kind`` and model ``size``:
+
+.. code-block:: python
+    :linenos:
+
+    from glasses_detector import GlassesClassifier, GlassesSegmenter
+
+    # Generate a CSV file with image paths and labels
+    classifier = GlassesClassifier(kind="sunglasses")
+    classifier.process_dir(
+        input_path="path/to/dir",         # failed files will raise a warning
+        output_path="path/to/output.csv", # path/to/dir/img1.jpg,<pred>...
+        format="proba",                   # <pred> is a probability of sunglasses
+        pbar="Processing",                # Set to None to disable
+    )
+
+    # Generate a directory with masks
+    segmenter = GlassesSegmenter(size="large", device="cuda")
+    segmenter.process_dir(
+        input_path="path/to/dir",         # output dir defaults to path/to/dir_preds
+        ext=".jpg",                       # saves all the masks as .jpg
+        format="mask",                    # output type will be a grayscale PIL image
+        batch_size=32,                    # to speed up the processing
+        output_size=(512, 512),           # Set to None to keep the same size as image
     )
 
 
-Using a segmenter is similar, here is an example of using a sunglasses segmentation model:
+It is also possible to directly use :meth:`~glasses_detector.components.pred_interface.PredInterface.predict` which allows to process already loaded images. This is useful when you want to incorporate the prediction into a custom pipeline.
 
 .. code-block:: python
+    :linenos:
 
-    from glasses_detector import FullSunglassesSegmenter
+    import numpy as np
+    from glasses_detector import GlassesDetector
 
-    # base_model can also be a tuple: (classifier size, base glasses segmenter size)
-    segmenter = FullSunglassesSegmenter(base_model="small", pretrained=True).eval()
-
-    segmenter.predict(
-        input_path="path/to/dir",
-        output_path="path/to/dir_masks",
-        mask_type="img",
+    # Predict normalized bounding boxes
+    detector = GlassesDetector()
+    predictions = detector(
+        image=np.random.rand(10, 3, 256, 256),
+        format="float",
     )
+    print(type(prediction), len(prediction))  # <class 'list'> 10
 
 
-.. note:: 
-    There is much more flexibility that you can do with the given models, for instance, you can use only base segmenters without accompanying classifiers, or you can define your own prediction methods without resizing images to ``256x256`` (as what is done in the background). For more details refer to :doc:`../modules/modules`, for instance at how segmenter :meth:`~.glasses_detector.bases.base_segmenter.BaseSegmenter.predict` works.
-
+.. admonition:: Refer to API documentation for model-specific examples
+    
+    * :class:`~glasses_detector.classifier.GlassesClassifier` and its :meth:`~glasses_detector.classifier.GlassesClassifier.predict`
+    * :class:`~glasses_detector.detector.GlassesDetector` and its :meth:`~glasses_detector.detector.GlassesDetector.predict`
+    * :class:`~glasses_detector.segmenter.GlassesSegmenter` and its :meth:`~glasses_detector.segmenter.GlassesSegmenter.predict`
 
 Demo
 ----
 
-Feel free to play around with some `demo image files <https://github.com/mantasu/glasses-detector/demo/>`_. For example, after installing through `pip <https://pypi.org/project/glasses-detector/>`_, you can run:
+Feel free to play around with some `demo image files <https://github.com/mantasu/glasses-detector/data/demo/>`_. For example, after installing through `pip <https://pypi.org/project/glasses-detector/>`_, you can run:
 
 .. code-block:: bash
 
     git clone https://github.com/mantasu/glasses-detector && cd glasses-detector/data
-    glasses-detector -i demo -o demo_labels.csv --kind sunglasses-classifier --label str
+    glasses-detector -i demo -o demo_labels.csv --task classifier:sunglasses -f proba
+    glasses-detector -i demo -o demo_masks -t segmentation:full -f img -e .jpg
+
+Alternatively, you can play around with the `demo notebook <https://github.com/mantasu/glasses-detector/notebooks/demo.ipynb>`_ which can be also accessed via `Google Colab <https://colab.research.google.com/github/mantasu/glasses-detector/blob/master/notebooks/demo.ipynb>`_.

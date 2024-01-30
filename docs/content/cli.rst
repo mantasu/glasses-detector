@@ -23,9 +23,9 @@ These flags allow you to define the kind of task and the model to process your i
 
     The format to use to map the raw prediction to.
 
-    * For *classification*, common formats are ``bool``, ``proba``, ``str`` - check :meth:`Classifier.predict<glasses_detector.classifier.GlassesClassifier.predict>` for more details
-    * For *detection*, common formats are ``bool``, ``int``, ``img`` - check :meth:`Detector.predict<glasses_detector.detector.GlassesDetector.predict>` for more details
-    * For *segmentation*, common formats are ``proba``, ``img``, ``mask`` - check :meth:`Segmenter.predict<glasses_detector.segmenter.GlassesSegmenter.predict>` for more details
+    * For *classification*, common formats are ``bool``, ``proba``, ``str`` - check :meth:`GlassesClassifier.predict<glasses_detector.classifier.GlassesClassifier.predict>` for more details
+    * For *detection*, common formats are ``bool``, ``int``, ``img`` - check :meth:`GlassesDetector.predict<glasses_detector.detector.GlassesDetector.predict>` for more details
+    * For *segmentation*, common formats are ``proba``, ``img``, ``mask`` - check :meth:`GlassesSegmenter.predict<glasses_detector.segmenter.GlassesSegmenter.predict>` for more details
 
     If not specified, it will be set automatically to ``str``, ``img``, ``mask`` for *classification*, *detection*, *segmentation* respectively.
     

@@ -30,9 +30,9 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
-    "sphinx_toolbox.collapse",
     "sphinx_copybutton",
     "sphinxcontrib.bibtex",
+    "sphinx_design",
 ]
 
 intersphinx_mapping = {
@@ -123,12 +123,39 @@ LONG_SIGNATURE_IDS = [
     "glasses_detector.segmenter.GlassesSegmenter.predict",
     "glasses_detector.segmenter.GlassesSegmenter.process_dir",
     "glasses_detector.segmenter.GlassesSegmenter.process_file",
+    "glasses_detector.architectures.tiny_binary_detector.TinyBinaryDetector.forward",
+    "glasses_detector.architectures.tiny_binary_detector.TinyBinaryDetector.compute_loss",
 ]
 
 LONG_PARAMETER_IDS = {
     "glasses_detector.classifier.GlassesClassifier.predict": ["format"],
     "glasses_detector.detector.GlassesDetector.predict": ["format"],
     "glasses_detector.segmenter.GlassesSegmenter.predict": ["format"],
+}
+
+CUSTOM_PYTHON_SYNTAX_COLORS = {
+    "GlassesClassifier": "dark-python-class",
+    "GlassesDetector": "dark-python-class",
+    "GlassesSegmenter": "dark-python-class",
+    "process_file": "dark-python-function",
+    "process_dir": "dark-python-function",
+    "run": "dark-python-function",
+    "load": "dark-python-function",
+    "type": "dark-python-class",
+    "format": "dark-python-variable",
+    "np": "dark-python-class",
+    "subprocess": "dark-python-class",
+    "random": "dark-python-class",
+    # "rand": "dark-python-variable",
+}
+
+CUSTOM_BASH_SYNTAX_COLORS = {
+    "dark-bash-keyword": (
+        "full",
+        ["glasses-detector", "git", "clone", "pip", "install"],
+    ),
+    "dark-bash-flag": ("start", ["-"]),
+    "dark-bash-op": ("full", ["&&"]),
 }
 
 
@@ -216,6 +243,62 @@ def break_long_signatures(soup: BeautifulSoup):
                 break_long_params(id, sig_param)
 
 
+from bs4 import BeautifulSoup, NavigableString
+import re
+
+
+def customize_code_block_colors(soup):
+    # Find all 'span' elements within 'div.highlight-python div.highlight pre'
+    spans = soup.select("div.highlight-python div.highlight pre span")
+
+    for span in spans:
+        for key, value in CUSTOM_PYTHON_SYNTAX_COLORS.items():
+            # If the span's text is 'GlassesClassifier', change its color to green
+            if key == span.get_text().strip():
+                span["class"].append(value)
+
+    highlight_bash_divs = soup.select("div.highlight-bash div.highlight")
+
+    for div in highlight_bash_divs:
+        pre_elements = div.find_all("pre")
+        for pre in pre_elements:
+            for content in pre.contents:
+                if isinstance(content, NavigableString):
+                    words = content.split(" ")
+                    for i, word in enumerate(words):
+                        i_modified = False
+
+                        for key, (rule, value) in CUSTOM_BASH_SYNTAX_COLORS.items():
+                            for w in value:
+                                detected = False
+                                wors = []
+                                for wor in word.split("\n"):
+                                    if rule == "start" and wor.startswith(w):
+                                        wors.append(f'<span class="{key}">{wor}</span>')
+                                        detected = True
+                                    elif rule == "full" and (
+                                        wor == w or wor == "\n" + w
+                                    ):
+                                        wors.append(f'<span class="{key}">{wor}</span>')
+                                        detected = True
+                                    else:
+                                        wors.append(
+                                            f'<span class="dark-bash-value">{wor}</span>'
+                                        )
+
+                                if detected:
+                                    words[i] = "\n".join(wors)
+                                    i_modified = True
+                                    break
+
+                        if not i_modified:
+                            words[i] = f'<span class="dark-bash-value">{word}</span>'
+
+                    new_content = " ".join(words)
+                    content.replace_with(BeautifulSoup(new_content, "html.parser"))
+    soup.prettify()
+
+
 def edit_html(app, exception):
     if app.builder.format != "html":
         return
@@ -233,6 +316,7 @@ def edit_html(app, exception):
             add_collapse_ids(soup)
             process_in_page_toc(soup)
             break_long_signatures(soup)
+            customize_code_block_colors(soup)
 
         with (Path(app.outdir) / f"{pagename}.html").open("w") as f:
             # Write back HTML

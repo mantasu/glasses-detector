@@ -891,9 +891,7 @@ def celeba_mask_hq_walk_through_masks(
 
             # Create a save path of original files to train/val/test location
             image_save_path = os.path.join(parent_path, "images", str(idx) + ".jpg")
-            mask_save_path = os.path.join(
-                parent_path, "masks", file.replace(".png", ".jpg")
-            )
+            mask_save_path = os.path.join(parent_path, "masks", str(idx) + ".jpg")
 
             # Open the image, convert mask to black/white
             image = Image.open(image_path).resize(resize)

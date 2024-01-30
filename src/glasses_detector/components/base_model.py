@@ -273,7 +273,7 @@ class BaseGlassesModel(PredInterface):
         image: FilePath | Image.Image | np.ndarray,
         format: Callable[[Any], Default]
         | Callable[[Image.Image, Any], Default] = lambda x: str(x),
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default:
         ...
 
@@ -283,7 +283,7 @@ class BaseGlassesModel(PredInterface):
         image: Collection[FilePath | Image.Image | np.ndarray],
         format: Callable[[Any], Default]
         | Callable[[Image.Image, Any], Default] = lambda x: str(x),
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> list[Default]:
         ...
 
@@ -296,7 +296,7 @@ class BaseGlassesModel(PredInterface):
         | Collection[FilePath | Image.Image | np.ndarray],
         format: Callable[[Any], Default]
         | Callable[[Image.Image, Any], Default] = lambda x: str(x),
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
         """Predicts based on the model specified by the child class.
 
@@ -343,12 +343,12 @@ class BaseGlassesModel(PredInterface):
                 automatically which function it is) and outputs a
                 formatted prediction of type :attr:`Default`. Defaults
                 to ``lambda x: str(x)``.
-            resize (tuple[int, int] | None, optional): The size (width,
-                height) to resize the image to before passing it through
-                the network. If :data:`None`, the image will not be
-                resized. It is recommended to resize it to the size the
-                model was trained on, which by default is
-                ``(256, 256)``. Defaults to ``(256, 256)``.
+            input_size (tuple[int, int] | None, optional): The size
+                (width, height), or ``(W, H)``, to resize the image to
+                before passing it through the network. If :data:`None`,
+                the image will not be resized. It is recommended to
+                resize it to the size the model was trained on, which by
+                default is ``(256, 256)``. Defaults to ``(256, 256)``.
 
         Returns:
             Default | list[Default]: The formatted prediction or a list
@@ -382,7 +382,7 @@ class BaseGlassesModel(PredInterface):
                     else img
                 )
             # Load the image and cast to device and append to batch
-            xs.append(AugmenterMixin.load_transform(img, resize=resize).to(device))
+            xs.append(AugmenterMixin.load_transform(img, resize=input_size).to(device))
 
         with eval_infer_mode(self.model):
             # Perform forward pass without grad

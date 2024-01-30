@@ -5,12 +5,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
+from torchvision import transforms
 from torchvision.models.segmentation import (
     deeplabv3_resnet50,
     fcn_resnet101,
     lraspp_mobilenet_v3_large,
 )
-from torchvision.models.segmentation.lraspp import LRASPPHead
 
 from .architectures import TinyBinarySegmenter
 from .components.base_model import BaseGlassesModel
@@ -30,7 +30,10 @@ class GlassesSegmenter(BaseGlassesModel):
 
     ----
 
-    .. collapse:: Performance of the Pre-trained Segmenters
+    .. dropdown:: Performance of the Pre-trained Segmenters
+        :icon: graph
+        :color: info
+        :animate: fade-in-slide-down
         :name: Performance of the Pre-trained Segmenters
 
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
@@ -73,7 +76,10 @@ class GlassesSegmenter(BaseGlassesModel):
         |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
 
-    .. collapse:: Size Information of the Pre-trained Segmenters
+    .. dropdown:: Size Information of the Pre-trained Segmenters
+        :icon: info
+        :color: info
+        :animate: fade-in-slide-down
         :name: Size Information of the Pre-trained Segmenters
 
         +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
@@ -275,7 +281,8 @@ class GlassesSegmenter(BaseGlassesModel):
         | dict[bool, Default]
         | Callable[[torch.Tensor], Default]
         | Callable[[Image.Image, torch.Tensor], Default] = "img",
-        resize: tuple[int, int] | None = (256, 256),
+        output_size: tuple[int, int] | None = None,
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default:
         ...
 
@@ -287,7 +294,8 @@ class GlassesSegmenter(BaseGlassesModel):
         | dict[bool, Default]
         | Callable[[torch.Tensor], Default]
         | Callable[[Image.Image, torch.Tensor], Default] = "img",
-        resize: tuple[int, int] | None = (256, 256),
+        output_size: tuple[int, int] | None = None,
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> list[Default]:
         ...
 
@@ -302,6 +310,8 @@ class GlassesSegmenter(BaseGlassesModel):
         | dict[bool, Default]
         | Callable[[torch.Tensor], Default]
         | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        output_size: tuple[int, int] | None = None,
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
         """Predicts which pixels in the image are positive.
 
@@ -363,6 +373,18 @@ class GlassesSegmenter(BaseGlassesModel):
                 predictions to a formatted
                 :data:`~glasses_detector.components.pred_type.Default`
                 output. Defaults to "img".
+            output_size (tuple[int, int] | None, optional): The size
+                (width, height), or ``(W, H)``, to resize the prediction
+                (output mask) to. If :data:`None`, the prediction will
+                have the same size as the input image. Defaults to
+                :data:`None`.
+            input_size (tuple[int, int] | None, optional): The size
+                (width, height), or ``(W, H)``, to resize the image to
+                before passing it through the network. If :data:`None`,
+                the image will not be resized. It is recommended to
+                resize it to the size the model was trained on, which by
+                default is ``(256, 256)``. Defaults to ``(256, 256)``.
+
 
         Returns:
             Default | list[Default]: The formatted prediction or a list
@@ -372,7 +394,7 @@ class GlassesSegmenter(BaseGlassesModel):
             ValueError: If the specified ``format`` as a string is
                 not recognized.
         """
-        if isinstance(format, str):
+        if isinstance(f := format, str):
             # Update mask type
             match format:
                 case "bool":
@@ -383,18 +405,20 @@ class GlassesSegmenter(BaseGlassesModel):
                     format = lambda x: x
                 case "proba":
                     format = lambda x: x.sigmoid()
-                case "img":
-                    format = lambda x: Image.fromarray(
-                        ((x > 0) * 255).to(torch.uint8),
-                        mode="L",
-                    )
-                case "overlay":
-                    format = lambda img, x: self.draw_mask(
-                        img,
-                        Image.fromarray(
-                            (x * 255).to(torch.uint8),
+                case "mask":
+                    format = (
+                        lambda img, x: Image.fromarray(
+                            ((x > 0) * 255).to(torch.uint8),
                             mode="L",
-                        ),
+                        ).resize(output_size if output_size else img.size),
+                    )
+                case "img":
+                    format = lambda img, x: self.draw_mask(
+                        img.resize(output_size) if output_size else img,
+                        Image.fromarray(
+                            ((x > 0) * 255).to(torch.uint8),
+                            mode="L",
+                        ).resize(output_size if output_size else img.size),
                     )
                 case _:
                     raise ValueError(f"Invalid format: {format}")
@@ -403,7 +427,13 @@ class GlassesSegmenter(BaseGlassesModel):
             # If mask type was specified as dictionary
             format = lambda x: torch.where((x > 0), d[True], d[False])
 
-        return super().predict(image, format)
+        if isinstance(f, str) and f not in {"mask", "img"}:
+            # Apply torch transform if not mask or img
+            format = lambda img, x: transforms.Resize(
+                output_size if output_size else img.size
+            )(format(x))
+
+        return super().predict(image, format, input_size)
 
     @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:

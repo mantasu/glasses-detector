@@ -90,7 +90,7 @@ class BinaryDetector(pl.LightningModule):
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Reduce On Plateau scheduler
         optimizer = AdamW(self.parameters(), lr=self.lr, weight_decay=0.1)
-        scheduler = ReduceLROnPlateau(optimizer, factor=0.3)
+        scheduler = ReduceLROnPlateau(optimizer, factor=0.1)
 
         return {
             "optimizer": optimizer,

@@ -52,7 +52,10 @@ class GlassesDetector(BaseGlassesModel):
 
     ----
 
-    .. collapse:: Performance of the Pre-trained Detectors
+    .. dropdown:: Performance of the Pre-trained Detectors
+        :icon: graph
+        :color: info
+        :animate: fade-in-slide-down
         :name: Performance of the Pre-trained Detectors
 
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
@@ -81,7 +84,10 @@ class GlassesDetector(BaseGlassesModel):
         but is still here to emphasize this fact. Not even background is
         considered as a class - bbox prediction will always happen.
 
-    .. collapse:: Size Information of the Pre-trained Detectors
+    .. dropdown:: Size Information of the Pre-trained Detectors
+        :icon: info
+        :color: info
+        :animate: fade-in-slide-down
         :name: Size Information of the Pre-trained Detectors
 
         +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
@@ -329,7 +335,7 @@ class GlassesDetector(BaseGlassesModel):
         format: str
         | Callable[[torch.Tensor], Default]
         | Callable[[Image.Image, torch.Tensor], Default] = "img",
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default:
         ...
 
@@ -340,7 +346,7 @@ class GlassesDetector(BaseGlassesModel):
         format: str
         | Callable[[torch.Tensor], Default]
         | Callable[[Image.Image, torch.Tensor], Default] = "img",
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> list[Default]:
         ...
 
@@ -353,7 +359,8 @@ class GlassesDetector(BaseGlassesModel):
         | Collection[FilePath | Image.Image | np.ndarray],
         format: Callable[[torch.Tensor], Default]
         | Callable[[Image.Image, torch.Tensor], Default] = "img",
-        resize: tuple[int, int] | None = (256, 256),
+        output_size: tuple[int, int] | None = None,
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
         """Predicts the bounding box(-es).
 
@@ -411,12 +418,18 @@ class GlassesDetector(BaseGlassesModel):
                 predictions to a formatted
                 :data:`~glasses_detector.components.pred_type.Default`
                 output. Defaults to ``"img"``.
-            resize (tuple[int, int] | None, optional): The size (width,
-                height) to resize the image to before passing it through
-                the network. If :data:`None`, the image will not be
-                resized. It is recommended to resize it to the size the
-                model was trained on, which by default is
-                ``(256, 256)``. Defaults to ``(256, 256)``.
+            output_size (tuple[int, int] | None, optional): The size
+                (width, height), or ``(W, H)``, the prediction (either
+                the bbox coordinates or the images itself) should
+                correspond to. If :data:`None`, the prediction will
+                correspond to the same size as the input image. Defaults
+                to :data:`None`.
+            input_size (tuple[int, int] | None, optional): The size
+                (width, height), or ``(W, H)``, to resize the image to
+                before passing it through the network. If :data:`None`,
+                the image will not be resized. It is recommended to
+                resize it to the size the model was trained on, which by
+                default is ``(256, 256)``. Defaults to ``(256, 256)``.
 
         Returns:
             Default | list[Default]: The formatted prediction or a list
@@ -426,16 +439,18 @@ class GlassesDetector(BaseGlassesModel):
             ValueError: If the specified ``format`` as a string is
                 not recognized.
         """
+        #
 
         def verify_bboxes(ori: Image.Image, boxes: torch.Tensor):
-            w, h = ori.size
+            # Set output size to original size if not specified
+            w, h = output_size if output_size else ori.size
 
-            if resize is not None and (w, h) != resize:
-                # Convert bboxes back to original size
-                boxes[:, 0] = boxes[:, 0] * w / resize[0]
-                boxes[:, 1] = boxes[:, 1] * h / resize[1]
-                boxes[:, 2] = boxes[:, 2] * w / resize[0]
-                boxes[:, 3] = boxes[:, 3] * h / resize[1]
+            if input_size is not None and input_size != (w, h):
+                # Convert bboxes to output size
+                boxes[:, 0] = boxes[:, 0] * w / input_size[0]
+                boxes[:, 1] = boxes[:, 1] * h / input_size[1]
+                boxes[:, 2] = boxes[:, 2] * w / input_size[0]
+                boxes[:, 3] = boxes[:, 3] * h / input_size[1]
 
             return boxes
 
@@ -447,7 +462,7 @@ class GlassesDetector(BaseGlassesModel):
 
                     def format_fn(ori, pred):
                         pred = verify_bboxes(ori, pred).numpy(force=True)
-                        w, h = ori.size if resize is None else resize
+                        w, h = output_size if output_size else ori.size
                         fn = lambda b, x, y: b[0] <= x <= b[2] and b[1] <= y <= b[3]
                         pred = np.any(
                             [
@@ -472,7 +487,7 @@ class GlassesDetector(BaseGlassesModel):
                     # between 0 and 1: [[x_min, y_min, x_max, y_max], ...]
 
                     def format_fn(ori, pred):
-                        w, h = ori.size if resize is None else resize
+                        w, h = ori.size if input_size is None else input_size
                         pred[:, 0] = pred[:, 0] / w
                         pred[:, 1] = pred[:, 1] / h
                         pred[:, 2] = pred[:, 2] / w
@@ -485,9 +500,9 @@ class GlassesDetector(BaseGlassesModel):
                     # "BBoxes: x_min y_min x_max y_max; ..."
 
                     def format_fn(ori, pred):
-                        pred["boxes"] = verify_bboxes(ori, pred["boxes"])
+                        pred = verify_bboxes(ori, pred)
                         return "BBoxes: " + "; ".join(
-                            [" ".join(map(int, b)) for b in pred["boxes"]]
+                            [" ".join(map(int, b)) for b in pred]
                         )
 
                 case "img":
@@ -495,8 +510,9 @@ class GlassesDetector(BaseGlassesModel):
                     # using default values in draw_rects
 
                     def format_fn(ori, pred):
-                        pred["boxes"] = verify_bboxes(ori, pred["boxes"])
-                        img = self.draw_rects(ori, pred["boxes"])
+                        pred = verify_bboxes(ori, pred)
+                        ori = ori.resize(output_size) if output_size else ori
+                        img = self.draw_rects(ori, pred)
 
                         return img
 
@@ -506,7 +522,7 @@ class GlassesDetector(BaseGlassesModel):
             # Convert to function
             format = format_fn
 
-        return super().predict(image, format)
+        return super().predict(image, format, input_size)
 
     @override
     def forward(self, x: torch.Tensor) -> list[torch.Tensor]:

@@ -25,7 +25,10 @@ class GlassesClassifier(BaseGlassesModel):
 
     ----
 
-    .. collapse:: Performance of the Pre-trained Classifiers
+    .. dropdown:: Performance of the Pre-trained Classifiers
+        :icon: graph
+        :color: info
+        :animate: fade-in-slide-down
         :name: Performance of the Pre-trained Classifiers
 
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
@@ -50,7 +53,10 @@ class GlassesClassifier(BaseGlassesModel):
         |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
 
-    .. collapse:: Size Information of the Pre-trained Classifiers
+    .. dropdown:: Size Information of the Pre-trained Classifiers
+        :icon: info
+        :color: info
+        :animate: fade-in-slide-down
         :name: Size Information of the Pre-trained Classifiers
 
         +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
@@ -68,13 +74,17 @@ class GlassesClassifier(BaseGlassesModel):
 
     Let's instantiate the classifier with default parameters:
 
-          >>> from glasses_detector import GlassesClassifier
-          >>> clf = GlassesClassifier()
+    .. code-block:: python
+
+        >>> from glasses_detector import GlassesClassifier
+        >>> clf = GlassesClassifier()
 
     First, we can perform a raw prediction on an image expressed as
     either a path, a :class:`PIL Image<PIL.Image.Image>` or a
     :class:`numpy array<numpy.ndarray>`. See :meth:`predict` for more
     details.
+
+    .. code-block:: python
 
         >>> clf(np.random.randint(0, 256, size=(224, 224, 3), dtype=np.uint8))
         'not_present'
@@ -84,6 +94,8 @@ class GlassesClassifier(BaseGlassesModel):
     We can also use a more specific method :meth:`process_file` which
     allows to save the results to a file:
 
+    .. code-block:: python
+
         >>> clf.process_file("path/to/img.jpg", "path/to/pred.txt", show=True)
         'present'
         >>> clf.process_file(["img1.jpg", "img2.jpg"], "preds.npy", format="proba")
@@ -92,6 +104,8 @@ class GlassesClassifier(BaseGlassesModel):
 
     Finally, we can also use :meth:`process_dir` to process all images
     in a directory and save the predictions to a file or a directory:
+
+    .. code-block:: python
 
         >>> clf.process_dir("path/to/dir", "path/to/preds.csv", format="str")
         >>> subprocess.run(["cat", "path/to/preds.csv"])
@@ -192,7 +206,7 @@ class GlassesClassifier(BaseGlassesModel):
         self,
         image: FilePath | Image.Image | np.ndarray,
         format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default:
         ...
 
@@ -201,7 +215,7 @@ class GlassesClassifier(BaseGlassesModel):
         self,
         image: Collection[FilePath | Image.Image | np.ndarray],
         format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> list[Default]:
         ...
 
@@ -213,7 +227,7 @@ class GlassesClassifier(BaseGlassesModel):
         | np.ndarray
         | Collection[FilePath | Image.Image | np.ndarray],
         format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
-        resize: tuple[int, int] | None = (256, 256),
+        input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
         """Predicts whether the positive class is present.
 
@@ -270,12 +284,12 @@ class GlassesClassifier(BaseGlassesModel):
                 raw :class:`torch.Tensor` score of type
                 ``torch.float32`` of shape ``(1,)`` to a label. Defaults
                 to ``"str"``.
-            resize (tuple[int, int] | None, optional): The size (width,
-                height) to resize the image to before passing it through
-                the network. If :data:`None`, the image will not be
-                resized. It is recommended to resize it to the size the
-                model was trained on, which by default is
-                ``(256, 256)``. Defaults to ``(256, 256)``.
+            input_size (tuple[int, int] | None, optional): The size
+                (width, height), or ``(W, H)``, to resize the image to
+                before passing it through the network. If :data:`None`,
+                the image will not be resized. It is recommended to
+                resize it to the size the model was trained on, which by
+                default is ``(256, 256)``. Defaults to ``(256, 256)``.
 
         Returns:
             Default | list[Default]: The formatted prediction or a list
@@ -305,7 +319,7 @@ class GlassesClassifier(BaseGlassesModel):
             # If the format was specified as dictionary
             format = lambda x: d[(x > 0).item()]
 
-        return super().predict(image, format, resize)
+        return super().predict(image, format, input_size)
 
     @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:

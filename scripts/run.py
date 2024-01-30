@@ -3,7 +3,7 @@ import sys
 
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.cli import LightningCLI
 from pytorch_lightning.tuner import Tuner
 
@@ -102,7 +102,6 @@ class RunCLI(LightningCLI):
             help="Whether to run the learning rate finder before training. Defaults to False.",
         )
         parser.add_lightning_class_args(ModelCheckpoint, "checkpoint")
-        parser.add_lightning_class_args(EarlyStopping, "early_stopping")
 
         # Checkpoint and trainer defaults
         parser.set_defaults(
@@ -111,9 +110,6 @@ class RunCLI(LightningCLI):
                 "checkpoint.save_last": False,
                 "checkpoint.monitor": "val_loss",
                 "checkpoint.mode": "min",
-                "early_stopping.monitor": "val_loss",
-                "early_stopping.mode": "min",
-                "early_stopping.patience": 15,
                 "trainer.max_epochs": 300,
                 "trainer.min_epochs": 300,
             }
@@ -205,3 +201,13 @@ def cli_main():
 
 if __name__ == "__main__":
     cli_main()
+
+
+    import numpy as np
+
+    # Predict normalized bounding boxes
+    detector = GlassesDetector()
+    predictions = detector(
+        image=np.random.rand(10, 3, 256, 256),
+        format="float",
+    )
