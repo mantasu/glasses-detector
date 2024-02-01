@@ -97,6 +97,8 @@ class GlassesSegmenter(BaseGlassesModel):
 
     Let's instantiate the segmenter with default parameters:
 
+    .. code-block:: python
+
           >>> from glasses_detector import GlassesSegmenter
           >>> seg = GlassesSegmenter()
 
@@ -104,6 +106,8 @@ class GlassesSegmenter(BaseGlassesModel):
     either a path, a :class:`PIL Image<PIL.Image.Image>` or a
     :class:`numpy array<numpy.ndarray>`. See :meth:`predict` for more
     details.
+
+    .. code-block:: python
 
         >>> seg(np.random.randint(0, 256, size=(2, 2, 3), dtype=np.uint8), format="bool")
         tensor([[False, False],
@@ -114,6 +118,8 @@ class GlassesSegmenter(BaseGlassesModel):
     We can also use a more specific method :meth:`process_file` which
     allows to save the results to a file:
 
+    .. code-block:: python
+
         >>> seg.process_file("path/to/img.jpg", "path/to/pred.jpg", show=True)
         ... # opens a new image window with overlaid mask
         >>> seg.process_file(["img1.jpg", "img2.jpg"], "preds.npy", format="proba")
@@ -122,6 +128,8 @@ class GlassesSegmenter(BaseGlassesModel):
 
     Finally, we can also use :meth:`process_dir` to process all images
     in a directory and save the predictions to a file or a directory:
+
+    .. code-block:: python
 
         >>> seg.process_dir("path/to/dir", "path/to/preds.csv", format="logit")
         >>> subprocess.run(["cat", "path/to/preds.csv"])
@@ -195,7 +203,8 @@ class GlassesSegmenter(BaseGlassesModel):
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinysegnet_v1", "version": "v1.0.0"},
         "medium": {"name": "lraspp_mobilenet_v3_large", "version": "v1.0.0"},
-        "large": {"name": "deeplabv3_resnet50", "version": "v1.0.0"},
+        "large": {"name": "fcn_resnet101", "version": "v1.0.0"},
+        "huge": {"name": "deeplabv3_resnet50", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {

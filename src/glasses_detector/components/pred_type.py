@@ -153,6 +153,8 @@ class PredType(Enum):
     this class are defined in the same file as :class:`PredType`. They
     can be used to specify the expected types when defining the methods:
 
+    .. code-block:: python
+
         >>> from glasses_detector.components.pred_type import StandardScalar
         >>> def predict_class(
         ...     self,
@@ -164,6 +166,8 @@ class PredType(Enum):
     :class:`PredType` static and class methods can be used to check
     the type of the prediction:
 
+    .. code-block:: python
+
         >>> PredType.is_standard_scalar(1)
         True
         >>> PredType.is_standard_scalar(np.array([1])[0])
@@ -173,6 +177,8 @@ class PredType(Enum):
 
     Finally, :meth:`standardize` can be used to convert the
     prediction to a standard type:
+
+    .. code-block:: python
 
         >>> PredType.standardize(np.array([1, 2, 3]))
         [1, 2, 3]

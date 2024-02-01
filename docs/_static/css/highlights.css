@@ -1,0 +1,79 @@
+div.highlight-python div.highlight pre .linenos {
+    margin-right: 1em;
+}
+
+/* Default python code syntax highlights for dark mode*/
+html[data-theme="dark"] div.highlight-python div.highlight pre {
+    .n { color: #9CDCFE; } /* Variable */
+    .k, .ow, .kn { color: #C586C0; } /* Keyword */
+    .gp { color: #af92ff; } /* Generic Prompt */
+    .kc { color: #569CD6; } /* Built-in constant */
+    .s2 { color: #CE9178; } /* String */
+    .mi, .m { color: #B5CEA8; } /* Number */
+    .o { color: #CCCCCC; } /* Operator */
+    .go { color: #808080; } /* Generic Output */
+    .p { color: #D4D4D4; } /* Punctuation */
+    .c1 { color: #6A9955; } /* Comment */
+    .nn, .nc { color: #4EC9B0; } /* Class/module name */
+    .nf, .nb { color: #DCDCAA; } /* Function name */
+    .err { color: #F44747; } /* Error */
+}
+
+/* Default python code syntax highlights for light mode*/
+html[data-theme="light"] div.highlight-python div.highlight pre {
+    .n { color: #3B3B3B; } /* Variable */
+    .k, .ow, .kn { color: #AF00DB; } /* Keyword */
+    .gp { color: #ff9ef7; } /* Generic Prompt */
+    .kc { color: #0000FF; } /* Built-in constant */
+    .s2 { color: #A31515; } /* String */
+    .mi, .m { color: #098658; } /* Number */
+    .o { color: #3B3B3B; } /* Operator */
+    .go { color: #8c8c8c; } /* Generic Output */
+    .p { color: #3B3B3B; } /* Punctuation */
+    .c1 { color: #008000; } /* Comment */
+    .nn, .nc { color: #267F99; } /* Class/module name */
+    .nf, .nb { color: #001080; } /* Function name */
+    .err { color: #fe7272; } /* Error */
+}
+
+/* Default bash code syntax highlights for dark mode*/
+html[data-theme="dark"] div.highlight-bash div.highlight pre {
+    .c1 { color: #6A9955; } /* Comment */
+}
+
+/* Default bash code syntax highlights for light mode*/
+html[data-theme="light"] div.highlight-bash div.highlight pre {
+    .c1 { color: #008000; } /* Comment */
+}
+
+/* Custom python code syntax highlights for dark mode*/
+html[data-theme="dark"] div.highlight-python div.highlight pre {
+    .custom-highlight-class { color: #4EC9B0; }
+    .custom-highlight-function { color: #DCDCAA; }
+    .custom-highlight-variable { color: #9CDCFE; }
+    .custom-highlight-constant { color: #4FC1FF; }
+}
+
+/* Custom python code syntax highlights for light mode*/
+html[data-theme="light"] div.highlight-python div.highlight pre {
+    .custom-highlight-class { color: #267F99; }
+    .custom-highlight-function { color: #001080; }
+    .custom-highlight-variable { color: #3B3B3B; }
+    .custom-highlight-constant { color: #0070C1; }
+}
+
+/* Custom bash code syntax highlights for dark mode*/
+html[data-theme="dark"] div.highlight-bash div.highlight pre, html[data-theme="dark"] code.highlight-bash {
+    .custom-highlight-default { color: #CE9178; }
+    .custom-highlight-start { color: #DCDCAA; }
+    .custom-highlight-flag { color: #569CD6; }
+    .custom-highlight-op { color: #CCCCCC; }
+}
+
+/* Custom bash code syntax highlights for light mode*/
+html[data-theme="light"] div.highlight-bash div.highlight pre, html[data-theme="light"] code.highlight-bash {
+    .custom-highlight-default { color: #A31515; }
+    .custom-highlight-start { color: #001080; }
+    .custom-highlight-flag { color: #0000FF; }
+    .custom-highlight-op { color: #3B3B3B; }
+}

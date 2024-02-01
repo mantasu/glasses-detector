@@ -7,12 +7,12 @@ Glasses Detector
    :maxdepth: 2
    :caption: Contents:
 
-   content/install
-   content/features
-   content/examples
-   content/cli
-   modules/api
-   content/credits
+   docs/main/install
+   docs/main/features
+   docs/main/examples
+   docs/main/cli
+   docs/api/api
+   docs/main/credits
 
 
 Indices and tables

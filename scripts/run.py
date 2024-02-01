@@ -68,7 +68,7 @@ class RunCLI(LightningCLI):
             metavar="<model-size>",
             type=str,
             default="medium",
-            choices=["small", "medium", "large"],
+            choices=["small", "medium", "large", "huge"], # TODO: remove huge
             help="The model size which determines architecture type. One of 'small', 'medium', 'large'. Defaults to 'medium'.",
         )
         parser.add_argument(
@@ -110,8 +110,8 @@ class RunCLI(LightningCLI):
                 "checkpoint.save_last": False,
                 "checkpoint.monitor": "val_loss",
                 "checkpoint.mode": "min",
+                "trainer.precision": "bf16-mixed",
                 "trainer.max_epochs": 300,
-                "trainer.min_epochs": 300,
             }
         )
 
@@ -201,13 +201,3 @@ def cli_main():
 
 if __name__ == "__main__":
     cli_main()
-
-
-    import numpy as np
-
-    # Predict normalized bounding boxes
-    detector = GlassesDetector()
-    predictions = detector(
-        image=np.random.rand(10, 3, 256, 256),
-        format="float",
-    )

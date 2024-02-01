@@ -105,6 +105,8 @@ class GlassesDetector(BaseGlassesModel):
 
     Let's instantiate the detector with default parameters:
 
+    .. code-block:: python
+
           >>> from glasses_detector import GlassesDetector
           >>> det = GlassesDetector()
 
@@ -112,6 +114,8 @@ class GlassesDetector(BaseGlassesModel):
     either a path, a :class:`PIL Image<PIL.Image.Image>` or a
     :class:`numpy array<numpy.ndarray>`. See :meth:`predict` for more
     details.
+
+    .. code-block:: python
 
         >>> det(np.random.randint(0, 256, size=(224, 224, 3), dtype=np.uint8), format="int")
         [[0, 0, 1, 1]]
@@ -121,6 +125,8 @@ class GlassesDetector(BaseGlassesModel):
     We can also use a more specific method :meth:`process_file` which
     allows to save the results to a file:
 
+    .. code-block:: python
+
         >>> det.process_file("path/to/img.jpg", "path/to/pred.jpg", show=True)
         ... # opens a new image window with drawn bboxes
         >>> det.process_file(["img1.jpg", "img2.jpg"], "preds.npy", format="bool")
@@ -129,6 +135,8 @@ class GlassesDetector(BaseGlassesModel):
 
     Finally, we can also use :meth:`process_dir` to process all images
     in a directory and save the predictions to a file or a directory:
+
+    .. code-block:: python
 
         >>> det.process_dir("path/to/dir", "path/to/preds.json", format="float")
         >>> subprocess.run(["cat", "path/to/preds.json"])

@@ -98,6 +98,8 @@ class BaseGlassesModel(PredInterface):
 
     Example:
 
+    .. code-block:: python
+
         >>> [info["name"] for info in DEFAULT_SIZE_MAP.values()]
         # list of all the available architectures
 
@@ -120,8 +122,10 @@ class BaseGlassesModel(PredInterface):
 
     Example:
 
+    .. code-block:: python
+
         >>> DEFAULT_KIND_MAP["<kind>"]["<size>"]
-        {"name": "<architecture-name>", "version": "<release-version>"}
+        {'name': '<architecture-name>', 'version': '<release-version>'}
 
     :meta hide-value:
     """

@@ -1,6 +1,10 @@
 Examples
 ========
 
+.. role:: bash(code)
+  :language: bash
+  :class: highlight
+
 .. _command-line:
 
 Command Line
@@ -14,7 +18,7 @@ You can run predictions via the command line. For example, classification of a s
     glasses-detector -i path/to/dir --output path/to/output.csv   # Generates CSV (default --task is classification)
 
 
-It is possible to specify the **kind** of ``--task`` in the following format ``<task>:<kind>``, for example, we may want to classify only *sunglasses* (only glasses with opaque lenses). Further, more options can be specified, like ``--format``, ``--size``, ``--batch-size``, ``--device``, etc:
+It is possible to specify the **kind** of :bash:`--task` in the following format :bash:`task:kind`, for example, we may want to classify only *sunglasses* (only glasses with opaque lenses). Further, more options can be specified, like :bash:`--format`, :bash:`--size`, :bash:`--batch-size`, :bash:`--device`, etc:
 
 .. code-block:: bash
     
@@ -30,7 +34,7 @@ Running *detection* and *segmentation* is similar, though we may want to generat
 
 .. tip::
 
-    For a more exhaustive explanation of the available options use ``glasses-detector --help`` or check :doc:`cli`.
+    For a more exhaustive explanation of the available options use :bash:`glasses-detector --help` or check :doc:`cli`.
 
 
 Python Script
@@ -43,7 +47,7 @@ The most straightforward way to perform a prediction on a single file (or a list
 
     from glasses_detector import GlassesClassifier, GlassesDetector
 
-    # Print either '1' or '0'
+    # Prints either '1' or '0'
     classifier = GlassesClassifier()
     classifier.process_file(
         input_path="path/to/img.jpg",     # can be a list of paths
@@ -66,7 +70,7 @@ A more useful method is :meth:`~glasses_detector.components.pred_interface.PredI
 
     from glasses_detector import GlassesClassifier, GlassesSegmenter
 
-    # Generate a CSV file with image paths and labels
+    # Generates a CSV file with image paths and labels
     classifier = GlassesClassifier(kind="sunglasses")
     classifier.process_dir(
         input_path="path/to/dir",         # failed files will raise a warning
@@ -75,11 +79,11 @@ A more useful method is :meth:`~glasses_detector.components.pred_interface.PredI
         pbar="Processing",                # Set to None to disable
     )
 
-    # Generate a directory with masks
+    # Generates a directory with masks
     segmenter = GlassesSegmenter(size="large", device="cuda")
     segmenter.process_dir(
         input_path="path/to/dir",         # output dir defaults to path/to/dir_preds
-        ext=".jpg",                       # saves all the masks as .jpg
+        ext=".jpg",                       # saves each mask in JPG format
         format="mask",                    # output type will be a grayscale PIL image
         batch_size=32,                    # to speed up the processing
         output_size=(512, 512),           # Set to None to keep the same size as image
