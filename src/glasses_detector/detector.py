@@ -117,7 +117,7 @@ class GlassesDetector(BaseGlassesModel):
 
     .. code-block:: python
 
-        >>> det(np.random.randint(0, 256, size=(224, 224, 3), dtype=np.uint8), format="int")
+        >>> det(np.random.randint(0, 256, size=(16, 16, 3), dtype=np.uint8), format="int")
         [[0, 0, 1, 1]]
         >>> det(["path/to/image1.jpg", "path/to/image2.jpg"], format="str")
         'BBoxes: 12 34 56 78; 90 12 34 56'

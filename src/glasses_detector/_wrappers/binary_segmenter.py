@@ -11,8 +11,6 @@ from torch.optim.lr_scheduler import (
     ReduceLROnPlateau,
 )
 
-from .tools import CosineAnnealingWarmerRestarts
-
 
 class BinarySegmenter(pl.LightningModule):
     def __init__(self, model, train_loader=None, val_loader=None, test_loader=None):

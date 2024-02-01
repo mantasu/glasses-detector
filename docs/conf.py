@@ -80,7 +80,7 @@ html_context = {
     "doc_path": "docs",
 }
 html_static_path = ["_static"]
-html_css_files = ["css/highlights.css", "css/signatures.css"]
+html_css_files = ["css/highlights.css", "css/signatures.css", "css/toctree.css"]
 html_title = f"Glasses Detector {release}"
 html_favicon = "_static/img/logo-light.png"
 

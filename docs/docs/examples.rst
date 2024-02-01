@@ -1,5 +1,5 @@
-Examples
-========
+:fas:`code` Examples
+====================
 
 .. role:: bash(code)
   :language: bash
@@ -14,8 +14,8 @@ You can run predictions via the command line. For example, classification of a s
 
 .. code-block:: bash
 
-    glasses-detector -i path/to/img.jpg --task classification     # Prints "present" or "absent"
-    glasses-detector -i path/to/dir --output path/to/output.csv   # Generates CSV (default --task is classification)
+    glasses-detector -i path/to/img.jpg --task classification   # Prints "present" or "absent"
+    glasses-detector -i path/to/dir --output path/to/output.csv # Creates CSV (default --task is classification)
 
 
 It is possible to specify the **kind** of :bash:`--task` in the following format :bash:`task:kind`, for example, we may want to classify only *sunglasses* (only glasses with opaque lenses). Further, more options can be specified, like :bash:`--format`, :bash:`--size`, :bash:`--batch-size`, :bash:`--device`, etc:
@@ -23,7 +23,7 @@ It is possible to specify the **kind** of :bash:`--task` in the following format
 .. code-block:: bash
     
     glasses-detector -i path/to/img.jpg -t classification:sunglasses -f proba # Prints probability of sunglasses
-    glasses-detector -i path/to/dir -o preds.pkl -s large -b 64 -d cuda       # Fast and accurate image processing
+    glasses-detector -i path/to/dir -o preds.pkl -s large -b 64 -d cuda       # Fast and accurate processing
 
 Running *detection* and *segmentation* is similar, though we may want to generate a folder of predictions when processing a directory (but we can also squeeze all the predictions into a single file, such as ``.npy``):
 
@@ -40,7 +40,7 @@ Running *detection* and *segmentation* is similar, though we may want to generat
 Python Script
 -------------
 
-The most straightforward way to perform a prediction on a single file (or a list of files) is to use :meth:`~glasses_detector.components.pred_interface.PredInterface.process_file`. Although, the prediction(-s) can be saved to a file or a directory of files, in most cases, this is useful to immediately show the prediction result(-s).
+The most straightforward way to perform a prediction on a single file (or a list of files) is to use :meth:`~glasses_detector.components.pred_interface.PredInterface.process_file`. Although the prediction(-s) can be saved to a file or a directory, in most cases, this is useful to immediately show the prediction result(-s).
 
 .. code-block:: python
     :linenos:
@@ -98,10 +98,10 @@ It is also possible to directly use :meth:`~glasses_detector.components.pred_int
     import numpy as np
     from glasses_detector import GlassesDetector
 
-    # Predict normalized bounding boxes
+    # Predicts normalized bounding boxes
     detector = GlassesDetector()
     predictions = detector(
-        image=np.random.rand(10, 3, 256, 256),
+        image=np.random.randint(0, 256, size=(224, 224, 3), dtype=np.uint8),
         format="float",
     )
     print(type(prediction), len(prediction))  # <class 'list'> 10

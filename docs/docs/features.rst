@@ -1,5 +1,5 @@
-Features
-========
+:fas:`gears` Features
+=====================
 
 The following *tasks* are supported:
 
@@ -15,11 +15,11 @@ Classification
 +----------------+-------------------------------------+-------------------------------------------+
 | **Kind**       | **Description**                     | **Example**                               |
 +================+=====================================+===========================================+
-| ``anyglasses`` | Any kind glasses/googles/spectacles | .. image:: ../../../assets/no_glasses.jpg |
+| ``anyglasses`` | Any kind glasses/googles/spectacles | .. image:: ../../assets/no_glasses.jpg    |
 +----------------+-------------------------------------+-------------------------------------------+
-| ``eyeglasses`` | Transparent eyeglasses              | .. image:: ../../../assets/eyeglasses.jpg |
+| ``eyeglasses`` | Transparent eyeglasses              | .. image:: ../../assets/eyeglasses.jpg    |
 +----------------+-------------------------------------+-------------------------------------------+
-| ``sunglasses`` | Opaque and semi-transparent glasses | .. image:: ../../../assets/sunglasses.jpg |
+| ``sunglasses`` | Opaque and semi-transparent glasses | .. image:: ../../assets/sunglasses.jpg    |
 +----------------+-------------------------------------+-------------------------------------------+
 
 .. admonition:: Check classifier performances
@@ -55,7 +55,7 @@ Segmentation
 +=============+=====================================================================+================================================+
 | ``frames``  | Frames (including legs) of any glasses                              |                                                |
 +-------------+---------------------------------------------------------------------+------------------------------------------------+
-| ``full``    | Frames (including legs) and lenses of any glasses                   | .. image:: ../../../assets/eyeglasses_mask.jpg |
+| ``full``    | Frames (including legs) and lenses of any glasses                   | .. image:: ../../assets/eyeglasses_mask.jpg    |
 +-------------+---------------------------------------------------------------------+------------------------------------------------+
 | ``legs``    | Legs of any glasses                                                 |                                                |
 +-------------+---------------------------------------------------------------------+------------------------------------------------+

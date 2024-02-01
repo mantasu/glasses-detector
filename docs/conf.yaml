@@ -53,8 +53,13 @@ build-finished:
       - "type"
       - "np"
       - "str"
+      - "int"
+      - "bool"
       - "subprocess"
       - "random"
+      - "@copy_signature"
+      - "@eval_infer_mode"
+      - "eval_infer_mode"
     custom-highlight-function:
       - "process_file"
       - "process_dir"
@@ -67,6 +72,9 @@ build-finished:
       - "standardize"
       - "is_standard_scalar"
       - "is_default"
+      - "reveal_type"
+      - "full_signature"
+      - "test_signature"
     custom-highlight-constant:
       - "StandardScalar"
       - "DEFAULT_SIZE_MAP"
@@ -85,3 +93,11 @@ build-finished:
       - "-"
     custom-highlight-op:
       - "&&"
+  
+  SECTION_ICONS:
+    Installation: "fas fa-download"
+    Features: "fas fa-cogs"
+    Examples: "fas fa-code"
+    CLI: "fas fa-terminal"
+    API: "fas fa-book"
+    Credits: "fas fa-heart"

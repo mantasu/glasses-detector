@@ -29,22 +29,22 @@ class copy_signature[F]:
     decorated function. This is useful when you want to copy the
     signature of a function to a wrapper function.
 
-    .. seealso::
-
-        https://stackoverflow.com/a/59717891
-
-
-    Example:
+    Example
+    -------
 
     .. code-block:: python
 
-        def f(x: bool, *extra: int) -> str: ...
+        def full_signature(x: bool, *extra: int) -> str: ...
 
-        @copy_signature(f)
-        def test(*args, **kwargs):
-            return f(*args, **kwargs)
+        @copy_signature(full_signature)
+        def test_signature(*args, **kwargs):
+            return full_signature(*args, **kwargs)
 
-        reveal_type(test)  # 'def (x: bool, *extra: int) -> str'
+        reveal_type(test_signature)  # 'def (x: bool, *extra: int) -> str'
+
+    .. seealso::
+
+        https://stackoverflow.com/a/59717891
 
     Args:
         target: The function whose signature to copy.
@@ -69,11 +69,8 @@ class eval_infer_mode:
     property, and :class:`~torch.inference_mode` are restored to their
     original states.
 
-    Args:
-        model (torch.nn.Module): The PyTorch model to be set to
-            evaluation mode.
-
-    Example:
+    Example
+    -------
 
     .. code-block:: python
 
@@ -81,14 +78,18 @@ class eval_infer_mode:
 
         @eval_infer_mode(model)
         def your_function():
-            # Your code here, e.g., forward pass
+            # E.g., forward pass
             pass
 
         # or
 
         with eval_infer_mode(model):
-            # Your code here, e.g., forward pass
+            # E.g., forward pass
             pass
+
+    Args:
+        model (torch.nn.Module): The PyTorch model to be set to
+            evaluation mode.
     """
 
     def __init__(self, model: torch.nn.Module):

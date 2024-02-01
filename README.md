@@ -1,11 +1,18 @@
+<style>
+    .doi-svg { filter: hue-rotate(70deg);}
+</style>
+
+
 # Glasses Detector
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg?color=purple)](https://colab.research.google.com/github/mantasu/glasses-detector/notebooks/demo.ipynb)
+![Docs](https://github.com/mantasu/glasses-detector/actions/workflows/sphinx.yaml/badge.svg)
 [![PyPI](https://img.shields.io/pypi/v/glasses-detector?color=orange)](https://pypi.org/project/glasses-detector/)
-[![Python](https://img.shields.io/badge/python-3.10%20|%203.11-yellow)](https://docs.python.org/3/)
+[![Python](https://img.shields.io/badge/python-3.12%20|%203.13-yellow)](https://docs.python.org/3/)
 [![CUDA: yes](https://img.shields.io/badge/cuda-yes-green)](https://developer.nvidia.com/cuda-toolkit)
-[![Docs: passing](https://img.shields.io/badge/docs-passing-skyblue)](https://mantasu.github.io/glasses-detector/)
-[![DOI](https://zenodo.org/badge/610509640.svg)](https://zenodo.org/badge/latestdoi/610509640)
+<a target="_blank" href="https://zenodo.org/badge/latestdoi/610509640"><img src="https://zenodo.org/badge/610509640.svg" alt="DOI" class="doi-svg"/></a>
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
+
 
 **Eyeglasses** and **sunglasses** _classifier_ + **glasses** and their **frames** _segmenter_. This project provides scripts to download the corresponding datasets, train the corresponding models and by itself is a PyPi project that provides a quick way to use the trained models via python script or terminal.
 

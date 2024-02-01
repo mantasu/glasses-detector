@@ -199,6 +199,42 @@ class BuildFinished:
         # Prettify soup
         soup.prettify()
 
+    def configure_section_icons(self, soup: BeautifulSoup):
+        #
+        as_ = soup.select("nav.navbar-nav li.nav-item a")
+
+        for a in as_:
+            for name, icon_cls in self.conf["SECTION_ICONS"].items():
+                if a.get_text().strip() != name:
+                    continue
+
+                # Add an icon to the navbar section item
+                a.parent["style"] = "margin-right: 0.5em;"
+                icon = f"<i class='{icon_cls} fa-xs' style='margin-right: 0.5em;'></i>"
+                a_new = f"{icon}{name}"
+                a.string.replace_with(BeautifulSoup(a_new, "html.parser"))
+
+        as_ = soup.select("div#index-toctree li.toctree-l1 a")
+
+        for a in as_:
+            for content in a.contents:
+                if isinstance(content, Tag) and content.name == "span":
+                    content["style"] = "margin-right: 0.5em;"
+                    continue
+                elif (
+                    not isinstance(content, NavigableString)
+                    or content.strip() not in self.conf["SECTION_ICONS"].keys()
+                ):
+                    continue
+
+                # Modify the underline of the toctree section item
+                content.parent["style"] = "text-decoration: none;"
+                content.replace_with(
+                    BeautifulSoup(f"<u>{content.get_text().strip()}</u>", "html.parser")
+                )
+
+        soup.prettify()
+
     def edit_html(self, app: Sphinx):
         if app.builder.format != "html":
             return
@@ -218,6 +254,7 @@ class BuildFinished:
                 self.break_long_signatures(soup)
                 self.customize_code_block_colors_python(soup)
                 self.customize_code_block_colors_bash(soup)
+                self.configure_section_icons(soup)
 
             with (Path(app.outdir) / f"{pagename}.html").open("w") as f:
                 # Write back HTML

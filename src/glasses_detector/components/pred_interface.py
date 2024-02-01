@@ -304,10 +304,10 @@ class PredInterface(ABC):
         Note:
             If some input path does not lead to a valid image file,
             e.g., does not exist, its prediction is set to :data:`None`.
-            Also, if at least one prediction fails, then a all
-            predictions are set to :data:`None`. In both cases, a
-            warning is is raised and the files or the lines in the
-            aggregated file are skipped (not saved).
+            Also, if at least one prediction fails, then all predictions
+            are set to :data:`None`. In both cases, a warning is is
+            raised and the files or the lines in the aggregated file are
+            skipped (not saved).
 
         Args:
             input_path (FilePath | typing.Collection[FilePath]): The

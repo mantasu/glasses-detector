@@ -1,5 +1,5 @@
-CLI
-===
+:fas:`terminal` CLI
+===================
 
 .. role:: bash(code)
   :language: bash

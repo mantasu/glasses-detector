@@ -1,5 +1,5 @@
-Installation
-============
+:fas:`download` Installation
+============================
 
 The packages requires at least `Python 3.12 <https://www.python.org/downloads/release/python-3120/>`_. To install the package via `pip <https://pypi.org/project/pip/>`_, simply run:
 
