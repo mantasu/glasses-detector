@@ -58,13 +58,21 @@ class BinaryDetector(pl.LightningModule):
         label_metrics = self.label_metrics.compute()
         boxes_metrics = self.boxes_metrics.compute()
 
+        # Reset the metrics
+        self.val_loss.reset()
+        self.label_metrics.reset()
+        self.boxes_metrics.reset()
+
         # Log the metrics and the learning rate
         self.log(f"{prefix}_loss", loss, prog_bar=True)
         self.log(f"{prefix}_f1", label_metrics["BinaryF1Score"], prog_bar=True)
         self.log(f"{prefix}_msle", boxes_metrics["BoxMSLE"], prog_bar=True)
         self.log(f"{prefix}_r2", boxes_metrics["BoxClippedR2"], prog_bar=True)
         self.log(f"{prefix}_iou", boxes_metrics["BoxIoU"], prog_bar=True)
-        self.log("lr", self.optimizers().param_groups[0]["lr"], prog_bar=True)
+
+        if not isinstance(opt := self.optimizers(), list):
+            # Log the learning rate of a single optimizer
+            self.log("lr", opt.param_groups[0]["lr"], prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
         self.eval_step(batch)
@@ -90,7 +98,7 @@ class BinaryDetector(pl.LightningModule):
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Reduce On Plateau scheduler
         optimizer = AdamW(self.parameters(), lr=self.lr, weight_decay=0.1)
-        scheduler = ReduceLROnPlateau(optimizer, factor=0.1)
+        scheduler = ReduceLROnPlateau(optimizer, threshold=0.01)
 
         return {
             "optimizer": optimizer,

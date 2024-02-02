@@ -122,17 +122,16 @@ class AugmenterMixin:
             # Image isn't a mask, convert it to RGB
             image = np.stack([image] * 3, axis=-1)
 
-        # Convert image to UINT8
-        image = image.astype(np.uint8)
-        orig_size = image.shape[:2][::-1]
-
         if resize is not None:
-            # Resize image to new (w, h)
-            image = st.resize(image, resize[::-1])
+            # Resize image to new (w, h), preserv range from 0 to 255
+            image = st.resize(image, resize[::-1], preserve_range=True)
+
+        # Convert image to UINT8 type
+        image = image.astype(np.uint8)
 
         if return_orig_size:
             # Original size as well
-            return image, orig_size
+            return image, image.shape[:2][::-1]
 
         return image
 

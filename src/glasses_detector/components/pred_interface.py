@@ -366,7 +366,9 @@ class PredInterface(ABC):
             for pred in preds:
                 if isinstance(pred, Image.Image):
                     # Show as image
-                    plt.show(pred)
+                    plt.imshow(pred)
+                    plt.axis("off")
+                    plt.show()
                 else:
                     # To stdout
                     print(pred)
@@ -387,7 +389,7 @@ class PredInterface(ABC):
             # Output is a single file for a single input
             output_paths = [output_path]
 
-        if len(output_path) != len(input_paths):
+        if len(output_paths) != len(input_paths):
             warnings.warn(
                 f"Number of output paths ({len(output_paths)}) does not match "
                 f"the number of input paths ({len(input_paths)}). The number "
@@ -400,7 +402,7 @@ class PredInterface(ABC):
             output_paths.append(None)
 
         for inp, out, pred in zip(input_paths, output_paths, preds):
-            if pred is None:
+            if pred is None or out is None:
                 continue
 
             if (split_path := os.path.splitext(out))[1] == "":
@@ -412,9 +414,8 @@ class PredInterface(ABC):
                 no_ext = os.path.splitext(os.path.basename(inp))[0]
                 out = os.path.join(split_path[0], no_ext + _ext)
 
-            if out is not None:
-                # Save pred to file
-                self.save(pred, out)
+            # Save pred to file
+            self.save(pred, out)
 
         if (
             is_multiple

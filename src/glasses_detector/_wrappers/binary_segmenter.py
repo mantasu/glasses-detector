@@ -3,13 +3,7 @@ import pytorch_lightning as pl
 import torch.nn as nn
 import torchmetrics
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import (
-    ChainedScheduler,
-    CosineAnnealingWarmRestarts,
-    ExponentialLR,
-    MultiStepLR,
-    ReduceLROnPlateau,
-)
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 class BinarySegmenter(pl.LightningModule):
@@ -60,7 +54,7 @@ class BinarySegmenter(pl.LightningModule):
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
-    def eval_step(self, batch, prefix=""):
+    def eval_step(self, batch):
         # Forward pass
         x, y = batch
         y_hat = self(x)
@@ -68,7 +62,6 @@ class BinarySegmenter(pl.LightningModule):
         # Compute the loss and the metrics
         self.val_loss.update(self.criterion(y_hat, y))
         self.metrics.update(y_hat.sigmoid(), y.long())
-        # self.log(f"{prefix}_loss", self.criterion(y_hat, y), prog_bar=True)
 
     def on_eval_epoch_end(self, prefix=""):
         # Compute total loss and metrics
@@ -90,13 +83,13 @@ class BinarySegmenter(pl.LightningModule):
             self.log("lr", opt.param_groups[0]["lr"], prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
-        self.eval_step(batch, prefix="val")
+        self.eval_step(batch)
 
     def on_validation_epoch_end(self):
         self.on_eval_epoch_end(prefix="val")
 
     def test_step(self, batch, batch_idx):
-        self.eval_step(batch, prefix="test")
+        self.eval_step(batch)
 
     def on_test_epoch_end(self):
         self.on_eval_epoch_end(prefix="test")
@@ -113,15 +106,7 @@ class BinarySegmenter(pl.LightningModule):
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Reduce On Plateau scheduler
         optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-2)
-        scheduler = ReduceLROnPlateau(
-            optimizer, factor=0.1, patience=10, threshold=0.01
-        )
-
-        # scheduler = ExponentialLR(optimizer, gamma=0.98)
-
-        # Multiply eta_max by gamma after every restart (warmer restart)
-        # optimizer = AdamW(self.parameters(), lr=5e-3, weight_decay=1e-2)
-        # scheduler = CosineAnnealingWarmerRestarts(optimizer, gamma=0.5)
+        scheduler = ReduceLROnPlateau(optimizer, threshold=0.01)
 
         return {
             "optimizer": optimizer,

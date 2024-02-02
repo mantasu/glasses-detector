@@ -4,7 +4,7 @@ Glasses Detector
 About
 -----
 
-Package for processing images with glasses of different types and their parts. It provides a quick way to use the pre-trained models for **3** kinds of tasks, with each task being divided to multiple categories, for instance, *classification of sunglasses* or *segmentation of glasses frames* (see :doc:`docs/features` for more details):
+Package for processing images with different types of glasses and their parts. It provides a quick way to use the pre-trained models for **3** kinds of tasks, each being divided to multiple categories, for instance, *classification of sunglasses* or *segmentation of glasses frames* (see :doc:`docs/features` for more details):
 
 * **Classification**: transparent, sunglasses, any glasses
 * **Detection**: solo, worn, eye-area

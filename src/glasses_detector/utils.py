@@ -106,12 +106,12 @@ class eval_infer_mode:
 
     def __enter__(self):
         self.model.eval()
-        self.inference_mode = torch.inference_mode(True)
+        self._inference_mode = torch.inference_mode(True)
+        self._inference_mode.__enter__()
 
     def __exit__(self, type: Any, value: Any, traceback: Any):
-        self.inference_mode.__exit__(type, value, traceback)
-        if self.was_training:
-            self.model.train()
+        self._inference_mode.__exit__(type, value, traceback)
+        self.model.train(self.was_training)
 
 
 def is_url(x: str) -> bool:

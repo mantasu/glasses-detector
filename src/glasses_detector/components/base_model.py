@@ -359,7 +359,7 @@ class BaseGlassesModel(PredInterface):
             of formatted predictions if multiple images were provided.
         """
         # Get the device from the model and init vars
-        device = next(iter(self.parameters())).device
+        device = next(iter(self.model.parameters())).device
         xs, preds, is_multiple = [], [], True
 
         # Warning: if the image has shape (3, H, W), it will be interpreted as 3 grayscale images

@@ -415,17 +415,15 @@ class GlassesSegmenter(BaseGlassesModel):
                 case "proba":
                     format = lambda x: x.sigmoid()
                 case "mask":
-                    format = (
-                        lambda img, x: Image.fromarray(
-                            ((x > 0) * 255).to(torch.uint8),
-                            mode="L",
-                        ).resize(output_size if output_size else img.size),
-                    )
+                    format = lambda img, x: Image.fromarray(
+                        ((x[0] > 0) * 255).to(torch.uint8).numpy(force=True),
+                        mode="L",
+                    ).resize(output_size if output_size else img.size)
                 case "img":
                     format = lambda img, x: self.draw_mask(
                         img.resize(output_size) if output_size else img,
                         Image.fromarray(
-                            ((x > 0) * 255).to(torch.uint8),
+                            ((x[0] > 0) * 255).to(torch.uint8).numpy(force=True),
                             mode="L",
                         ).resize(output_size if output_size else img.size),
                     )
@@ -440,7 +438,7 @@ class GlassesSegmenter(BaseGlassesModel):
             # Apply torch transform if not mask or img
             format = lambda img, x: transforms.Resize(
                 output_size if output_size else img.size
-            )(format(x))
+            )(format(x.squeeze(0)))
 
         return super().predict(image, format, input_size)
 

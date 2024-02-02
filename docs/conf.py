@@ -68,7 +68,23 @@ html_theme_options = {
         "image_light": "_static/img/logo-light.png",
         "image_dark": "_static/img/logo-dark.png",
     },
-    "github_url": "https://github.com/mantasu/glasses-detector",
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/mantasu/glasses-detector",
+            "icon": "fa-brands fa-github",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/glasses-detector",
+            "icon": "fa-custom fa-pypi",
+        },
+        {
+            "name": "Zenodo",
+            "url": "https://zenodo.org/doi/10.5281/zenodo.8126101",
+            "icon": "fa-custom fa-zenodo",
+        },
+    ],
     "show_toc_level": 2,
     "navigation_with_keys": False,
     "header_links_before_dropdown": 7,
@@ -80,6 +96,7 @@ html_context = {
     "doc_path": "docs",
 }
 html_static_path = ["_static"]
+html_js_files = ["js/pypi-icon.js", "js/zenodo-icon.js"]
 html_css_files = ["css/highlights.css", "css/signatures.css", "css/toctree.css"]
 html_title = f"Glasses Detector {release}"
 html_favicon = "_static/img/logo-light.png"

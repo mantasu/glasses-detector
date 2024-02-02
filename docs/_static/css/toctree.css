@@ -1,3 +1,7 @@
+.fa-zenodo {
+    font-size: 1em; /* Adjust this value to change the icon size */
+}
+
 .toctree-wrapper {
     /* Padding + Width */
     padding: 1em 2em;

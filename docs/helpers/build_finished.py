@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import requests
 import yaml
 from bs4 import BeautifulSoup, NavigableString, Tag
 from sphinx.application import Sphinx

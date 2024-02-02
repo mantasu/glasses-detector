@@ -121,7 +121,7 @@ Feel free to play around with some `demo image files <https://github.com/mantasu
 .. code-block:: bash
 
     git clone https://github.com/mantasu/glasses-detector && cd glasses-detector/data
-    glasses-detector -i demo -o demo_labels.csv --task classifier:sunglasses -f proba
+    glasses-detector -i demo -o demo_labels.csv --task classification:sunglasses -f proba
     glasses-detector -i demo -o demo_masks -t segmentation:full -f img -e .jpg
 
-Alternatively, you can play around with the `demo notebook <https://github.com/mantasu/glasses-detector/notebooks/demo.ipynb>`_ which can be also accessed via `Google Colab <https://colab.research.google.com/github/mantasu/glasses-detector/blob/master/notebooks/demo.ipynb>`_.
+Alternatively, you can check out the `demo notebook <https://github.com/mantasu/glasses-detector/notebooks/demo.ipynb>`_ which can be also accessed on `Google Colab <https://colab.research.google.com/github/mantasu/glasses-detector/blob/master/notebooks/demo.ipynb>`_.

@@ -1,6 +1,5 @@
 import argparse
 import os
-import typing
 
 import torch
 
@@ -22,7 +21,7 @@ def parse_kwargs():
         "-o",
         "--output-path",
         metavar="path/to/dir/or/file",
-        type=typing.Union[str, None],
+        type=str,
         default=None,
         help=f"Path to the output file or the directory. If not provided, "
         f"then, if input is a file, the prediction will be printed (or shown "
@@ -39,7 +38,7 @@ def parse_kwargs():
         "-e",
         "--extension",
         metavar="<ext>",
-        type=typing.Union[str, None],
+        type=str,
         default=None,
         choices=(ch := [".txt", ".csv", ".json", ".npy", ".pkl", ".jpg", ".png"]),
         help=f"Only used if `--output-path` is a directory. The extension to "
@@ -52,7 +51,7 @@ def parse_kwargs():
         "-f",
         "--format",
         metavar="<format>",
-        type=typing.Union[str, None],
+        type=str,
         default=None,
         help=f"The format to use to map the raw prediction to. For "
         f"classification, common formats are bool, proba, str, for detection, "
@@ -128,7 +127,7 @@ def parse_kwargs():
         "-w",
         "--weights-path",
         metavar="path/to/weights.pth",
-        type=typing.Union[str, None],
+        type=str,
         default=None,
         help=f"Path to custom weights to load into the model. If not "
         f"specified, weights will be loaded from the default location (and "
@@ -137,7 +136,7 @@ def parse_kwargs():
     parser.add_argument(
         "-d",
         "--device",
-        type=typing.Union[str, None],
+        type=str,
         metavar="<device>",
         default=None,
         help=f"The device on which to perform inference. If not specified, it "
@@ -212,6 +211,8 @@ def main():
 
     if is_file:
         # Process a single image file
+        process_kwargs.pop("batch_size")
+        process_kwargs.pop("pbar")
         model.process_file(**process_kwargs)
     else:
         # Process a directory of images

@@ -67,12 +67,19 @@ class BinaryClassifier(pl.LightningModule):
         loss = self.val_loss.compute()
         metrics = self.metrics.compute()
 
+        # Reset the metrics
+        self.val_loss.reset()
+        self.metrics.reset()
+
         # Log the loss and the metrics
         self.log(f"{prefix}_loss", loss, prog_bar=True)
         self.log(f"{prefix}_f1", metrics["BinaryF1Score"], prog_bar=True)
         self.log(f"{prefix}_roc_auc", metrics["BinaryAUROC"], prog_bar=True)
         self.log(f"{prefix}_pr_auc", metrics["BinaryAveragePrecision"], prog_bar=True)
-        self.log("lr", self.optimizers().param_groups[0]["lr"], prog_bar=True)
+
+        if not isinstance(opt := self.optimizers(), list):
+            # Log the learning rate of a single optimizer
+            self.log("lr", opt.param_groups[0]["lr"], prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
         self.eval_step(batch)
@@ -98,7 +105,7 @@ class BinaryClassifier(pl.LightningModule):
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Reduce On Plateau scheduler
         optimizer = AdamW(self.parameters(), lr=self.lr, weight_decay=0.1)
-        scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10)
+        scheduler = ReduceLROnPlateau(optimizer, threshold=0.01)
 
         return {
             "optimizer": optimizer,
