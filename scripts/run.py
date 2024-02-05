@@ -50,7 +50,7 @@ class RunCLI(LightningCLI):
                 "classification:eyeglasses",
                 "detection",
                 "detection:eyes",
-                "detection:standalone",
+                "detection:solo",
                 "detection:worn",
                 "segmentation",
                 "segmentation:frames",
@@ -68,7 +68,7 @@ class RunCLI(LightningCLI):
             metavar="<model-size>",
             type=str,
             default="medium",
-            choices=["small", "medium", "large", "huge"], # TODO: remove huge
+            choices=["small", "medium", "large"],
             help="The model size which determines architecture type. One of 'small', 'medium', 'large'. Defaults to 'medium'.",
         )
         parser.add_argument(

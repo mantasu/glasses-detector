@@ -97,7 +97,7 @@ html_context = {
 }
 html_static_path = ["_static"]
 html_js_files = ["js/pypi-icon.js", "js/zenodo-icon.js"]
-html_css_files = ["css/highlights.css", "css/signatures.css", "css/toctree.css"]
+html_css_files = ["css/highlights.css", "css/signatures.css", "css/custom.css"]
 html_title = f"Glasses Detector {release}"
 html_favicon = "_static/img/logo-light.png"
 

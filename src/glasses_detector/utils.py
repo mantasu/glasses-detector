@@ -10,6 +10,7 @@
 
         :class:`str` | :class:`bytes` | :class:`os.PathLike`
 """
+
 import functools
 import imghdr
 import os
@@ -50,11 +51,9 @@ class copy_signature[F]:
         target: The function whose signature to copy.
     """
 
-    def __init__(self, target: F) -> None:
-        ...
+    def __init__(self, target: F) -> None: ...
 
-    def __call__(self, wrapped: Callable[..., Any]) -> F:
-        ...
+    def __call__(self, wrapped: Callable[..., Any]) -> F: ...
 
 
 class eval_infer_mode:
@@ -138,13 +137,11 @@ def is_url(x: str) -> bool:
 
 
 @overload
-def flatten[T](items: T) -> T:
-    ...
+def flatten[T](items: T) -> T: ...
 
 
 @overload
-def flatten[T](items: typing.Iterable[T | typing.Iterable]) -> list[T]:
-    ...
+def flatten[T](items: typing.Iterable[T | typing.Iterable]) -> list[T]: ...
 
 
 def flatten[T](items: T | Iterable[T | Iterable]) -> T | list[T]:

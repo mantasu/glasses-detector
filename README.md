@@ -1,12 +1,14 @@
-# Glasses Detector
+<h1 align="center"><img src="https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/logo-dark.png" width=27px height=27px> Glasses Detector</h1>
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg?color=purple)](https://colab.research.google.com/github/mantasu/glasses-detector/blob/main/notebooks/demo.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mantasu/glasses-detector/blob/main/notebooks/demo.ipynb)
 [![Docs](https://github.com/mantasu/glasses-detector/actions/workflows/sphinx.yaml/badge.svg)](https://mantasu.github.io/glasses-detector/)
 [![PyPI](https://img.shields.io/pypi/v/glasses-detector?color=orange)](https://pypi.org/project/glasses-detector/)
 [![Python](https://img.shields.io/badge/python-3.12%20|%203.13-yellow)](https://docs.python.org/3/)
 [![CUDA: yes](https://img.shields.io/badge/cuda-yes-green)](https://developer.nvidia.com/cuda-toolkit)
 [![DOI](https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/svg/doi.svg)](https://zenodo.org/badge/latestdoi/610509640)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
+
+![Banner]([docs/_static/img/banner.jpg](https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/banner.jpg))
 
 <div style="background-color: #882211; border-radius: 0.25em; padding: 0.25em 0.5em;"><b>Warning!</b> The package is currently in development and all the information here is only relevant for the future release <code>v1.0.0</code>. Details and usage of the current active release <code>v0.1.1</code> is available on the <a href="https://mantasu.github.io/glasses-detector/">documentation page</a>.</div>
 
@@ -134,15 +136,15 @@ After processing all the datasets, your `data` directory should have the followi
 ```
 └── data                    <- The data directory (root) under project
     ├── classification
-    |   ├── anyglasses      <- Datasets with any glasses as positives
+    │   ├── anyglasses      <- Datasets with any glasses as positives
     │   ├── eyeglasses      <- Datasets with transparent glasses as positives
-    |   └── sunglasses      <- Datasets with semi-transparent/opaque glasses as positives 
+    │   └── sunglasses      <- Datasets with semi-transparent/opaque glasses as positives 
     │
     ├── detection
-    |   ├── eyes            <- Datasets with bounding boxes for eye area 
-    |   ├── standalone      <- Datasets with bounding boxes for standalone glasses
-    |   └── worn            <- Datasets with bounding boxes for worn glasses
-    |
+    │   ├── eyes            <- Datasets with bounding boxes for eye area 
+    │   ├── standalone      <- Datasets with bounding boxes for standalone glasses
+    │   └── worn            <- Datasets with bounding boxes for worn glasses
+    │
     └── segmentation
         ├── frames          <- Datasets with masks for glasses frames
         ├── full            <- Datasets with masks for full glasses (frames + lenses)
@@ -262,4 +264,4 @@ If you get _UserWarning: No positive samples in targets, true positive value sho
 
 ## Credits
 
-For references and citation, please see [Glasses Detector Credits](https://mantasu.github.io/glasses-detector/docs/credits.html)
+For references and citation, please see [Glasses Detector Credits](https://mantasu.github.io/glasses-detector/docs/credits.html).

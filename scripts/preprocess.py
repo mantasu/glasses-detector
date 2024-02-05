@@ -1170,9 +1170,9 @@ def prepare_eyeglass(**kwargs):
 
 def prepare_glasses_lenses(**kwargs):
     # Update the kwargs (file path, dataset name, class map)
-    kwargs[
-        "data_file"
-    ] = "glasses lenses segmentation.v7-sh-improvments-version.coco.zip"
+    kwargs["data_file"] = (
+        "glasses lenses segmentation.v7-sh-improvments-version.coco.zip"
+    )
     kwargs["save_name"] = "glasses-lenses"
     kwargs["class_map"] = {"glasses-lenses": {"segmentation": ["lenses"]}}
 
@@ -1192,9 +1192,9 @@ def prepare_glasses_lens(**kwargs):
 
 def prepare_glasses_segmentation_cropped_faces(**kwargs):
     # Update the kwargs (file path, dataset name, class map)
-    kwargs[
-        "data_file"
-    ] = "glasses segmentation cropped faces.v2-segmentation_models_pytorch-s_1st_version.coco-segmentation.zip"
+    kwargs["data_file"] = (
+        "glasses segmentation cropped faces.v2-segmentation_models_pytorch-s_1st_version.coco-segmentation.zip"
+    )
     kwargs["save_name"] = "glasses-segmentation-cropped-faces"
     kwargs["class_map"] = {"glasses-lenses": {"segmentation": ["lenses"]}}
 
@@ -1234,9 +1234,9 @@ def prepare_capstone_mini_2(**kwargs):
 
 def prepare_sunglasses_color_detection(**kwargs):
     # Update the kwargs (file path, dataset name, class map)
-    kwargs[
-        "data_file"
-    ] = "Sunglasses Color detection roboflow.v2i.coco-segmentation.zip"
+    kwargs["data_file"] = (
+        "Sunglasses Color detection roboflow.v2i.coco-segmentation.zip"
+    )
     kwargs["save_name"] = "sunglasses-color-detection"
     kwargs["class_map"] = {
         "Lens": {"segmentation": ["lenses"]},
@@ -1413,7 +1413,7 @@ def prepare_kacamata_membaca(**kwargs):
     # Update the kwargs (file path, dataset name, class map)
     kwargs["data_file"] = "Kacamata-Membaca.v1i.coco.zip"
     kwargs["save_name"] = "kacamata-membaca"
-    kwargs["class_map"] = {"Kacamata-Membaca": {"detection": ["standalone"]}}
+    kwargs["class_map"] = {"Kacamata-Membaca": {"detection": ["solo"]}}
 
     # Process the data splits
     walk_coco_splits(**kwargs)
@@ -1423,7 +1423,7 @@ def prepare_onlyglasses(**kwargs):
     # Update the kwargs (file path, dataset name, class map)
     kwargs["data_file"] = "onlyglasses.v1i.coco.zip"
     kwargs["save_name"] = "onlyglasses"
-    kwargs["class_map"] = {"glasses": {"detection": ["standalone"]}}
+    kwargs["class_map"] = {"glasses": {"detection": ["solo"]}}
 
     # Process the data splits
     walk_coco_splits(**kwargs)

@@ -6,11 +6,9 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision import transforms
-from torchvision.models.segmentation import (
-    deeplabv3_resnet50,
-    fcn_resnet101,
-    lraspp_mobilenet_v3_large,
-)
+from torchvision.models.segmentation import fcn_resnet101, lraspp_mobilenet_v3_large
+from torchvision.transforms.v2.functional import to_image, to_pil_image
+from torchvision.utils import draw_segmentation_masks
 
 from .architectures import TinyBinarySegmenter
 from .components.base_model import BaseGlassesModel
@@ -204,7 +202,6 @@ class GlassesSegmenter(BaseGlassesModel):
         "small": {"name": "tinysegnet_v1", "version": "v1.0.0"},
         "medium": {"name": "lraspp_mobilenet_v3_large", "version": "v1.0.0"},
         "large": {"name": "fcn_resnet101", "version": "v1.0.0"},
-        "huge": {"name": "deeplabv3_resnet50", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
@@ -224,14 +221,9 @@ class GlassesSegmenter(BaseGlassesModel):
                 m = TinyBinarySegmenter()
             case "lraspp_mobilenet_v3_large":
                 m = lraspp_mobilenet_v3_large(num_classes=1)
-                # m.classifier = LRASPPHead(40, 960, 1, 128)
             case "fcn_resnet101":
                 m = fcn_resnet101()
                 m.classifier[-1] = nn.Conv2d(512, 1, 1)
-                m.aux_classifier = None
-            case "deeplabv3_resnet50":
-                m = deeplabv3_resnet50(num_classes=1)
-                # m.classifier[-1] = nn.Conv2d(256, 1, 1)
                 m.aux_classifier = None
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
@@ -239,86 +231,136 @@ class GlassesSegmenter(BaseGlassesModel):
         return m
 
     @staticmethod
-    def draw_mask(
-        img: Image.Image,
-        mask: torch.Tensor | np.ndarray | Image.Image,
-        color: str | tuple[int, int, int] = "red",
-        alpha: float = 0.5,
+    def draw_masks(
+        image: Image.Image | np.ndarray | torch.Tensor,
+        masks: Image.Image | list[Image.Image] | np.ndarray | torch.Tensor,
+        alpha: float = 0.8,
+        colors: (
+            str | tuple[int, int, int] | list[str | tuple[int, int, int]] | None
+        ) = None,
     ) -> Image.Image:
-        """Draws a mask over an image.
+        """Draws mask(-s) over an image.
 
-        Takes the original image and a mask and overlays the mask over
-        the image with a specified color and transparency.
+        Takes the original image and a mask or a list of masks and
+        overlays them over the image with a specified colors and
+        transparency.
+
+        See Also:
+
+            * :func:`~torchvision.utils.draw_segmentation_masks` for
+              more details about how the masks are drawn.
+            * :func:`~torchvision.transforms.functional.to_image` for
+              more details about the expected formats if the input
+              image and the masks are of type :class:`PIL.Image.Image`
+              or :class:`numpy.ndarray`.
 
         Args:
-            img (PIL.Image.Image): The image to draw the mask over.
-            mask (torch.Tensor | numpy.ndarray | PIL.Image.Image): The
-                mask to draw over the image. It should be of the same
-                size as the image. If it is a :class:`torch.Tensor` or
-                a :class:`numpy.ndarray`, it should be of shape
-                ``(H, W)``, contain values between ``0`` and ``255``,
-                and be of type :data:`torch.uint8` or
-                :data:`numpy.uint8` respectively.
-            color (str | tuple[int, int, int], optional): The color of
-                the overlaid mask. Defaults to ``"red"``.
-            alpha (float, optional): The transparency of the mask.
-                Defaults to ``0.5``.
+            image (PIL.Image.Image | numpy.ndarray | torch.Tensor): The
+                original image. It can be either a *PIL*
+                :class:`~PIL.Image.Image`, a *numpy*
+                :class:`~numpy.ndarray` of shape (H, W, 3) or (H, W) and
+                type :data:`~numpy.uint8` or a *torch*
+                :class:`~torch.Tensor` of shape (3, H, W) or (H, W)
+                and type :data:`~torch.uint8`.
+            masks (PIL.Image.Image | list[PIL.Image.Image] | numpy.ndarray | torch.Tensor):
+                The mask or a list of masks to draw over the image. It
+                can be either a *PIL* :class:`~PIL.Image.Image` or a
+                list of them, a *numpy* :class:`~numpy.ndarray` of shape
+                (H, W) or (N, H, W) and type :data:`~numpy.uint8` or
+                :data:`~numpy.bool`, or a *torch* :class:`~torch.Tensor`
+                of shape (H, W) or (N, H, W) and type
+                :data:`~torch.uint8` or :data:`~torch.bool`. Note: ``N``
+                is the number of masks.
+            alpha (float, optional): Float number between ``0`` and
+                ``1`` denoting the transparency of the masks. ``0``
+                means full transparency, ``1`` means no transparency.
+                Defaults to ``0.8``.
+            colors (str | tuple[int, int, int] | list[str | tuple[int, int, int]] | None, optional):
+                List containing the colors of the boxes or single color
+                for all boxes. The color can be represented as PIL
+                strings e.g. "red" or "#FF00FF", or as RGB tuples e.g.
+                ``(240, 10, 157)``. By default, random colors are
+                generated for boxes. Defaults to :data:`None`. Defaults to :data:`None`.
 
         Returns:
             PIL.Image.Image: The RGB image with the mask drawn over it.
         """
-        if isinstance(mask, torch.Tensor):
-            # Convert to numpy array
-            mask = mask.numpy(force=True)
+        if isinstance(image, np.ndarray):
+            # TODO: https://github.com/pytorch/vision/issues/8255
+            image = np.atleast_3d(image)
 
-        if isinstance(mask, np.ndarray):
-            # Convert to PIL Image
-            mask = Image.fromarray(mask)
+        if (image := to_image(image)).ndim == 2:
+            # Add a channel dimension
+            image = image.unsqueeze(0)
 
-        # Overlay the mask on the image
-        mask = mask.convert("L").point(lambda p: p * alpha)
-        colored_mask = Image.new("RGB", mask.size, color)
-        img.paste(colored_mask, mask=mask)
+        if isinstance(masks, list) and isinstance(masks[0], Image.Image):
+            # Ensure each image is commonly in grayscale
+            masks = [mask.convert("L") for mask in masks]
+        elif isinstance(masks, Image.Image):
+            # Ensure mask is in grayscale
+            masks = masks.convert("L")
 
-        return img
+        if not isinstance(masks, torch.Tensor):
+            # Convert to a tensor: (H, W) or (N, H, W)
+            masks = torch.from_numpy(np.array(masks))
+
+        if masks.dtype == torch.uint8:
+            # Convert to bool
+            masks = masks > 128
+
+        # Draw the masks on top of the image
+        new_image = draw_segmentation_masks(
+            image=image,
+            masks=masks,
+            alpha=alpha,
+            colors=colors,
+        ).to(torch.uint8)
+
+        return to_pil_image(new_image)
 
     @overload
     def predict(
         self,
         image: FilePath | Image.Image | np.ndarray,
-        format: str
-        | dict[bool, Default]
-        | Callable[[torch.Tensor], Default]
-        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        format: (
+            str
+            | dict[bool, Default]
+            | Callable[[torch.Tensor], Default]
+            | Callable[[Image.Image, torch.Tensor], Default]
+        ) = "img",
         output_size: tuple[int, int] | None = None,
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> Default:
-        ...
+    ) -> Default: ...
 
     @overload
     def predict(
         self,
         image: Collection[FilePath | Image.Image | np.ndarray],
-        format: str
-        | dict[bool, Default]
-        | Callable[[torch.Tensor], Default]
-        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        format: (
+            str
+            | dict[bool, Default]
+            | Callable[[torch.Tensor], Default]
+            | Callable[[Image.Image, torch.Tensor], Default]
+        ) = "img",
         output_size: tuple[int, int] | None = None,
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> list[Default]:
-        ...
+    ) -> list[Default]: ...
 
     @override
     def predict(
         self,
-        image: FilePath
-        | Image.Image
-        | np.ndarray
-        | Collection[FilePath | Image.Image | np.ndarray],
-        format: str
-        | dict[bool, Default]
-        | Callable[[torch.Tensor], Default]
-        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        image: (
+            FilePath
+            | Image.Image
+            | np.ndarray
+            | Collection[FilePath | Image.Image | np.ndarray]
+        ),
+        format: (
+            str
+            | dict[bool, Default]
+            | Callable[[torch.Tensor], Default]
+            | Callable[[Image.Image, torch.Tensor], Default]
+        ) = "img",
         output_size: tuple[int, int] | None = None,
         input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:

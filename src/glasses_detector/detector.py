@@ -4,7 +4,7 @@ from typing import Callable, ClassVar, Collection, overload, override
 import numpy as np
 import torch
 import torch.nn as nn
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from torchvision.models.detection import (
     fasterrcnn_mobilenet_v3_large_fpn,
     fasterrcnn_resnet50_fpn_v2,
@@ -12,6 +12,8 @@ from torchvision.models.detection import (
     retinanet_resnet50_fpn_v2,
     ssdlite320_mobilenet_v3_large,
 )
+from torchvision.transforms.v2.functional import to_image, to_pil_image
+from torchvision.utils import draw_bounding_boxes
 
 from .architectures import TinyBinaryDetector
 from .components import BaseGlassesModel
@@ -69,7 +71,7 @@ class GlassesDetector(BaseGlassesModel):
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
         |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``standalone`` | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        | ``solo``       | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
         |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
@@ -158,7 +160,7 @@ class GlassesDetector(BaseGlassesModel):
             +-------------------+-------------------------------------+
             | ``"eyes"``        | No glasses, just the eye area       |
             +-------------------+-------------------------------------+
-            | ``"standalone"``  | Any glasses in the wild             |
+            | ``"solo"``        | Any standalone glasses in the wild  |
             +-------------------+-------------------------------------+
             | ``"worn"``        | Any glasses that are worn by people |
             +-------------------+-------------------------------------+
@@ -198,6 +200,7 @@ class GlassesDetector(BaseGlassesModel):
         device (str | torch.device, optional): Device to cast the model
             (once it is loaded) to. Defaults to ``"cpu"``.
     """
+
     kind: str = "worn"
     size: str = "medium"
     pretrained: bool | str | None = field(default=True, repr=False)
@@ -211,7 +214,7 @@ class GlassesDetector(BaseGlassesModel):
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, str]] = {
         "eyes": DEFAULT_SIZE_MAP,
-        "standalone": DEFAULT_SIZE_MAP,
+        "solo": DEFAULT_SIZE_MAP,
         "worn": DEFAULT_SIZE_MAP,
     }
 
@@ -258,12 +261,17 @@ class GlassesDetector(BaseGlassesModel):
         return m
 
     @staticmethod
-    def draw_rects(
-        img: Image.Image,
-        bboxes: torch.Tensor | np.ndarray | list[list[int | float]],
-        labels: torch.Tensor | np.ndarray | list[int] | None = None,
-        color: str | dict[int, str] | None = "red",
-        name: str | dict[int, str] | None = None,
+    def draw_boxes(
+        image: Image.Image | np.ndarray | torch.Tensor,
+        boxes: list[list[int | float]] | np.ndarray | torch.Tensor,
+        labels: list[str] | None = None,
+        colors: (
+            str | tuple[int, int, int] | list[str | tuple[int, int, int]] | None
+        ) = None,
+        fill: bool = False,
+        width: int = 1,
+        font: str | None = None,
+        font_size: int | None = None,
     ) -> Image.Image:
         """Draws bounding boxes on the image.
 
@@ -271,102 +279,121 @@ class GlassesDetector(BaseGlassesModel):
         them on the image. Optionally, the labels can be provided to
         write the label next to the bounding box.
 
+        See Also:
+
+            * :func:`~torchvision.utils.draw_bounding_boxes` for more
+              details about how the bounding boxes are drawn.
+            * :func:`~torchvision.transforms.functional.to_image` for
+              more details about the expected formats if the input
+              image is of type :class:`PIL.Image.Image` or
+              :class:`numpy.ndarray`.
+
         Args:
-            img (PIL.Image.Image): The original image.
-            bboxes (torch.Tensor | numpy.ndarray | list[list[int | float]]):
+            image (PIL.Image.Image | numpy.ndarray | torch.Tensor): The
+                original image. It can be either a *PIL*
+                :class:`~PIL.Image.Image`, a *numpy*
+                :class:`~numpy.ndarray` of shape (H, W, 3) or (H, W) and
+                type :data:`~numpy.uint8` or a *torch*
+                :class:`~torch.Tensor` of shape (3, H, W) or (H, W)
+                and type :data:`~torch.uint8`.
+            boxes (list[list[int | float]] | numpy.ndarray | torch.Tensor):
                 The bounding boxes to draw. The expected shape is
                 ``(N, 4)`` where ``N`` is the number of bounding boxes
                 and the last dimension corresponds to the coordinates of
                 the bounding box in the following order: ``x_min``,
                 ``y_min``, ``x_max``, ``y_max``.
-            labels (torch.Tensor | numpy.ndarray | list[int] | None, optional):
-                The labels corresponding to ``N`` bounding boxes. If
-                :data:`None`, no labels will be written next to the
-                drawn bounding boxes. Defaults to :data:`None`.
-            color (str | dict[int, str] | None , optional): If
-                :class:`str`, all box rectangles will use the same
-                color, if :class:`dict`, it will be used as a mapping
-                from class index (i.e., corresponding ``label``) to
-                color, if :data:`None`, no boxes will be drawn. Defaults
-                to ``"red"``.
-            name (str | dict[int, str] | None, optional): If
-                :class:`str`, all box rectangles will use the same
-                name, if :class:`dict`, it will be used as a mapping
-                from class index (i.e., corresponding ``label``) to
-                name, if :data:`None`, no names will be written next to
-                the drawn bounding boxes. Defaults to :data:`None`.
+            labels (list[str] | None, optional): The labels
+                corresponding to ``N`` bounding boxes. If :data:`None`,
+                no labels will be written next to the drawn bounding
+                boxes. Defaults to :data:`None`.
+            colors (list[str | tuple[int, int, int]] | str | tuple[int, int, int] | None, optional):
+                List containing the colors of the boxes or single color
+                for all boxes. The color can be represented as PIL
+                strings e.g. "red" or "#FF00FF", or as RGB tuples e.g.
+                ``(240, 10, 157)``. By default, random colors are
+                generated for boxes. Defaults to :data:`None`.
+            fill (bool, optional): If :data:`True`, fills the bounding
+                box with the specified color. Defaults to :data:`False`.
+            width (int, optional): Width of bounding box used when
+                calling :meth:`~PIL.ImageDraw.rectangle`. Defaults to
+                ``1``.
+            font (str | None, optional): A filename containing a
+                *TrueType* font. If the file is not found in this
+                filename, the loader may also search in other
+                directories, such as the ``fonts/`` directory on Windows
+                or ``/Library/Fonts/``, ``/System/Library/Fonts/`` and
+                ``~/Library/Fonts/`` on macOS. Defaults to :data:`None`.
+            font_size (int | None, optional): The requested font size in
+                points used when calling
+                :meth:`~PIL.ImageFont.truetype`. Defaults to
+                :data:`None`.
+
         Returns:
             PIL.Image.Image: The image with bounding boxes drawn on it.
         """
-        # Convert to numpy
-        if isinstance(bboxes, torch.Tensor):
-            bboxes = bboxes.numpy(force=True)
+        if isinstance(image, np.ndarray):
+            # TODO: https://github.com/pytorch/vision/issues/8255
+            image = np.atleast_3d(image)
 
-        if isinstance(labels, torch.Tensor):
-            labels = labels.numpy(force=True)
+        if (image := to_image(image)).ndim == 2:
+            # Add a channel dimension
+            image = image.unsqueeze(0)
 
-        # Convert to list
-        if isinstance(bboxes, np.ndarray):
-            bboxes = bboxes.tolist()
+        if not isinstance(boxes, torch.Tensor):
+            # Convert bboxes to torch Tensor
+            boxes = torch.tensor(boxes, dtype=torch.float32)
 
-        if isinstance(labels, np.ndarray):
-            labels = labels.tolist()
+        # Draw the bounding boxes on the image
+        new_image = draw_bounding_boxes(
+            image=image,
+            boxes=boxes,
+            labels=labels,
+            colors=colors,
+            fill=fill,
+            width=width,
+            font=font,
+            font_size=font_size,
+        )
 
-        if labels is None:
-            # Match len for zipping
-            labels = [None] * len(bboxes)
-
-        for bbox, label in zip(bboxes, labels):
-            if color is not None:
-                # Draw the rectangle around the object
-                img = ImageDraw.Draw(img).rectangle(
-                    bbox,
-                    outline=color if isinstance(color, str) else color[label],
-                    width=3,
-                )
-
-            if label is not None and name is not None:
-                # Write down the label next to bbox
-                img = ImageDraw.Draw(img).text(
-                    bbox[:2],
-                    text=name if isinstance(name, str) else name.get(label, "unnamed"),
-                    fill=color if isinstance(color, str) else color.get(label, "red"),
-                    font=ImageFont.truetype("arial.ttf", 20),
-                )
-
-        return img
+        return to_pil_image(new_image)
 
     @overload
     def predict(
         self,
         image: FilePath | Image.Image | np.ndarray,
-        format: str
-        | Callable[[torch.Tensor], Default]
-        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        format: (
+            str
+            | Callable[[torch.Tensor], Default]
+            | Callable[[Image.Image, torch.Tensor], Default]
+        ) = "img",
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> Default:
-        ...
+    ) -> Default: ...
 
     @overload
     def predict(
         self,
         image: Collection[FilePath | Image.Image | np.ndarray],
-        format: str
-        | Callable[[torch.Tensor], Default]
-        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        format: (
+            str
+            | Callable[[torch.Tensor], Default]
+            | Callable[[Image.Image, torch.Tensor], Default]
+        ) = "img",
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> list[Default]:
-        ...
+    ) -> list[Default]: ...
 
     @override
     def predict(
         self,
-        image: FilePath
-        | Image.Image
-        | np.ndarray
-        | Collection[FilePath | Image.Image | np.ndarray],
-        format: Callable[[torch.Tensor], Default]
-        | Callable[[Image.Image, torch.Tensor], Default] = "img",
+        image: (
+            FilePath
+            | Image.Image
+            | np.ndarray
+            | Collection[FilePath | Image.Image | np.ndarray]
+        ),
+        format: (
+            Callable[[torch.Tensor], Default]
+            | Callable[[Image.Image, torch.Tensor], Default]
+        ) = "img",
         output_size: tuple[int, int] | None = None,
         input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:

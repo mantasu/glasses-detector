@@ -1,6 +1,11 @@
 Glasses Detector
 ================
 
+.. image:: _static/img/banner.jpg
+    :alt: Glasses Detector Banner
+    :align: center
+    :name: banner
+
 About
 -----
 

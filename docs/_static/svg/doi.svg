@@ -10,7 +10,7 @@
         </mask>
         <g mask="url(#a)">
             <path fill="#555" d="M0 0h31.375v20H0z" />
-            <path fill="#a82ee6"
+            <path fill="#ad55d9"
             d="M31.375 0h152.484375v20H31.375z"
             />
             <path fill="url(#b)" d="M0 0h183.859375v20H0z" />
@@ -19,10 +19,10 @@
         Verdana,Geneva,sans-serif" font-size="11">
             <text x="16.1875" y="15" fill="#010101"
             fill-opacity=".3">
-                DOI
+                doi
             </text>
             <text x="16.1875" y="14">
-                DOI
+                doi
             </text>
             <text x="107.1171875"
             y="15" fill="#010101" fill-opacity=".3">

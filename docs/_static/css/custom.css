@@ -1,0 +1,77 @@
+/* Adjust icon size */
+.fa-zenodo {
+    font-size: 1em;
+}
+
+/* Header setup for index.html */
+#glasses-detector h1 {
+    display: flex;
+    align-items: center;
+}
+
+/* Logo setup for index.html page header */
+#glasses-detector h1::before {
+    content: "";
+    display: inline-block;
+    height: 1.5em;
+    width: 1.5em;
+    margin-right: 10px;
+}
+
+/* Logo setup for index.html page header for dark mode */
+html[data-theme="dark"] #glasses-detector h1::before {
+    background: url("../img/logo-dark.png") no-repeat center/contain;
+}
+
+/* Logo setup for index.html page header for light mode */
+html[data-theme="light"] #glasses-detector h1::before {
+    background: url("../img/logo-light.png") no-repeat center/contain;
+}
+
+/* Adjust navbar logo size */
+img.logo__image {
+    width: 40px;
+    height: 40px;
+}
+
+/* Align the table content in the center */
+#classification-kinds td, #detection-kinds td, #segmentation-kinds td {
+    vertical-align: middle;
+}
+
+/* Adjust banner */
+#banner {
+    margin-top: 2em;
+    border-radius: 2em;
+}
+
+.toctree-wrapper {
+    /* Padding + Width */
+    padding: 1em 2em;
+    width: 100%;
+
+    /* Border Setup */
+    border-radius: 1em;
+    border-width: .25em;
+    border-style: solid;
+
+    /* Color setup (automatic for dark/light modes) */
+    background-color: var(--pst-color-on-background);
+    border: .25em solid var(--pst-color-border)
+}
+
+#index-toctree {
+    /* Multi-column Layout */
+    column-count: 2;
+}
+
+#index-toctree .toctree-l1 {
+    /* List Style */
+    padding: 0.5em 0;
+}
+
+#index-toctree .toctree-l2 {
+    /* List Style */
+    list-style-type: circle !important;
+    margin-left: 1em !important;
+}

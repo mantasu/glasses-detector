@@ -74,7 +74,7 @@ def parse_kwargs():
             "classification:eyeglasses",
             "detection",
             "detection:eyes",
-            "detection:standalone",
+            "detection:solo",
             "detection:worn",
             "segmentation",
             "segmentation:frames",
