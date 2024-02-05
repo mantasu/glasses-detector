@@ -10,5 +10,6 @@ journal: "GitHub repository"
 publisher: "GitHub"
 url: "https://github.com/mantasu/glasses-detector"
 license: "MIT"
-date-released: 2024-02
+type: software
+date-released: 2024-02-01
 doi: 10.5281/zenodo.8126101

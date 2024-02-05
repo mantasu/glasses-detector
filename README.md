@@ -8,7 +8,7 @@
 [![DOI](https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/svg/doi.svg)](https://zenodo.org/badge/latestdoi/610509640)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
-![Banner]([docs/_static/img/banner.jpg](https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/banner.jpg))
+![Banner](https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/banner.jpg)
 
 <div style="background-color: #882211; border-radius: 0.25em; padding: 0.25em 0.5em;"><b>Warning!</b> The package is currently in development and all the information here is only relevant for the future release <code>v1.0.0</code>. Details and usage of the current active release <code>v0.1.1</code> is available on the <a href="https://mantasu.github.io/glasses-detector/">documentation page</a>.</div>
 
