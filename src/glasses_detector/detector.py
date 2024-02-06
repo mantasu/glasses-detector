@@ -209,7 +209,7 @@ class GlassesDetector(BaseGlassesModel):
     DEFAULT_SIZE_MAP: ClassVar[dict[str, int]] = {
         "small": {"name": "tinydetnet_v1", "version": "v1.0.0"},
         "medium": {"name": "ssdlite320_mobilenet_v3_large", "version": "v1.0.0"},
-        "large": {"name": "fcos_resnet50_fpn", "version": "v1.0.0"},
+        "large": {"name": "fasterrcnn_resnet50_fpn_v2", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, str]] = {
@@ -283,7 +283,7 @@ class GlassesDetector(BaseGlassesModel):
 
             * :func:`~torchvision.utils.draw_bounding_boxes` for more
               details about how the bounding boxes are drawn.
-            * :func:`~torchvision.transforms.functional.to_image` for
+            * :func:`~torchvision.transforms.v2.functional.to_image` for
               more details about the expected formats if the input
               image is of type :class:`PIL.Image.Image` or
               :class:`numpy.ndarray`.
@@ -292,10 +292,10 @@ class GlassesDetector(BaseGlassesModel):
             image (PIL.Image.Image | numpy.ndarray | torch.Tensor): The
                 original image. It can be either a *PIL*
                 :class:`~PIL.Image.Image`, a *numpy*
-                :class:`~numpy.ndarray` of shape (H, W, 3) or (H, W) and
-                type :data:`~numpy.uint8` or a *torch*
-                :class:`~torch.Tensor` of shape (3, H, W) or (H, W)
-                and type :data:`~torch.uint8`.
+                :class:`~numpy.ndarray` of shape ``(H, W, 3)`` or
+                ``(H, W)`` and type :attr:`~numpy.uint8` or a *torch*
+                :class:`~torch.Tensor` of shape ``(3, H, W)`` or
+                ``(H, W)`` and type :attr:`~torch.uint8`.
             boxes (list[list[int | float]] | numpy.ndarray | torch.Tensor):
                 The bounding boxes to draw. The expected shape is
                 ``(N, 4)`` where ``N`` is the number of bounding boxes

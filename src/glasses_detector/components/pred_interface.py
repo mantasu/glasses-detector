@@ -5,10 +5,10 @@ import warnings
 from abc import ABC, abstractmethod
 from typing import Collection, Iterable, overload
 
-import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from PIL import Image
+from PIL.ImageShow import IPythonViewer, _viewers
 from tqdm import tqdm
 
 from ..utils import FilePath, flatten, is_image_file
@@ -194,16 +194,14 @@ class PredInterface(ABC):
         self,
         image: FilePath,
         **kwargs,
-    ) -> Default:
-        ...
+    ) -> Default: ...
 
     @overload
     def predict(
         self,
         image: Collection[FilePath],
         **kwargs,
-    ) -> list[Default]:
-        ...
+    ) -> list[Default]: ...
 
     @abstractmethod
     def predict(
@@ -237,8 +235,7 @@ class PredInterface(ABC):
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
-    ) -> Default | None:
-        ...
+    ) -> Default | None: ...
 
     @overload
     def process_file(
@@ -248,8 +245,7 @@ class PredInterface(ABC):
         ext: str | None = None,
         show: bool = False,
         **pred_kwargs,
-    ) -> list[Default | None]:
-        ...
+    ) -> list[Default | None]: ...
 
     def process_file(
         self,
@@ -363,12 +359,36 @@ class PredInterface(ABC):
             return [None] * len(input_paths) if is_multiple else None
 
         if show:
-            for pred in preds:
-                if isinstance(pred, Image.Image):
-                    # Show as image
-                    plt.imshow(pred)
-                    plt.axis("off")
-                    plt.show()
+            if (
+                len(_viewers) == 1
+                and isinstance(_viewers[0], IPythonViewer)
+                and not "__IPYTHON__" in globals()
+            ):
+                # Only consider IPython if runtime is IPython
+                is_viewer_available = False
+            else:
+                # Check if any viewer is available
+                is_viewer_available = len(_viewers) > 0
+
+            if (
+                any(isinstance(pred, Image.Image) for pred in preds)
+                and not is_viewer_available
+            ):
+                warnings.warn(
+                    "Cannot show images because no image viewer is available. "
+                    "Please install the backend supported by Pillow, for "
+                    "example, on Debian-based systems, you can install:\n\n"
+                    "sudo apt-get install xdg-utils\n\nThe images will be "
+                    "saved as `pred-<index>.jpg` in the current directory."
+                )
+
+            for i, pred in enumerate(preds):
+                if isinstance(pred, Image.Image) and is_viewer_available:
+                    # Show image
+                    pred.show()
+                elif not is_viewer_available:
+                    # Save image in current dir
+                    pred.save(f"pred-{i}.jpg")
                 else:
                     # To stdout
                     print(pred)

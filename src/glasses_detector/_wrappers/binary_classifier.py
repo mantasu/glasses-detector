@@ -16,7 +16,6 @@ class BinaryClassifier(pl.LightningModule):
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.lr = 1e-3
 
         # Create loss function and account for imbalance of classes
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
@@ -104,7 +103,7 @@ class BinaryClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Reduce On Plateau scheduler
-        optimizer = AdamW(self.parameters(), lr=self.lr, weight_decay=0.1)
+        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=0.1)
         scheduler = ReduceLROnPlateau(optimizer, threshold=0.01)
 
         return {

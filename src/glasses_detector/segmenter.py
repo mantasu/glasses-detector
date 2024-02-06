@@ -249,7 +249,7 @@ class GlassesSegmenter(BaseGlassesModel):
 
             * :func:`~torchvision.utils.draw_segmentation_masks` for
               more details about how the masks are drawn.
-            * :func:`~torchvision.transforms.functional.to_image` for
+            * :func:`~torchvision.transforms.v2.functional.to_image` for
               more details about the expected formats if the input
               image and the masks are of type :class:`PIL.Image.Image`
               or :class:`numpy.ndarray`.
@@ -258,19 +258,19 @@ class GlassesSegmenter(BaseGlassesModel):
             image (PIL.Image.Image | numpy.ndarray | torch.Tensor): The
                 original image. It can be either a *PIL*
                 :class:`~PIL.Image.Image`, a *numpy*
-                :class:`~numpy.ndarray` of shape (H, W, 3) or (H, W) and
-                type :data:`~numpy.uint8` or a *torch*
-                :class:`~torch.Tensor` of shape (3, H, W) or (H, W)
-                and type :data:`~torch.uint8`.
+                :class:`~numpy.ndarray` of shape ``(H, W, 3)`` or
+                ``(H, W)`` and type :attr:`~numpy.uint8` or a *torch*
+                :class:`~torch.Tensor` of shape ``(3, H, W)`` or
+                ``(H, W)`` and type :attr:`~torch.uint8`.
             masks (PIL.Image.Image | list[PIL.Image.Image] | numpy.ndarray | torch.Tensor):
                 The mask or a list of masks to draw over the image. It
                 can be either a *PIL* :class:`~PIL.Image.Image` or a
                 list of them, a *numpy* :class:`~numpy.ndarray` of shape
-                (H, W) or (N, H, W) and type :data:`~numpy.uint8` or
-                :data:`~numpy.bool`, or a *torch* :class:`~torch.Tensor`
-                of shape (H, W) or (N, H, W) and type
-                :data:`~torch.uint8` or :data:`~torch.bool`. Note: ``N``
-                is the number of masks.
+                (H, W) or (N, H, W) and type :attr:`~numpy.uint8` or
+                :class:`~numpy.bool_`, or a *torch*
+                :class:`~torch.Tensor` of shape ``(H, W)`` or
+                ``(N, H, W)`` and type :attr:`~torch.uint8` or
+                :attr:`~torch.bool`. Note: ``N`` is the number of masks.
             alpha (float, optional): Float number between ``0`` and
                 ``1`` denoting the transparency of the masks. ``0``
                 means full transparency, ``1`` means no transparency.

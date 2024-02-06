@@ -1,5 +1,7 @@
 <h1 align="center"><img src="https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/logo-dark.png" width=27px height=27px> Glasses Detector</h1>
 
+<div align="center">
+
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mantasu/glasses-detector/blob/main/notebooks/demo.ipynb)
 [![Docs](https://github.com/mantasu/glasses-detector/actions/workflows/sphinx.yaml/badge.svg)](https://mantasu.github.io/glasses-detector/)
 [![PyPI](https://img.shields.io/pypi/v/glasses-detector?color=orange)](https://pypi.org/project/glasses-detector/)
@@ -9,6 +11,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
 ![Banner](https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/banner.jpg)
+
+</div>
 
 <div style="background-color: #882211; border-radius: 0.25em; padding: 0.25em 0.5em;"><b>Warning!</b> The package is currently in development and all the information here is only relevant for the future release <code>v1.0.0</code>. Details and usage of the current active release <code>v0.1.1</code> is available on the <a href="https://mantasu.github.io/glasses-detector/">documentation page</a>.</div>
 

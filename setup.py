@@ -213,28 +213,39 @@ The following model architectures were used from [Torchvision](https://pytorch.o
 """
 
 setuptools.setup(
-    name = "glasses-detector",
-    version = "0.1.1",
-    author = "Mantas Birškus",
-    author_email = "mantix7@gmail.com",
-    license = "MIT",
-    description = f"Eyeglasses and sunglasses detector (classifier and segmenter)",
-    long_description = DESCRIPTION,
-    long_description_content_type = "text/markdown",
-    url = "https://github.com/mantasu/glasses-detector",
-    project_urls = {
+    name="glasses-detector",
+    version="1.0.0",
+    author="Mantas Birškus",
+    author_email="mantix7@gmail.com",
+    license="MIT",
+    description=f"Glasses classification, detection, and segmentation.",
+    long_description=DESCRIPTION,
+    long_description_content_type="text/markdown",
+    url="https://github.com/mantasu/glasses-detector",
+    project_urls={
         "Documentation": "https://mantasu.github.io/glasses-detector",
         "Bug Tracker": "https://github.com/mantasu/glasses-detector/issues",
     },
-    keywords = [
-        "face",
+    keywords=[
         "python",
         "pytorch",
+        "torchvision",
+        "face",
+        "eyes",
+        "transparent",
+        "opaque",
         "glasses",
-        "frames",
+        "googles",
+        "spectacles",
         "eyeglasses",
         "sunglasses",
+        "frames",
+        "lenses",
+        "legs",
+        "shadows",
         "binary",
+        "identification",
+        "identifier",
         "classification",
         "classifier",
         "segmentation",
@@ -242,28 +253,27 @@ setuptools.setup(
         "detection",
         "detector",
     ],
-    install_requires = [
+    install_requires=[
         "tqdm",
         "torch",
         "torchvision",
-        "albumentations",
     ],
-    classifiers = [
+    classifiers=[
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    package_dir = {"": "src"},
-    packages = setuptools.find_packages(where="src"),
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
     entry_points={
         "console_scripts": [
             "glasses-detector=glasses_detector.__main__:main",
         ]
     },
-    python_requires = ">=3.10"
+    python_requires=">=3.12",
 )

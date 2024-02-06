@@ -1,4 +1,5 @@
 import inspect
+import os
 import warnings
 from abc import abstractmethod
 from dataclasses import dataclass, field, fields
@@ -17,8 +18,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
+from torchvision.transforms.v2.functional import normalize, to_image
 
-from .._data import AugmenterMixin
 from ..utils import FilePath, copy_signature, eval_infer_mode, is_path_type, is_url
 from .pred_interface import PredInterface
 from .pred_type import Default
@@ -78,9 +79,9 @@ class BaseGlassesModel(PredInterface):
     device: str | torch.device = field(default="cpu", repr=False)
     model: nn.Module = field(default_factory=lambda: None, init=False, repr=False)
 
-    BASE_WEIGHTS_URL: ClassVar[
-        str
-    ] = "https://github.com/mantasu/glasses-detector/releases/download"
+    BASE_WEIGHTS_URL: ClassVar[str] = (
+        "https://github.com/mantasu/glasses-detector/releases/download"
+    )
     """
     typing.ClassVar[str]: The base URL to download the weights from.
     """
@@ -275,31 +276,34 @@ class BaseGlassesModel(PredInterface):
     def predict(
         self,
         image: FilePath | Image.Image | np.ndarray,
-        format: Callable[[Any], Default]
-        | Callable[[Image.Image, Any], Default] = lambda x: str(x),
+        format: (
+            Callable[[Any], Default] | Callable[[Image.Image, Any], Default]
+        ) = lambda x: str(x),
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> Default:
-        ...
+    ) -> Default: ...
 
     @overload
     def predict(
         self,
         image: Collection[FilePath | Image.Image | np.ndarray],
-        format: Callable[[Any], Default]
-        | Callable[[Image.Image, Any], Default] = lambda x: str(x),
+        format: (
+            Callable[[Any], Default] | Callable[[Image.Image, Any], Default]
+        ) = lambda x: str(x),
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> list[Default]:
-        ...
+    ) -> list[Default]: ...
 
     @override
     def predict(
         self,
-        image: FilePath
-        | Image.Image
-        | np.ndarray
-        | Collection[FilePath | Image.Image | np.ndarray],
-        format: Callable[[Any], Default]
-        | Callable[[Image.Image, Any], Default] = lambda x: str(x),
+        image: (
+            FilePath
+            | Image.Image
+            | np.ndarray
+            | Collection[FilePath | Image.Image | np.ndarray]
+        ),
+        format: (
+            Callable[[Any], Default] | Callable[[Image.Image, Any], Default]
+        ) = lambda x: str(x),
         input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
         """Predicts based on the model specified by the child class.
@@ -358,7 +362,8 @@ class BaseGlassesModel(PredInterface):
             Default | list[Default]: The formatted prediction or a list
             of formatted predictions if multiple images were provided.
         """
-        # Get the device from the model and init vars
+        # Init mean + std (default from albumentations) and others
+        mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
         device = next(iter(self.model.parameters())).device
         xs, preds, is_multiple = [], [], True
 
@@ -376,17 +381,23 @@ class BaseGlassesModel(PredInterface):
             original_images = []
 
         for img in image:
+            if isinstance(img, (str, bytes, os.PathLike)):
+                # Load from the path
+                img = Image.open(img)
+            elif isinstance(img, np.ndarray):
+                # Convert to PIL image
+                img = Image.fromarray(img)
+
             if require_original:
                 # Keep track of original
-                original_images.append(
-                    Image.open(img)
-                    if isinstance(img, str)
-                    else Image.fromarray(img)
-                    if isinstance(img, np.ndarray)
-                    else img
-                )
-            # Load the image and cast to device and append to batch
-            xs.append(AugmenterMixin.load_transform(img, resize=input_size).to(device))
+                original_images.append(img)
+
+            if input_size is not None:
+                # Resize the image
+                img = img.resize(input_size)
+
+            # Convert to tensor, normalize and cast to device; append
+            xs.append(normalize(to_image(img), mean=mean, std=std).to(device))
 
         with eval_infer_mode(self.model):
             # Perform forward pass without grad

@@ -23,12 +23,12 @@ build-finished:
     - "glasses_detector.classifier.GlassesClassifier.process_dir"
     - "glasses_detector.classifier.GlassesClassifier.process_file"
     - "glasses_detector.detector.GlassesDetector"
-    - "glasses_detector.detector.GlassesDetector.draw_rects"
+    - "glasses_detector.detector.GlassesDetector.draw_boxes"
     - "glasses_detector.detector.GlassesDetector.predict"
     - "glasses_detector.detector.GlassesDetector.process_dir"
     - "glasses_detector.detector.GlassesDetector.process_file"
     - "glasses_detector.segmenter.GlassesSegmenter"
-    - "glasses_detector.segmenter.GlassesSegmenter.draw_mask"
+    - "glasses_detector.segmenter.GlassesSegmenter.draw_masks"
     - "glasses_detector.segmenter.GlassesSegmenter.predict"
     - "glasses_detector.segmenter.GlassesSegmenter.process_dir"
     - "glasses_detector.segmenter.GlassesSegmenter.process_file"
@@ -42,6 +42,10 @@ build-finished:
       - "format"
     glasses_detector.segmenter.GlassesSegmenter.predict:
       - "format"
+    glasses_detector.detector.GlassesDetector.draw_boxes:
+      - "colors"
+    glasses_detector.segmenter.GlassesSegmenter.draw_masks:
+      - "colors"
 
   CUSTOM_SYNTAX_COLORS_PYTHON:
     custom-highlight-class:
