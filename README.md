@@ -1,4 +1,4 @@
-<h1 align="center"><img src="https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/logo-dark.png" width=27px height=27px> Glasses Detector</h1>
+<h1 align="center"><img src="https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/img/logo-light.png" width=27px height=27px> Glasses Detector</h1>
 
 <div align="center">
 
