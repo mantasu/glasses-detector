@@ -6,10 +6,7 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision.models.detection import (
-    fasterrcnn_mobilenet_v3_large_fpn,
     fasterrcnn_resnet50_fpn_v2,
-    fcos_resnet50_fpn,
-    retinanet_resnet50_fpn_v2,
     ssdlite320_mobilenet_v3_large,
 )
 from torchvision.transforms.v2.functional import to_image, to_pil_image
@@ -60,27 +57,27 @@ class GlassesDetector(BaseGlassesModel):
         :animate: fade-in-slide-down
         :name: Performance of the Pre-trained Detectors
 
-        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | Kind           | Size       | MSE :math:`\downarrow`  | F1 :math:`\uparrow` | R2 :math:`\uparrow`      | IoU :math:`\uparrow`    |
-        +================+============+=========================+=====================+==========================+=========================+
-        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``eyes``       | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
-        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``solo``       | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
-        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``worn``       | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
-        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        +----------------+------------+--------------------------+---------------------+--------------------------+-------------------------+
+        | Kind           | Size       | MSLE :math:`\downarrow`  | F1 :math:`\uparrow` | R2 :math:`\uparrow`      | IoU :math:`\uparrow`    |
+        +================+============+==========================+=====================+==========================+=========================+
+        |                | ``small``  | TODO                     | TODO                | TODO                     | TODO                    |
+        |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
+        | ``eyes``       | ``medium`` | TODO                     | TODO                | TODO                     | TODO                    |
+        |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                     | TODO                | TODO                     | TODO                    |
+        +----------------+------------+--------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                     | TODO                | TODO                     | TODO                    |
+        |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
+        | ``solo``       | ``medium`` | TODO                     | TODO                | TODO                     | TODO                    |
+        |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                     | TODO                | TODO                     | TODO                    |
+        +----------------+------------+--------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | TODO                     | TODO                | TODO                     | TODO                    |
+        |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
+        | ``worn``       | ``medium`` | TODO                     | TODO                | TODO                     | TODO                    |
+        |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | TODO                     | TODO                | TODO                     | TODO                    |
+        +----------------+------------+--------------------------+---------------------+--------------------------+-------------------------+
 
         **NB**: **F1 score** is useless because there is only one class,
         but is still here to emphasize this fact. Not even background is
@@ -190,9 +187,9 @@ class GlassesDetector(BaseGlassesModel):
               about the number of parameters.
 
             Defaults to ``"medium"``.
-        pretrained (bool | str | None, optional): Whether to load
-            weights from a custom URL (or a local file if they're
-            already downloaded) which will be inferred based on model's
+        weights (bool | str | None, optional): Whether to load weights
+            from a custom URL (or a local file if they're already
+            downloaded) which will be inferred based on model's
             :attr:`kind` and :attr:`size`. If a string is provided, it
             will be used as a custom path or a URL (determined
             automatically) to the model weights. Defaults to
@@ -203,7 +200,7 @@ class GlassesDetector(BaseGlassesModel):
 
     kind: str = "worn"
     size: str = "medium"
-    pretrained: bool | str | None = field(default=True, repr=False)
+    weights: bool | str | None = field(default=True, repr=False)
     task: str = field(default="detection", init=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, int]] = {
@@ -232,24 +229,6 @@ class GlassesDetector(BaseGlassesModel):
                 )
             case "fasterrcnn_resnet50_fpn_v2":
                 m = fasterrcnn_resnet50_fpn_v2(
-                    num_classes=2,
-                    box_detections_per_img=1,
-                    box_batch_size_per_image=10,
-                )
-            case "retinanet_resnet50_fpn_v2":
-                m = retinanet_resnet50_fpn_v2(
-                    num_classes=2,
-                    detections_per_img=1,
-                    topk_candidates=10,
-                )
-            case "fcos_resnet50_fpn":
-                m = fcos_resnet50_fpn(
-                    num_classes=2,
-                    detections_per_img=1,
-                    topk_candidates=10,
-                )
-            case "fasterrcnn_mobilenet_v3_large_fpn":
-                m = fasterrcnn_mobilenet_v3_large_fpn(
                     num_classes=2,
                     box_detections_per_img=1,
                     box_batch_size_per_image=10,
@@ -474,7 +453,6 @@ class GlassesDetector(BaseGlassesModel):
             ValueError: If the specified ``format`` as a string is
                 not recognized.
         """
-        #
 
         def verify_bboxes(ori: Image.Image, boxes: torch.Tensor):
             # Set output size to original size if not specified

@@ -54,7 +54,6 @@ class AugmenterMixin:
             A.CoarseDropout(max_holes=5, p=0.3),
             A.Normalize(),
             ToTensor(),
-            # ToTensorV2(),
         ]
 
     @classmethod

@@ -1,9 +1,11 @@
 import argparse
+import inspect
 import os
 
 import torch
 
 from . import GlassesClassifier, GlassesDetector, GlassesSegmenter
+from .components import BaseGlassesModel
 
 
 def parse_kwargs():
@@ -11,7 +13,7 @@ def parse_kwargs():
 
     parser.add_argument(
         "-i",
-        "--input-path",
+        "--input",
         metavar="path/to/dir/or/file",
         type=str,
         required=True,
@@ -19,7 +21,7 @@ def parse_kwargs():
     )
     parser.add_argument(
         "-o",
-        "--output-path",
+        "--output",
         metavar="path/to/dir/or/file",
         type=str,
         default=None,
@@ -41,7 +43,7 @@ def parse_kwargs():
         type=str,
         default=None,
         choices=(ch := [".txt", ".csv", ".json", ".npy", ".pkl", ".jpg", ".png"]),
-        help=f"Only used if `--output-path` is a directory. The extension to "
+        help=f"Only used if `--output` is a directory. The extension to "
         f"use to save the predictions as files. Common extensions include: "
         f"{", ".join([f"{c}" for c in ch])}. If not specified, it will be set "
         f"automatically to .jpg for image predictions and to .txt for all "
@@ -106,7 +108,7 @@ def parse_kwargs():
         metavar="<batch-size>",
         type=int,
         default=1,
-        help=f"Only used if `--input-path` is a directory. The batch size to "
+        help=f"Only used if `--input` is a directory. The batch size to "
         f"use when processing the images. This groups the files in the input "
         f"directory to batches of size `batch_size` before processing them. "
         f"In some cases, larger batch sizes can speed up the processing at "
@@ -118,14 +120,14 @@ def parse_kwargs():
         type=str,
         metavar="<pbar-desc>",
         default="Processing",
-        help=f"Only used if `--input-path` is a directory. It is the "
+        help=f"Only used if `--input` is a directory. It is the "
         f"description that is used for the progress bar. If specified "
         f"as '' (empty string), no progress bar is shown. Defaults to "
         f"'Processing'.",
     )
     parser.add_argument(
         "-w",
-        "--weights-path",
+        "--weights",
         metavar="path/to/weights.pth",
         type=str,
         default=None,
@@ -146,13 +148,17 @@ def parse_kwargs():
 
     return vars(parser.parse_args())
 
-def prepare_kwargs(kwargs):
+def prepare_kwargs(kwargs: dict[str, str | int | None]):
     # Define the keys to use when calling process and init methods
-    process_keys = ["is_file", "input_path", "output_path", "ext", "batch_size", "show", "pbar"]
-    model_keys = ["task", "kind", "size", "pretrained", "device"]
+    model_keys = inspect.getfullargspec(BaseGlassesModel.__init__).args
+    process_keys = [key for key in kwargs.keys() if key not in model_keys]
+    process_keys += ["ext", "show", "is_file", "input_path", "output_path"]
 
     # Add "is_file" key to check which process method to call
-    kwargs["is_file"] = os.path.splitext(kwargs["input_path"])[-1] != ""
+    kwargs["is_file"] = os.path.splitext(kwargs["input"])[-1] != ""
+    kwargs["ext"] = kwargs.pop("extension")
+    kwargs["input_path"] = kwargs.pop("input")
+    kwargs["output_path"] = kwargs.pop("output")
 
     if not kwargs["is_file"] and kwargs["output_path"] is None:
         # Input is a directory but no output path is specified
@@ -171,9 +177,15 @@ def prepare_kwargs(kwargs):
         kwargs["task"] = splits[0]
         kwargs["kind"] = splits[1]
     
-    if kwargs["weights_path"] is not None:
-        # Custom weights path is specified
-        kwargs["pretrained"] = kwargs["weights_path"]
+    if kwargs["format"] is None and kwargs["task"] == "classification":
+        # Default format for classification
+        kwargs["format"] = "str"
+    elif kwargs["format"] is None and kwargs["task"] == "detection":
+        # Default format for detection
+        kwargs["format"] = "img"
+    elif kwargs["format"] is None and kwargs["task"] == "segmentation":
+        # Default format for segmentation
+        kwargs["format"] = "mask"
     
     if kwargs["device"] is None and torch.cuda.is_available():
         # CUDA device is available

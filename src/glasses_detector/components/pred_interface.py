@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from typing import Collection, Iterable, overload
 
 import numpy as np
-import yaml
 from PIL import Image
 from PIL.ImageShow import IPythonViewer, _viewers
 from tqdm import tqdm
@@ -113,7 +112,7 @@ class PredInterface(ABC):
                 return pred
             elif isinstance(pred, dict):
                 # Stack to single 2D matrix (flatten lists)
-                names_col = np.array(pred.keys())[:, None]
+                names_col = np.array(list(pred.keys()))[:, None]
                 vals_cols = np.stack(
                     [
                         np.atleast_1d(flatten(PredType.standardize(v)))
@@ -124,8 +123,11 @@ class PredInterface(ABC):
             else:
                 return np.array(PredType.standardize(pred))
 
-        # Make the directory to save the file to and get ext
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        if (dirname := os.path.dirname(filepath)) != "":
+            # Directory to save the pred file to
+            os.makedirs(dirname, exist_ok=True)
+
+        # Get the extension of the file
         ext = os.path.splitext(filepath)[1]
 
         match ext:
@@ -135,18 +137,25 @@ class PredInterface(ABC):
                         f.write(str(pred))
                 else:
                     # Save to .txt each row has image name and pred values
-                    np.savetxt(filepath, _as_numpy(pred), delimiter=" ")
+                    np.savetxt(filepath, _as_numpy(pred), fmt="%s", delimiter=" ")
             case ".csv":
                 if PredType.is_scalar(pred):
                     with open(filepath, "w") as f:
                         f.write(str(pred))
                 else:
                     # Save to .csv each row has image name and pred values
-                    np.savetxt(filepath, _as_numpy(pred), delimiter=",")
+                    np.savetxt(filepath, _as_numpy(pred), fmt="%s", delimiter=",")
             case ".json":
                 with open(filepath, "w") as f:
                     json.dump(_standardize(pred), f)
             case ".yml" | ".yaml":
+                try:
+                    import yaml
+                except ImportError:
+                    raise ImportError(
+                        "PyYAML is required to save predictions to YAML files. "
+                        "Please install it using `pip install pyyaml`."
+                    )
                 with open(filepath, "w") as f:
                     yaml.dump(_standardize(pred), f)
             case ".pkl":
@@ -352,20 +361,22 @@ class PredInterface(ABC):
         try:
             # Predict using the child method by passing the image paths
             preds = self.predict(safe_paths, **pred_kwargs)
-            preds = [preds.pop() if p in safe_paths else None for p in input_paths]
+            preds = [preds.pop(0) if p in safe_paths else None for p in input_paths]
         except Exception as e:
             # Raise a warning if prediction failed and return None
             warnings.warn(f"Prediction failed for {input_paths}. Skipping...\n{e}")
             return [None] * len(input_paths) if is_multiple else None
 
         if show:
-            if (
-                len(_viewers) == 1
-                and isinstance(_viewers[0], IPythonViewer)
-                and not "__IPYTHON__" in globals()
-            ):
-                # Only consider IPython if runtime is IPython
-                is_viewer_available = False
+
+            if len(_viewers) == 1 and isinstance(_viewers[0], IPythonViewer):
+                try:
+                    from IPython import get_ipython
+
+                    # Only consider IPython if runtime is IPython
+                    is_viewer_available = get_ipython() is not None
+                except ImportError:
+                    is_viewer_available = False
             else:
                 # Check if any viewer is available
                 is_viewer_available = len(_viewers) > 0
@@ -377,21 +388,21 @@ class PredInterface(ABC):
                 warnings.warn(
                     "Cannot show images because no image viewer is available. "
                     "Please install the backend supported by Pillow, for "
-                    "example, on Debian-based systems, you can install:\n\n"
+                    "example, on Debian-based systems, you can install:\n\n\t"
                     "sudo apt-get install xdg-utils\n\nThe images will be "
                     "saved as `pred-<index>.jpg` in the current directory."
                 )
 
             for i, pred in enumerate(preds):
-                if isinstance(pred, Image.Image) and is_viewer_available:
-                    # Show image
-                    pred.show()
-                elif not is_viewer_available:
-                    # Save image in current dir
-                    pred.save(f"pred-{i}.jpg")
-                else:
+                if not isinstance(pred, Image.Image):
                     # To stdout
                     print(pred)
+                elif is_viewer_available:
+                    # Show image
+                    pred.show()
+                else:
+                    # Save image in current dir
+                    pred.save(f"pred-{i}.jpg")
 
         if output_path is None:
             # Output is None or a single file for multiple inputs
@@ -439,7 +450,7 @@ class PredInterface(ABC):
 
         if (
             is_multiple
-            and isinstance(output_path, FilePath)
+            and isinstance(output_path, (str, bytes, os.PathLike))
             and os.path.splitext(output_path)[1] != ""
         ):
             # Output path is a single file for multiple inputs

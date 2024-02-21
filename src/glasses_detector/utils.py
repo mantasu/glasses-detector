@@ -15,7 +15,7 @@ import functools
 import imghdr
 import os
 import typing
-from typing import Any, Callable, Iterable, TypeGuard, overload
+from typing import Any, Callable, Concatenate, Iterable, TypeGuard, overload
 from urllib.parse import urlparse
 
 import torch
@@ -54,6 +54,53 @@ class copy_signature[F]:
     def __init__(self, target: F) -> None: ...
 
     def __call__(self, wrapped: Callable[..., Any]) -> F: ...
+
+
+def copy_method_signature[
+    **P, T
+](source: Callable[Concatenate[Any, P], T]) -> Callable[
+    [Callable], Callable[Concatenate[Any, P], T]
+]:
+    """Decorator to copy a method's signature.
+
+    This decorator takes a class method and copies its signature to the
+    decorated method. This is useful when you want to copy the
+    signature of a method to a wrapper method.
+
+    Example
+    -------
+
+    .. code-block:: python
+
+        def full_signature(x: bool, *extra: int) -> str: ...
+
+        @copy_method_signature(full_signature)
+        def test_signature(*args, **kwargs):
+            return full_signature(*args, **kwargs)
+
+        reveal_type(test_signature)  # 'def (x: bool, *extra: int) -> str'
+
+    .. seealso::
+
+        https://github.com/python/typing/issues/270#issuecomment-1344537820
+
+    Args:
+        source (typing.Callable[typing.Concatenate[typing.Any, P], T]):
+            The method whose signature to copy.
+
+    Returns:
+        typing.Callable[[typing.Callable], typing.Callable[typing.Concatenate[typing.Any, P], T]]:
+            The decorator to copy the signature.
+    """
+
+    def wrapper(target: Callable) -> Callable[Concatenate[Any, P], T]:
+        @functools.wraps(source)
+        def wrapped(self, *args: P.args, **kwargs: P.kwargs) -> T:
+            return target(self, *args, **kwargs)
+
+        return wrapped
+
+    return wrapper
 
 
 class eval_infer_mode:

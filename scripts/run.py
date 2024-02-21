@@ -89,7 +89,7 @@ class RunCLI(LightningCLI):
         )
         parser.add_argument(
             "-w",
-            "--weights-path",
+            "--weights",
             metavar="path/to/weights",
             type=str | None,
             default=None,
@@ -121,7 +121,7 @@ class RunCLI(LightningCLI):
         parser.link_arguments("size", "model.size", apply_on="parse")
         parser.link_arguments("batch_size", "model.batch_size", apply_on="parse")
         parser.link_arguments("num_workers", "model.num_workers", apply_on="parse")
-        parser.link_arguments("weights_path", "model.weights_path", apply_on="parse")
+        parser.link_arguments("weights", "model.weights", apply_on="parse")
 
     def before_fit(self):
         if self.config.fit.checkpoint.filename is None:
@@ -158,7 +158,7 @@ def create_wrapper_callback(
     size: str = "medium",
     batch_size: int = 64,
     num_workers: int = 8,
-    weights_path: str | None = None,
+    weights: str | None = None,
 ) -> pl.LightningModule:
     
     # Get task and kind
@@ -190,7 +190,7 @@ def create_wrapper_callback(
         wrapper_cls = BinarySegmenter
 
     # Initialize model architecture and load weights if needed
-    model = model_cls(kind=kind, size=size, pretrained=weights_path).model
+    model = model_cls(kind=kind, size=size, weights=weights).model
 
     return wrapper_cls(model, *data_cls.create_loaders(**kwargs))
 

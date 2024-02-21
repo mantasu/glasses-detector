@@ -4,13 +4,14 @@ from typing import Callable, ClassVar, Collection, overload, override
 import numpy as np
 import torch
 import torch.nn as nn
-from PIL import Image
-from torchvision.models import efficientnet_v2_s, shufflenet_v2_x1_0
+from PIL import Image, ImageDraw, ImageFont
+from torchvision.models import efficientnet_b4, shufflenet_v2_x1_0
+from torchvision.transforms.v2.functional import to_pil_image
 
 from .architectures import TinyBinaryClassifier
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
-from .utils import FilePath, copy_signature
+from .utils import FilePath, copy_method_signature
 
 
 @dataclass
@@ -66,7 +67,7 @@ class GlassesClassifier(BaseGlassesModel):
         +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
         | ``medium``     | :func:`~torchvision.models.shufflenet_v2_x1_0` :cite:p:`ma2018shufflenet`            | TODO                      | TODO                      | TODO                      | TODO                        |
         +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
-        | ``large``      | :func:`~torchvision.models.efficientnet_v2_s` :cite:p:`tan2021efficientnetv2`        | TODO                      | TODO                      | TODO                      | TODO                        |
+        | ``large``      | :func:`~torchvision.models.efficientnet_b4` :cite:p:`tan2019efficientnet`            | TODO                      | TODO                      | TODO                      | TODO                        |
         +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
 
     Examples
@@ -87,7 +88,7 @@ class GlassesClassifier(BaseGlassesModel):
     .. code-block:: python
 
         >>> clf(np.random.randint(0, 256, size=(224, 224, 3), dtype=np.uint8))
-        'not_present'
+        'absent'
         >>> clf(["path/to/image1.jpg", "path/to/image2.jpg"], format="bool")
         [True, False]
 
@@ -110,7 +111,7 @@ class GlassesClassifier(BaseGlassesModel):
         >>> clf.process_dir("path/to/dir", "path/to/preds.csv", format="str")
         >>> subprocess.run(["cat", "path/to/preds.csv"])
         path/to/dir/img1.jpg,present
-        path/to/dir/img2.jpg,not_present
+        path/to/dir/img2.jpg,absent
         ...
         >>> clf.process_dir("path/to/dir", "path/to/pred_dir", ext=".txt")
         >>> subprocess.run(["ls", "path/to/pred_dir"])
@@ -157,9 +158,9 @@ class GlassesClassifier(BaseGlassesModel):
               about the number of parameters.
 
             Defaults to ``"medium"``.
-        pretrained (bool | str | None, optional): Whether to load
-            weights from a custom URL (or a local file if they're
-            already downloaded) which will be inferred based on model's
+        weights (bool | str | None, optional): Whether to load weights
+            from a custom URL (or a local file if they're already
+            downloaded) which will be inferred based on model's
             :attr:`kind` and :attr:`size`. If a string is provided, it
             will be used as a custom path or a URL (determined
             automatically) to the model weights. Defaults to
@@ -167,15 +168,16 @@ class GlassesClassifier(BaseGlassesModel):
         device (str | torch.device, optional): Device to cast the model
             (once it is loaded) to. Defaults to ``"cpu"``.
     """
+
     kind: str = "anyglasses"
     size: str = "medium"
-    pretrained: bool | str | None = field(default=True, repr=False)
+    weights: bool | str | None = field(default=True, repr=False)
     task: str = field(default="classification", init=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinyclsnet_v1", "version": "v1.0.0"},
         "medium": {"name": "shufflenet_v2_x1_0", "version": "v1.0.0"},
-        "large": {"name": "efficientnet_v2_s", "version": "v1.0.0"},
+        "large": {"name": "efficientnet_b4", "version": "v1.0.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
@@ -193,13 +195,48 @@ class GlassesClassifier(BaseGlassesModel):
             case "shufflenet_v2_x1_0":
                 m = shufflenet_v2_x1_0()
                 m.fc = nn.Linear(1024, 1)
-            case "efficientnet_v2_s":
-                m = efficientnet_v2_s()
-                m.classifier = nn.Linear(1280, 1)
+            case "efficientnet_b4":
+                m = efficientnet_b4(num_classes=1)
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 
         return m
+
+    @staticmethod
+    def draw_label(
+        image: Image.Image | np.ndarray | torch.Tensor,
+        label: str,
+        font: str | None = None,
+        font_size: int = 15,
+    ) -> Image.Image:
+        if isinstance(image, torch.Tensor):
+            # Convert tensor to PIL image
+            image = to_pil_image(image)
+
+        if isinstance(image, np.ndarray):
+            # Convert ndarray to PIL image
+            image = Image.fromarray(image)
+
+        if font is None:
+            # Use the default system font
+            font = ImageFont.load_default()
+        else:
+            # Use the specified font with the specified font size
+            font = ImageFont.truetype(font=font, size=font_size)
+
+        # Create a new image with extra space for the title
+        new_image = Image.new("RGB", (image.width, image.height + 2 * font_size))
+        new_image.paste(image)
+
+        # Draw the title
+        draw = ImageDraw.Draw(new_image)
+        _, _, text_width, text_height = font.getbbox(label, font=font)
+
+        x = (new_image.width - text_width) / 2
+        y = image.height + (font_size * 2 - text_height) / 2
+        draw.text((x, y), label, font=font, fill="white")
+
+        return new_image
 
     @overload
     def predict(
@@ -207,8 +244,7 @@ class GlassesClassifier(BaseGlassesModel):
         image: FilePath | Image.Image | np.ndarray,
         format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> Default:
-        ...
+    ) -> Default: ...
 
     @overload
     def predict(
@@ -216,16 +252,17 @@ class GlassesClassifier(BaseGlassesModel):
         image: Collection[FilePath | Image.Image | np.ndarray],
         format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
         input_size: tuple[int, int] | None = (256, 256),
-    ) -> list[Default]:
-        ...
+    ) -> list[Default]: ...
 
     @override
     def predict(
         self,
-        image: FilePath
-        | Image.Image
-        | np.ndarray
-        | Collection[FilePath | Image.Image | np.ndarray],
+        image: (
+            FilePath
+            | Image.Image
+            | np.ndarray
+            | Collection[FilePath | Image.Image | np.ndarray]
+        ),
         format: str | dict[bool, Default] | Callable[[torch.Tensor], Default] = "str",
         input_size: tuple[int, int] | None = (256, 256),
     ) -> Default | list[Default]:
@@ -262,19 +299,21 @@ class GlassesClassifier(BaseGlassesModel):
                 a :class:`~typing.Collection`, then the output will be a
                 :class:`lis` of corresponding items of **output type**):
 
-                +------------+---------------------+------------------------------------------------------------+
-                | **format** | **output type**     | **prediction mapping**                                     |
-                +============+=====================+============================================================+
-                | ``"bool"`` | :class:`bool`       | :data:`True` if positive, :data:`False` if negative        |
-                +------------+---------------------+------------------------------------------------------------+
-                | ``"int"``  | :class:`int`        | ``1`` if positive, ``0`` if negative                       |
-                +------------+---------------------+------------------------------------------------------------+
-                | ``"str"``  | :class:`str`        | ``"present"`` if positive, ``"not_present"`` if negative   |
-                +------------+---------------------+------------------------------------------------------------+
-                | ``"logit"``| :class:`float`      | Raw score (real number) of a positive class                |
-                +------------+---------------------+------------------------------------------------------------+
-                | ``"proba"``| :class:`float`      | Probability (a number between 0 and 1) of a positive class |
-                +------------+---------------------+------------------------------------------------------------+
+                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+                | **format**  | **output type**          | **prediction mapping**                                                                                                            |
+                +=============+==========================+===================================================================================================================================+
+                | ``"bool"``  | :class:`bool`            | :data:`True` if positive, :data:`False` if negative                                                                               |
+                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+                | ``"int"``   | :class:`int`             | ``1`` if positive, ``0`` if negative                                                                                              |
+                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+                | ``"str"``   | :class:`str`             | ``"present"`` if positive, ``"absent"`` if negative                                                                               |
+                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+                | ``"logit"`` | :class:`float`           | Raw score (real number) of a positive class                                                                                       |
+                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+                | ``"proba"`` | :class:`float`           | Probability (a number between 0 and 1) of a positive class                                                                        |
+                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+                | ``"img"``   | :class:`PIL.Image.Image` | The original image with an inserted title using default values in :meth:`draw_label` (title text corresponds to ``"str"`` format) |
+                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
 
                 It is also possible to provide a dictionary with 2 keys:
                 :data:`True` and :data:`False`, each mapping to values
@@ -307,11 +346,15 @@ class GlassesClassifier(BaseGlassesModel):
                 case "int":
                     format = {True: 1, False: 0}
                 case "str":
-                    format = {True: "present", False: "not_present"}
+                    format = {True: "present", False: "absent"}
                 case "logit":
                     format = lambda x: x.item()
                 case "proba":
                     format = lambda x: x.sigmoid().item()
+                case "img":
+                    format = lambda img, x: self.draw_label(
+                        img, "present" if (x > 0).item() else "absent"
+                    )
                 case _:
                     raise ValueError(f"Invalid format: {format}")
 
@@ -326,6 +369,6 @@ class GlassesClassifier(BaseGlassesModel):
         return super().forward(x)
 
     @override
-    @copy_signature(predict)
+    @copy_method_signature(predict)
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)

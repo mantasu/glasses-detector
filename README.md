@@ -20,11 +20,11 @@
 
 ## About
 
-Package for processing images with different types of glasses and their parts. It provides a quick way to use the pre-trained models for **3** kinds of tasks, each being divided to multiple categories, for instance, *classification of sunglasses* or *segmentation of glasses frames*:
+Package for processing images with different types of glasses and their parts. It provides a quick way to use the pre-trained models for **3** kinds of tasks, each being divided to multiple categories, for instance, *classification of sunglasses* or *segmentation of glasses frames*.
 
-* **Classification**: transparent, sunglasses, any glasses
-* **Detection**: solo, worn, eye-area
-* **Segmentation**: frames, lenses, legs, shadows, full, hybrid
+| **Classification**       | **Detection**              | **Segmentation**                            |
+| ------------------------ | -------------------------- | ------------------------------------------- |
+| Transparent, opaque, any | Worn, standalone, eye-area | Full, frames, hybrid, legs, lenses, shadows |
 
 > **Note**: refer to [Glasses Detector Features](https://mantasu.github.io/glasses-detector/docs/features.html) for visual examples.
 
@@ -146,7 +146,7 @@ After processing all the datasets, your `data` directory should have the followi
     │
     ├── detection
     │   ├── eyes            <- Datasets with bounding boxes for eye area 
-    │   ├── standalone      <- Datasets with bounding boxes for standalone glasses
+    │   ├── solo            <- Datasets with bounding boxes for standalone glasses
     │   └── worn            <- Datasets with bounding boxes for worn glasses
     │
     └── segmentation
@@ -216,7 +216,7 @@ The table below shows which datasets are used for which tasks and their categori
 | Classification | `eyeglasses` | `2`, `4`, `5`, `6`, `10`, `11`, `12`, `13`, `14`           |
 | Classification | `sunglasses` | `1`, `2`, `3`, `4`, `5`, `6`, `10`, `11`, `12`, `13`, `14` |
 | Detection      | `eyes`       | `13`, `14`, `15`, `16`                                     |
-| Detection      | `standalone` | `17`, `18`                                                 |
+| Detection      | `solo`       | `17`, `18`                                                 |
 | Detection      | `worn`       | `10`, `11`, `12`, `13`, `14`, `15`                         |
 | Segmentation   | `frames`     | `20`, `22`                                                 |
 | Segmentation   | `full`       | `19`, `26`, `27`                                           |

@@ -18,9 +18,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
-from torchvision.transforms.v2.functional import normalize, to_image
+from torchvision.transforms.v2.functional import normalize, to_dtype, to_image
 
-from ..utils import FilePath, copy_signature, eval_infer_mode, is_path_type, is_url
+from ..utils import (
+    FilePath,
+    copy_method_signature,
+    eval_infer_mode,
+    is_path_type,
+    is_url,
+)
 from .pred_interface import PredInterface
 from .pred_type import Default
 
@@ -61,12 +67,12 @@ class BaseGlassesModel(PredInterface):
             :meth:`model_info`.
         size (str): The size of the model. Used to access
             :meth:`model_info`.
-        pretrained (bool | str | None, optional): Whether to load
-            weights from a custom URL (or local file if they're already
+        weights (bool | str | None, optional): Whether to load weights
+            from a custom URL (or local file if they're already
             downloaded) which will be inferred based on model's
             :attr:`task`, :attr:`kind`, and :attr:`size`. If a string
             is provided, it will be used as a path or a URL (determined
-            automatically) to the model weights. Defaults to
+            automatically) to the model weights. Defaults to pretrained
             :data:`False`.
         device (str | torch.device, optional): Device to cast the model
             (once it is loaded) to. Defaults to ``"cpu"``.
@@ -75,7 +81,7 @@ class BaseGlassesModel(PredInterface):
     task: str
     kind: str
     size: str
-    pretrained: bool | str | None = field(default=False, repr=False)
+    weights: bool | str | None = field(default=False, repr=False)
     device: str | torch.device = field(default="cpu", repr=False)
     model: nn.Module = field(default_factory=lambda: None, init=False, repr=False)
 
@@ -146,9 +152,9 @@ class BaseGlassesModel(PredInterface):
             message = f"Model structure named {model_name} does not exist. "
             self._model_init_warning(message=message)
 
-        if self.pretrained:
-            # Load weights if pretrained is True or a path
-            self.load_weights(path_or_url=self.pretrained)
+        if self.weights:
+            # Load weights if True or path is specified
+            self.load_weights(path_or_url=self.weights)
 
         # Cast to device
         self.model.to(self.device)
@@ -248,8 +254,8 @@ class BaseGlassesModel(PredInterface):
         kwargs.setdefault("device", device := next(iter(model.parameters())).device)
 
         # Weights will be handled after instantiation
-        pretrained = kwargs.get("pretrained", False)
-        kwargs["pretrained"] = False
+        weights = kwargs.get("weights", False)
+        kwargs["weights"] = False
 
         # Filter out the arguments that are not for the model init
         is_init = {f.name: f.init for f in fields(cls)}
@@ -263,9 +269,9 @@ class BaseGlassesModel(PredInterface):
         # Assign the actual model
         glasses_model.model = model
 
-        if pretrained := kwargs.get("pretrained", False):
-            # Load weights if `pretrained` is True or a path
-            glasses_model.load_weights(path_or_url=pretrained)
+        if weights := kwargs.get("weights", False):
+            # Load weights if `weights` is True or a path
+            glasses_model.load_weights(path_or_url=weights)
 
         # Cast to device
         glasses_model.model.to(device)
@@ -382,11 +388,11 @@ class BaseGlassesModel(PredInterface):
 
         for img in image:
             if isinstance(img, (str, bytes, os.PathLike)):
-                # Load from the path
-                img = Image.open(img)
+                # Load from the path and ensure RGB
+                img = Image.open(img).convert("RGB")
             elif isinstance(img, np.ndarray):
-                # Convert to PIL image
-                img = Image.fromarray(img)
+                # Convert to PIL image and ensure RGB
+                img = Image.fromarray(img).convert("RGB")
 
             if require_original:
                 # Keep track of original
@@ -396,12 +402,13 @@ class BaseGlassesModel(PredInterface):
                 # Resize the image
                 img = img.resize(input_size)
 
-            # Convert to tensor, normalize and cast to device; append
-            xs.append(normalize(to_image(img), mean=mean, std=std).to(device))
+            # Convert to tensor, normalize; add to xs
+            x = to_dtype(to_image(img), scale=True)
+            xs.append(normalize(x, mean=mean, std=std))
 
         with eval_infer_mode(self.model):
-            # Perform forward pass without grad
-            pred = self.forward(torch.stack(xs))
+            # Stack and cast to device; perform forward pass
+            pred = self.forward(torch.stack(xs).to(device))
 
         for i, pred in enumerate(pred):
             if require_original:
@@ -534,6 +541,6 @@ class BaseGlassesModel(PredInterface):
             f"using `GlassesModel.create_model` and assign it."
         )
 
-    @copy_signature(predict)
+    @copy_method_signature(predict)
     def __call__(self, *args, **kwargs):
         return self.predict(*args, **kwargs)

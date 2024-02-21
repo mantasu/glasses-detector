@@ -103,8 +103,14 @@ class BinaryClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         # Initialize AdamW optimizer and Reduce On Plateau scheduler
-        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=0.1)
-        scheduler = ReduceLROnPlateau(optimizer, threshold=0.01)
+        optimizer = AdamW(self.parameters(), lr=1e-3, weight_decay=1e-3)
+        scheduler = ReduceLROnPlateau(
+            optimizer=optimizer,
+            factor=0.3,
+            patience=15,
+            threshold=0.01,
+            min_lr=1e-6,
+        )
 
         return {
             "optimizer": optimizer,

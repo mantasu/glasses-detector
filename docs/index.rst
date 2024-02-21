@@ -15,6 +15,12 @@ Package for processing images with different types of glasses and their parts. I
 * **Detection**: solo, worn, eye-area
 * **Segmentation**: frames, lenses, legs, shadows, full, smart
 
++--------------------------+----------------------------+---------------------------------------------+
+| Classification           | Detection                  | Segmentation                                |
++==========================+============================+=============================================+
+| Transparent, opaque, any | Worn, standalone, eye-area | Full, frames, hybrid, legs, lenses, shadows |
++--------------------------+----------------------------+---------------------------------------------+
+
 The processing can be launched via the command line or written in a *Python* script. Based on the selected task, an image or a directory of images will be processed and corresponding predictions, e.g., labels or masks, will be generated.
 
 .. seealso:: 

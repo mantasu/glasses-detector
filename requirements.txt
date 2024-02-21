@@ -1,7 +1,9 @@
 tqdm
 torch
 scipy
+pyyaml
 rarfile
+ipython
 pycocotools
 torchvision
 albumentations
