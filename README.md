@@ -28,9 +28,11 @@ Package for processing images with different types of glasses and their parts. I
 
 <div align="center">
 
-| Classification                                                        | Detection                                                      | Segmentation                                                                                                        |
-| --------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| :eyeglasses: _transparent_ :dark_sunglasses: _opaque_ :goggles: _any_ | :nerd_face: _worn_ :eyeglasses: _standalone_ :eyes: _eye-area_ | :eyeglasses: _full_ :framed_picture: _frames_ :mechanical_leg: _legs_ :mag: _lenses_ :bust_in_silhouette: _shadows_ |
+<table align="center"><tbody>
+    <tr><td><strong>Classification</string></td> <td> :eyeglasses: <em>transparent</em> :dark_sunglasses: <em>opaque</em> :goggles: <em>any</em> </td></tr>
+    <tr><td><strong>Detection</string></td> <td> :nerd_face: <em>worn</em> :eyeglasses:  <em>standalone</em> :eyes: <em>eye-area</em></td></tr>
+    <tr><td><strong>Segmentation</string></td> <td> :eyeglasses: <em>full</em> :framed_picture: <em>frames</em> :mechanical_leg: <em>legs</em> :mag: <em>lenses</em> :bust_in_silhouette: <em>shadows</em></td></tr>
+</tbody></table>
 
 $\color{gray}{\textit{Note: }\text{refer to}}$ [Glasses Detector Features](https://mantasu.github.io/glasses-detector/docs/features.html) $\color{gray}{\text{for visual examples.}}$
 
