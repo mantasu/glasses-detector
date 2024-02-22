@@ -14,33 +14,42 @@
 
 </div>
 
-<div style="background-color: #882211; border-radius: 0.25em; padding: 0.25em 0.5em;"><b>Warning!</b> The package is currently in development and all the information here is only relevant for the future release <code>v1.0.0</code>. Details and usage of the current active release <code>v0.1.1</code> is available on the <a href="https://mantasu.github.io/glasses-detector/">documentation page</a>.</div>
+> [!caution]
+> The package is currently in development and all the information here is only relevant for the future release <code>v1.0.0</code>. Details and usage of the current active release <code>v0.1.1</code> are available on the <a href="https://mantasu.github.io/glasses-detector/">documentation page</a>.
 
-> **Note**: The main branch is in development - do not clone it yet, instead, clone the [latest release](https://github.com/mantasu/glasses-detector/releases/tag/v0.1.1) for now.
+> [!warning]  
+> The main branch is in development - do not clone it yet, instead, clone the [latest release](https://github.com/mantasu/glasses-detector/releases/tag/v0.1.1) for now.
 
 ## About
 
-Package for processing images with different types of glasses and their parts. It provides a quick way to use the pre-trained models for **3** kinds of tasks, each being divided to multiple categories, for instance, *classification of sunglasses* or *segmentation of glasses frames*.
+Package for processing images with different types of glasses and their parts. It provides a quick way to use the pre-trained models for **3** kinds of tasks, each divided into multiple categories, for instance, *classification of sunglasses* or *segmentation of glasses frames*.
 
-| **Classification**       | **Detection**              | **Segmentation**                            |
-| ------------------------ | -------------------------- | ------------------------------------------- |
-| Transparent, opaque, any | Worn, standalone, eye-area | Full, frames, hybrid, legs, lenses, shadows |
+<br>
 
-> **Note**: refer to [Glasses Detector Features](https://mantasu.github.io/glasses-detector/docs/features.html) for visual examples.
+<div align="center">
+
+| Classification                                                        | Detection                                                      | Segmentation                                                                                                        |
+| --------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| :eyeglasses: _transparent_ :dark_sunglasses: _opaque_ :goggles: _any_ | :nerd_face: _worn_ :eyeglasses: _standalone_ :eyes: _eye-area_ | :eyeglasses: _full_ :framed_picture: _frames_ :mechanical_leg: _legs_ :mag: _lenses_ :bust_in_silhouette: _shadows_ |
+
+$\color{gray}{\textit{Note: }\text{refer to}}$ [Glasses Detector Features](https://mantasu.github.io/glasses-detector/docs/features.html) $\color{gray}{\text{for visual examples.}}$
+
+</div>
 
 ## Installation
 
-Minimum version of [Python 3.12](https://www.python.org/downloads/release/python-3120/) is required. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) (select *Nightly*) in advance to enable GPU support for your device.
+> [!IMPORTANT]
+> Minimum version of [Python 3.12](https://www.python.org/downloads/release/python-3120/) is required. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) (select *Nightly* for compatibility) in advance to select specific configuration for your device and environment.
 
 ### Pip Package
 
-If you only need the library with pre-trained models, just install the [pip package](https://pypi.org/project/glasses-detector/) and see _Quick Start_ for usage (also check [Glasses Detector Installation](https://mantasu.github.io/glasses-detector/docs/features.html) for more details):
+If you only need the library with pre-trained models, just install the [pip package](https://pypi.org/project/glasses-detector/) and see **Quick Start** for usage (also check [Glasses Detector Installation](https://mantasu.github.io/glasses-detector/docs/features.html) for more details):
 
 ```bash
 pip install glasses-detector
 ```
 
-You can also install it from source:
+You can also install it from the source:
 
 ```bash
 git clone https://github.com/mantasu/glasses-detector
@@ -49,7 +58,7 @@ cd glasses-detector && pip install .
 
 ### Local Project
 
-If you want to train your own models on the given datasets (or on some other datasets), just clone the project and install training requirements, then see _Running_ section to see how to run training and testing.
+If you want to train your own models on the given datasets (or on some other datasets), just clone the project and install training requirements, then see **Running** section to see how to run training and testing.
 
 ```bash
 git clone https://github.com/mantasu/glasses-detector
@@ -63,7 +72,7 @@ conda create -n glasses-detector python=3.12
 conda activate glasses-detector 
 ```
 
-To set-up the datasets, refer to _Data_ section.
+> To set-up the datasets, refer to **Data** section.
 
 ## Quick Start
 
@@ -76,7 +85,8 @@ glasses-detector -i path/to/img.jpg -t classification -d cuda -f int # Prints 1 
 glasses-detector -i path/to/img_dir -t segmentation -f mask -e .jpg  # Generates masks
 ```
 
-> **Note**: you can also specify things like `--output-path`, `--size`, `--batch-size` etc. Check the [Glasses Detector CLI](https://mantasu.github.io/glasses-detector/docs/cli.html) and [Command Line Examples](https://mantasu.github.io/glasses-detector/docs/examples.html#command-line) for more details.
+> [!TIP]
+> You can also specify things like `--output-path`, `--size`, `--batch-size` etc. Check the [Glasses Detector CLI](https://mantasu.github.io/glasses-detector/docs/cli.html) and [Command Line Examples](https://mantasu.github.io/glasses-detector/docs/examples.html#command-line) for more details.
 
 ### Python Script
 
@@ -100,7 +110,8 @@ detector = GlassesDetector(kind="eyes", device="cuda")
 detector.process_dir("path/to/dir", ext=".txt", batch_size=64)
 ```
 
-> **Note**: again, there are a lot more things that can be specified, for instance, `output_size` and `pbar`. It is also possible to directly output the results or save them in a variable. See [Glasses Detector API](https://mantasu.github.io/glasses-detector/docs/api.html) and [Python Script Examples](https://mantasu.github.io/glasses-detector/docs/examples.html#python-script) for more details.
+> [!TIP]
+> Again, there are a lot more things that can be specified, for instance, `output_size` and `pbar`. It is also possible to directly output the results or save them in a variable. See [Glasses Detector API](https://mantasu.github.io/glasses-detector/docs/api.html) and [Python Script Examples](https://mantasu.github.io/glasses-detector/docs/examples.html#python-script) for more details.
 
 ### Demo
 
@@ -133,7 +144,8 @@ Once you download all the datasets (or some that interest you), process them:
 python scripts/preprocess.py --root data -f -d
 ```
 
-> **Tip**: you can also specify only certain tasks, e.g., `--tasks classification segmentation` would ignore detection datasets. It is also possible to change image size and val/test split fractions: use `--help` to see all the available CLI options.
+> [!TIP]
+> You can also specify only certain tasks, e.g., `--tasks classification segmentation` would ignore detection datasets. It is also possible to change image size and val/test split fractions: use `--help` to see all the available CLI options.
 
 After processing all the datasets, your `data` directory should have the following structure:
 
@@ -160,7 +172,8 @@ After processing all the datasets, your `data` directory should have the followi
 
 Almost every dataset will have `train`, `val` and `test` sub-directories. These splits for _classification_ datasets are further divided to `<category>` and `no_<category>`, for _detection_ - to `images` and `annotations`, and for _segmentation_ - to `images` and `masks` sub-sub-directories. By default, all the images are `256x256`.
 
-> **Note**: instead of downloading the datasets manually one-by-one, here is a [Kaggle Dataset](https://www.kaggle.com/datasets/mantasu/glasses-detector) that you could download which already contains everything.
+> [!NOTE]
+> Instead of downloading the datasets manually one-by-one, here is a [Kaggle Dataset](https://www.kaggle.com/datasets/mantasu/glasses-detector) that you could download which already contains everything.
 
 <details>
 
@@ -210,6 +223,8 @@ Download the following files and _place them all_ inside the cloned project unde
 
 The table below shows which datasets are used for which tasks and their categories. Feel free to pick only the ones that interest you.
 
+<div align="center">
+
 | Task           | Category     | Dataset IDs                                                |
 | -------------- | ------------ | ---------------------------------------------------------- |
 | Classification | `anyglasses` | `1`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `13`, `14`, `15`   |
@@ -224,6 +239,8 @@ The table below shows which datasets are used for which tasks and their categori
 | Segmentation   | `lenses`     | `22`, `23`, `24`, `25`, `29`, `30`, `31`                   |
 | Segmentation   | `shadows`    | `20`                                                       |
 | Segmentation   | `smart`      | `21`                                                       |
+
+</div>
 
 </details>
 
@@ -264,7 +281,7 @@ Or you can also specify the `pth` file to pre-load the model with weights:
 python scripts/run.py test -t classification:anyglasses -s small -w path/to/weights.pth
 ```
 
-If you get _UserWarning: No positive samples in targets, true positive value should be meaningless_, increase the batch size.
+> If you get _UserWarning: No positive samples in targets, true positive value should be meaningless_, increase the batch size.
 
 ## Credits
 
