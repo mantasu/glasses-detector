@@ -246,9 +246,9 @@ class GlassesDetector(BaseGlassesModel):
         labels: list[str] | None = None,
         colors: (
             str | tuple[int, int, int] | list[str | tuple[int, int, int]] | None
-        ) = None,
+        ) = "red",
         fill: bool = False,
-        width: int = 1,
+        width: int = 3,
         font: str | None = None,
         font_size: int | None = None,
     ) -> Image.Image:
@@ -289,13 +289,13 @@ class GlassesDetector(BaseGlassesModel):
                 List containing the colors of the boxes or single color
                 for all boxes. The color can be represented as PIL
                 strings e.g. "red" or "#FF00FF", or as RGB tuples e.g.
-                ``(240, 10, 157)``. By default, random colors are
-                generated for boxes. Defaults to :data:`None`.
+                ``(240, 10, 157)``. If :data:`None`, random colors are
+                generated for boxes. Defaults to ``"red"``.
             fill (bool, optional): If :data:`True`, fills the bounding
                 box with the specified color. Defaults to :data:`False`.
             width (int, optional): Width of bounding box used when
                 calling :meth:`~PIL.ImageDraw.rectangle`. Defaults to
-                ``1``.
+                ``3``.
             font (str | None, optional): A filename containing a
                 *TrueType* font. If the file is not found in this
                 filename, the loader may also search in other
@@ -402,7 +402,7 @@ class GlassesDetector(BaseGlassesModel):
                 and be of RGB format. Normalization is not needed as the
                 channels will be automatically normalized before passing
                 through the network.
-            format (str | dict[bool, Default] | typing.Callable[[torch.Tensor], Default], optional):
+            format (str | dict[bool, Default] | typing.Callable[[torch.Tensor], Default] | typing.Callable[[PIL.Image.Image, torch.Tensor], Default], optional):
                 The string specifying the way to map the predictions to
                 outputs of specific format. These are the following
                 options (if ``image`` is a :class:`~typing.Collection`,
@@ -501,10 +501,7 @@ class GlassesDetector(BaseGlassesModel):
 
                     def format_fn(ori, pred):
                         w, h = ori.size if input_size is None else input_size
-                        pred[:, 0] = pred[:, 0] / w
-                        pred[:, 1] = pred[:, 1] / h
-                        pred[:, 2] = pred[:, 2] / w
-                        pred[:, 3] = pred[:, 3] / h
+                        pred = pred / torch.tensor([w, h, w, h], device=pred.device)
 
                         return [[float(p.item()) for p in b] for b in pred]
 
@@ -515,17 +512,17 @@ class GlassesDetector(BaseGlassesModel):
                     def format_fn(ori, pred):
                         pred = verify_bboxes(ori, pred)
                         return "BBoxes: " + "; ".join(
-                            [" ".join(map(int, b)) for b in pred]
+                            [" ".join(map(str, map(int, b))) for b in pred]
                         )
 
                 case "img":
                     # The original image with bounding boxes drawn on it
-                    # using default values in draw_rects
+                    # using default values in draw_boxes
 
                     def format_fn(ori, pred):
                         pred = verify_bboxes(ori, pred)
                         ori = ori.resize(output_size) if output_size else ori
-                        img = self.draw_rects(ori, pred)
+                        img = self.draw_boxes(ori, pred)
 
                         return img
 

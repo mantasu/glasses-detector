@@ -20,13 +20,7 @@ import torch.nn as nn
 from PIL import Image
 from torchvision.transforms.v2.functional import normalize, to_dtype, to_image
 
-from ..utils import (
-    FilePath,
-    copy_method_signature,
-    eval_infer_mode,
-    is_path_type,
-    is_url,
-)
+from ..utils import FilePath, copy_signature, eval_infer_mode, is_path_type, is_url
 from .pred_interface import PredInterface
 from .pred_type import Default
 
@@ -541,6 +535,6 @@ class BaseGlassesModel(PredInterface):
             f"using `GlassesModel.create_model` and assign it."
         )
 
-    @copy_method_signature(predict)
+    @copy_signature(predict)
     def __call__(self, *args, **kwargs):
         return self.predict(*args, **kwargs)

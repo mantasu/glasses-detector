@@ -11,7 +11,7 @@ from torchvision.transforms.v2.functional import to_pil_image
 from .architectures import TinyBinaryClassifier
 from .components.base_model import BaseGlassesModel
 from .components.pred_type import Default
-from .utils import FilePath, copy_method_signature
+from .utils import FilePath, copy_signature
 
 
 @dataclass
@@ -369,6 +369,6 @@ class GlassesClassifier(BaseGlassesModel):
         return super().forward(x)
 
     @override
-    @copy_method_signature(predict)
+    @copy_signature(predict)
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)

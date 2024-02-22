@@ -15,7 +15,7 @@ import functools
 import imghdr
 import os
 import typing
-from typing import Any, Callable, Concatenate, Iterable, TypeGuard, overload
+from typing import Any, Callable, Iterable, TypeGuard, overload
 from urllib.parse import urlparse
 
 import torch
@@ -23,12 +23,11 @@ import torch
 type FilePath = str | bytes | os.PathLike
 
 
-class copy_signature[F]:
-    """Decorator to copy a function's signature.
+class copy_signature[**P, T]:
+    """Decorator to copy a function's or a method's signature.
 
-    This decorator takes a function and copies its signature to the
-    decorated function. This is useful when you want to copy the
-    signature of a function to a wrapper function.
+    This decorator takes a callable and copies its signature to the
+    decorated function or method.
 
     Example
     -------
@@ -45,62 +44,23 @@ class copy_signature[F]:
 
     .. seealso::
 
-        https://stackoverflow.com/a/59717891
-
-    Args:
-        target: The function whose signature to copy.
-    """
-
-    def __init__(self, target: F) -> None: ...
-
-    def __call__(self, wrapped: Callable[..., Any]) -> F: ...
-
-
-def copy_method_signature[
-    **P, T
-](source: Callable[Concatenate[Any, P], T]) -> Callable[
-    [Callable], Callable[Concatenate[Any, P], T]
-]:
-    """Decorator to copy a method's signature.
-
-    This decorator takes a class method and copies its signature to the
-    decorated method. This is useful when you want to copy the
-    signature of a method to a wrapper method.
-
-    Example
-    -------
-
-    .. code-block:: python
-
-        def full_signature(x: bool, *extra: int) -> str: ...
-
-        @copy_method_signature(full_signature)
-        def test_signature(*args, **kwargs):
-            return full_signature(*args, **kwargs)
-
-        reveal_type(test_signature)  # 'def (x: bool, *extra: int) -> str'
-
-    .. seealso::
-
         https://github.com/python/typing/issues/270#issuecomment-1344537820
 
     Args:
-        source (typing.Callable[typing.Concatenate[typing.Any, P], T]):
-            The method whose signature to copy.
-
-    Returns:
-        typing.Callable[[typing.Callable], typing.Callable[typing.Concatenate[typing.Any, P], T]]:
-            The decorator to copy the signature.
+        source (typing.Callable[P, T]): The callable whose signature to
+            copy.
     """
 
-    def wrapper(target: Callable) -> Callable[Concatenate[Any, P], T]:
-        @functools.wraps(source)
-        def wrapped(self, *args: P.args, **kwargs: P.kwargs) -> T:
-            return target(self, *args, **kwargs)
+    def __init__(self, source: Callable[P, T]):
+        # The source callable
+        self.source = source
+
+    def __call__(self, target: Callable[..., T]) -> Callable[P, T]:
+        @functools.wraps(self.source)
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
+            return target(*args, **kwargs)
 
         return wrapped
-
-    return wrapper
 
 
 class eval_infer_mode:
@@ -216,6 +176,8 @@ def flatten[T](items: T | Iterable[T | Iterable]) -> T | list[T]:
             flattened.extend(flatten(item))
         else:
             flattened.append(item)
+
+    return flattened
 
 
 def is_path_type(path: Any) -> TypeGuard[FilePath]:

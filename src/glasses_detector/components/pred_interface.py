@@ -296,7 +296,12 @@ class PredInterface(ABC):
 
         For more details on how each file type is saved, regardless if
         it is a single prediction or the aggregated predictions, see
-        :meth:`.save`
+        :meth:`.save`.
+
+        **NB**: aggregation of multiple images to a single file is
+        different from that of :meth:`.process_dir` - here, the full
+        paths are used as sample identifiers, unlike just the names of
+        the images.
 
         Tip:
             If multiple images are provided (as a list of input paths),
@@ -478,13 +483,13 @@ class PredInterface(ABC):
 
         Takes a path to a directory of images, optionally sub-groups to
         batches, generates the predictions for every image and returns
-        them if ``output_path`` is :data:`None` or saves them to a specified
-        file or as files to a specified directory. The following cases
-        are considered:
+        them if ``output_path`` is :data:`None` or saves them to a
+        specified file or as files to a specified directory. The
+        following cases are considered:
 
-        1. If ``output_path`` is :data:`None`, the predictions are returned
-           as a dictionary of predictions where the keys are the names
-           of the images and the values are the corresponding
+        1. If ``output_path`` is :data:`None`, the predictions are
+           returned as a dictionary of predictions where the keys are
+           the names of the images and the values are the corresponding
            predictions.
         2. If ``output_path`` is a single file, the predictions are
            aggregated to a single file.
@@ -497,6 +502,11 @@ class PredInterface(ABC):
         For more details on how each file type is saved, regardless if
         it is a single prediction or the aggregated predictions, see
         :meth:`.save`.
+
+        **NB**: aggregation of images to a single file/dictionary is
+        different from that of :meth:`.process_file` (when multiple
+        file paths are passed) - here, only the names of the images are
+        used as keys, unlike the full paths.
 
         Tip:
             For *very large* directories, consider specifying

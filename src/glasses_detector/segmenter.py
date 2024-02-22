@@ -5,9 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
-from torchvision import transforms
 from torchvision.models.segmentation import fcn_resnet101, lraspp_mobilenet_v3_large
-from torchvision.transforms.v2.functional import to_image, to_pil_image
+from torchvision.transforms.v2.functional import resize, to_image, to_pil_image
 from torchvision.utils import draw_segmentation_masks
 
 from .architectures import TinyBinarySegmenter
@@ -234,10 +233,10 @@ class GlassesSegmenter(BaseGlassesModel):
     def draw_masks(
         image: Image.Image | np.ndarray | torch.Tensor,
         masks: Image.Image | list[Image.Image] | np.ndarray | torch.Tensor,
-        alpha: float = 0.8,
+        alpha: float = 0.5,
         colors: (
             str | tuple[int, int, int] | list[str | tuple[int, int, int]] | None
-        ) = None,
+        ) = "red",
     ) -> Image.Image:
         """Draws mask(-s) over an image.
 
@@ -274,13 +273,13 @@ class GlassesSegmenter(BaseGlassesModel):
             alpha (float, optional): Float number between ``0`` and
                 ``1`` denoting the transparency of the masks. ``0``
                 means full transparency, ``1`` means no transparency.
-                Defaults to ``0.8``.
+                Defaults to ``0.5``.
             colors (str | tuple[int, int, int] | list[str | tuple[int, int, int]] | None, optional):
                 List containing the colors of the boxes or single color
                 for all boxes. The color can be represented as PIL
                 strings e.g. "red" or "#FF00FF", or as RGB tuples e.g.
-                ``(240, 10, 157)``. By default, random colors are
-                generated for boxes. Defaults to :data:`None`. Defaults to :data:`None`.
+                ``(240, 10, 157)``. If :data:`None`, random colors are
+                generated for for each mask. Defaults to ``"red"``.
 
         Returns:
             PIL.Image.Image: The RGB image with the mask drawn over it.
@@ -413,13 +412,13 @@ class GlassesSegmenter(BaseGlassesModel):
                 | ``"img"``     | :class:`PIL.Image.Image` of mode ``"RGB"`` (RGB)                        | The original image with the mask overlaid on it using default values in :meth:`draw_mask` |
                 +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 
-                It is also possible to provide a a dictionary with 2
-                keys: :data:`True` and :data:`False`, each mapping to
-                values corresponding to what to output if the predicted
-                pixel is positive or negative. Further, a custom
-                callback function is also possible that specifies how to
-                map the original image (:class:`~PIL.Image.Image`) and
-                the mask prediction (:class:`~torch.Tensor` of type
+                It is also possible to provide a dictionary with 2 keys:
+                :data:`True` and :data:`False`, each mapping to values
+                corresponding to what to output if the predicted pixel
+                is positive or negative. Further, a custom callback
+                function is also possible that specifies how to map the
+                original image (:class:`~PIL.Image.Image`) and the mask
+                prediction (:class:`~torch.Tensor` of type
                 :data:`torch.float32` of shape ``(H, W)``), or just the
                 predictions to a formatted
                 :data:`~glasses_detector.components.pred_type.Default`
@@ -462,7 +461,7 @@ class GlassesSegmenter(BaseGlassesModel):
                         mode="L",
                     ).resize(output_size if output_size else img.size)
                 case "img":
-                    format = lambda img, x: self.draw_mask(
+                    format = lambda img, x: self.draw_masks(
                         img.resize(output_size) if output_size else img,
                         Image.fromarray(
                             ((x[0] > 0) * 255).to(torch.uint8).numpy(force=True),
@@ -476,11 +475,13 @@ class GlassesSegmenter(BaseGlassesModel):
             # If mask type was specified as dictionary
             format = lambda x: torch.where((x > 0), d[True], d[False])
 
-        if isinstance(f, str) and f not in {"mask", "img"}:
+        if isinstance(f, dict) or (isinstance(f, str) and f not in {"mask", "img"}):
             # Apply torch transform if not mask or img
-            format = lambda img, x: transforms.Resize(
-                output_size if output_size else img.size
-            )(format(x.squeeze(0)))
+            format_fn = format
+            format = lambda img, x: resize(
+                inpt=format_fn(x),
+                size=output_size if output_size else img.size,
+            ).squeeze(0)
 
         return super().predict(image, format, input_size)
 
