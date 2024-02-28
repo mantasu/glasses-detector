@@ -9,7 +9,11 @@ from .components import BaseGlassesModel
 
 
 def parse_kwargs():
-    parser = argparse.ArgumentParser(description="Processing files with models.")
+    parser = argparse.ArgumentParser(
+        prog="Glasses Detector",
+        description=f"Classification, detection, and segmentation of glasses "
+        f"in images.",
+    )
 
     parser.add_argument(
         "-i",
@@ -74,6 +78,7 @@ def parse_kwargs():
             "classification:anyglasses",
             "classification:sunglasses",
             "classification:eyeglasses",
+            "classification:shadows",
             "detection",
             "detection:eyes",
             "detection:solo",
@@ -98,9 +103,9 @@ def parse_kwargs():
         metavar="<model-size>",
         type=str,
         default="medium",
-        choices=["small", "medium", "large"],
+        choices=["small", "medium", "large", "s", "m", "l"],
         help=f"The model size which determines architecture type. One of "
-        f"'small', 'medium', 'large'. Defaults to 'medium'.",
+        f"'small', 'medium', 'large' (or 's', 'm', 'l'). Defaults to 'medium'.",
     )
     parser.add_argument(
         "-b",
@@ -186,16 +191,6 @@ def prepare_kwargs(kwargs: dict[str, str | int | None]):
     elif kwargs["format"] is None and kwargs["task"] == "segmentation":
         # Default format for segmentation
         kwargs["format"] = "mask"
-    
-    if kwargs["device"] is None and torch.cuda.is_available():
-        # CUDA device is available
-        kwargs["device"] = torch.device("cuda")
-    elif kwargs["device"] is None and torch.backends.mps.is_available():
-        # MPS device is available
-        kwargs["device"] = torch.device("mps")
-    elif kwargs["device"] is None:
-        # CPU device is used by default
-        kwargs["device"] = torch.device("cpu")
 
     # Get the kwargs for the process and init methods
     process_kwargs = {k: kwargs[k] for k in process_keys if k in kwargs}

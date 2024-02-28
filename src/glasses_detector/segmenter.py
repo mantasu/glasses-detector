@@ -79,15 +79,15 @@ class GlassesSegmenter(BaseGlassesModel):
         :animate: fade-in-slide-down
         :name: Size Information of the Pre-trained Segmenters
 
-        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
-        | Size           | Architecture                                                                                                 | Params :math:`\downarrow` | GFLOPs :math:`\downarrow` | Memory :math:`\downarrow` | Filesize :math:`\downarrow` |
-        +================+==============================================================================================================+===========================+===========================+===========================+=============================+
-        | ``small``      | :class:`tinysegnet_v1<.architectures.tiny_binary_segmenter.TinyBinarySegmenter>`                             | TODO                      | TODO                      | TODO                      | TODO                        |
-        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
-        | ``medium``     | :func:`~torchvision.models.segmentation.lraspp_mobilenet_v3_large` :cite:p:`howard2019searching`             | TODO                      | TODO                      | TODO                      | TODO                        |
-        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
-        | ``large``      | :func:`~torchvision.models.segmentation.fcn_resnet101` :cite:p:`long2015fully,he2016deep`                    | TODO                      | TODO                      | TODO                      | TODO                        |
-        +----------------+--------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        +----------------+---------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | Size           | Architecture                                                                                                  | Params                    | GFLOPs                    | Memory (MB)                    | Filesize (MB)                    |
+        +================+===============================================================================================================+===========================+===========================+================================+==================================+
+        | ``small``      | :class:`Tiny Segmenter <.architectures.tiny_binary_segmenter.TinyBinarySegmenter>`                            | 0.23M                     | 1.6                       | 264.25                         | 0.92                             |
+        +----------------+---------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | ``medium``     | :func:`Lite R-ASPP <torchvision.models.segmentation.lraspp_mobilenet_v3_large>` :cite:p:`howard2019searching` | 3.22M                     | 0.51                      | 220.59                         | 12.47                            |
+        +----------------+---------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | ``large``      | :func:`FCN <torchvision.models.segmentation.fcn_resnet101>` :cite:p:`long2015fully,he2016deep`                | 51.94M                    | 54.1                      | 1781.37                        | 198.74                           |
+        +----------------+---------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
 
     Examples
     --------
@@ -158,18 +158,19 @@ class GlassesSegmenter(BaseGlassesModel):
             +-------------------+---------------------------------------------------------------------+
 
             Defaults to ``"smart"``.
-        size (str, optional): The size of the model to use. Available
+        size (str, optional): The size of the model to use (check
+            :attr:`.ALLOWED_SIZE_ALIASES` for size aliases). Available
             options are:
 
-            +--------------+-------------------------------------------------------------+
-            |              |                                                             |
-            +--------------+-------------------------------------------------------------+
-            | ``"small"``  | Very few parameters but lower accuracy                      |
-            +--------------+-------------------------------------------------------------+
-            | ``"medium"`` | A balance between the number of parameters and the accuracy |
-            +--------------+-------------------------------------------------------------+
-            | ``"large"``  | Large number of parameters but higher accuracy              |
-            +--------------+-------------------------------------------------------------+
+            +-------------------------+-------------------------------------------------------------+
+            |                         |                                                             |
+            +-------------------------+-------------------------------------------------------------+
+            | ``"small"`` or ``"s"``  | Very few parameters but lower accuracy                      |
+            +-------------------------+-------------------------------------------------------------+
+            | ``"medium"`` or ``"m"`` | A balance between the number of parameters and the accuracy |
+            +-------------------------+-------------------------------------------------------------+
+            | ``"large"`` or ``"l"``  | Large number of parameters but higher accuracy              |
+            +-------------------------+-------------------------------------------------------------+
 
             Please check:
 
@@ -188,13 +189,17 @@ class GlassesSegmenter(BaseGlassesModel):
             will be used as a custom path or a URL (determined
             automatically) to the model weights. Defaults to
             :data:`True`.
-        device (str | torch.device, optional): Device to cast the model
-            (once it is loaded) to. Defaults to ``"cpu"``.
+        device (str | torch.device | None, optional): Device to cast the
+            model to (once it is loaded). If specified as :data:`None`,
+            it will be automatically checked if
+            `CUDA <https://developer.nvidia.com/cuda-toolkit>`_ or
+            `MPS <https://developer.apple.com/documentation/metalperformanceshaders>`_
+            is supported. Defaults to :data:`None`.
     """
 
     kind: str = "smart"
     size: str = "medium"
-    weights: bool | str | None = field(default=True, repr=False)
+    weights: bool | str | None = True
     task: str = field(default="segmentation", init=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
@@ -396,21 +401,24 @@ class GlassesSegmenter(BaseGlassesModel):
                 :class:`~typing.Collection`, then the output will be a
                 :class:`list` of corresponding items of **output type**):
 
-                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                | **format**    | **output type**                                                         | **prediction mapping**                                                                    |
-                +===============+=========================================================================+===========================================================================================+
-                | ``"bool"``    | :class:`torch.Tensor` of type :data:`torch.bool` of shape ``(H, W)``    | :data:`True` for positive pixels, :data:`False` for negative pixels                       |
-                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                | ``"int"``     | :class:`torch.Tensor` of type :data:`torch.int64` of shape ``(H, W)``   | ``1`` for positive pixels, ``0`` for negative pixels                                      |
-                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                | ``"logit"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Raw score (real number) of being a positive pixel                                         |
-                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                | ``"proba"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Probability (a number between 0 and 1) of being a positive pixel                          |
-                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                | ``"mask"``    | :class:`PIL.Image.Image` of mode ``"L"`` (grayscale)                    | *White* for positive pixels, *black* for negative pixels                                  |
-                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                | ``"img"``     | :class:`PIL.Image.Image` of mode ``"RGB"`` (RGB)                        | The original image with the mask overlaid on it using default values in :meth:`draw_mask` |
-                +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                .. table::
+                    :widths: 10 30 60
+
+                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                    | **format**    | **output type**                                                         | **prediction mapping**                                                                    |
+                    +===============+=========================================================================+===========================================================================================+
+                    | ``"bool"``    | :class:`torch.Tensor` of type :data:`torch.bool` of shape ``(H, W)``    | :data:`True` for positive pixels, :data:`False` for negative pixels                       |
+                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                    | ``"int"``     | :class:`torch.Tensor` of type :data:`torch.int64` of shape ``(H, W)``   | ``1`` for positive pixels, ``0`` for negative pixels                                      |
+                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                    | ``"logit"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Raw score (real number) of being a positive pixel                                         |
+                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                    | ``"proba"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Probability (a number between 0 and 1) of being a positive pixel                          |
+                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                    | ``"mask"``    | :class:`PIL.Image.Image` of mode ``"L"`` (grayscale)                    | *White* for positive pixels, *black* for negative pixels                                  |
+                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                    | ``"img"``     | :class:`PIL.Image.Image` of mode ``"RGB"`` (RGB)                        | The original image with the mask overlaid on it using default values in :meth:`draw_mask` |
+                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 
                 It is also possible to provide a dictionary with 2 keys:
                 :data:`True` and :data:`False`, each mapping to values

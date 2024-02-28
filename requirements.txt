@@ -2,10 +2,12 @@ tqdm
 torch
 scipy
 pyyaml
+fvcore
 rarfile
-ipython
+ipykernel
 pycocotools
 torchvision
+prettytable
 albumentations
 pytorch_lightning
 tensorboard

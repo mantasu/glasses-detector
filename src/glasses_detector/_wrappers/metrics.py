@@ -23,8 +23,7 @@ class BoxMetric(torchmetrics.Metric):
         self,
         preds: torch.Tensor,
         targets: torch.Tensor,
-    ) -> torch.Tensor:
-        ...
+    ) -> torch.Tensor: ...
 
     def update(
         self,

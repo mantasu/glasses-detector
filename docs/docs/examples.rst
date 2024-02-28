@@ -74,7 +74,7 @@ A more useful method is :meth:`~glasses_detector.components.pred_interface.PredI
     classifier = GlassesClassifier(kind="sunglasses")
     classifier.process_dir(
         input_path="path/to/dir",         # failed files will raise a warning
-        output_path="path/to/output.csv", # path/to/dir/img1.jpg,<pred>...
+        output_path="path/to/output.csv", # img_name1.jpg,<pred>...
         format="proba",                   # <pred> is a probability of sunglasses
         pbar="Processing",                # Set to None to disable
     )

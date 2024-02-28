@@ -48,6 +48,7 @@ class RunCLI(LightningCLI):
                 "classification:anyglasses",
                 "classification:sunglasses",
                 "classification:eyeglasses",
+                "classification:shadows",
                 "detection",
                 "detection:eyes",
                 "detection:solo",

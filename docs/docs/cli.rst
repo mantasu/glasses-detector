@@ -43,6 +43,7 @@ These flags allow you to define the kind of task and the model to process your i
     * ``classification:anyglasses``
     * ``classification:sunglasses``
     * ``classification:eyeglasses``
+    * ``classification:shadows``
     * ``detection``
     * ``detection:eyes``
     * ``detection:solo``
@@ -61,7 +62,7 @@ These flags allow you to define the kind of task and the model to process your i
 
 .. option:: -s <model-size>, --size <model-size>
 
-    The model size which determines architecture type. One of ``small``, ``medium``, ``large``.
+    The model size which determines architecture type. One of ``small``, ``medium``, ``large`` (or ``s``, ``m``, ``l``).
     
     **Default:** ``medium``
 

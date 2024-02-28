@@ -35,21 +35,27 @@ class GlassesClassifier(BaseGlassesModel):
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
         | Kind           | Size       | BCE :math:`\downarrow`  | F1 :math:`\uparrow` | ROC-AUC :math:`\uparrow` | PR-AUC :math:`\uparrow` |
         +================+============+=========================+=====================+==========================+=========================+
-        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                | ``small``  | 0.2160                  | 0.9431              | 0.9866                   | 0.9757                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``anyglasses`` | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        | ``anyglasses`` | ``medium`` | 0.1539                  | 0.9693              | 0.9933                   | 0.9895                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                | ``large``  | 0.1623                  | 0.9652              | 0.9941                   | 0.9922                  |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | 0.2210                  | 0.9082              | 0.9808                   | 0.9590                  |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``eyeglasses`` | ``medium`` | 0.1342                  | 0.9502              | 0.9922                   | 0.9810                  |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | 0.1472                  | 0.9490              | 0.9905                   | 0.9804                  |
+        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``small``  | 0.2331                  | 0.8827              | 0.9852                   | 0.9551                  |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        | ``sunglasses`` | ``medium`` | 0.1794                  | 0.9311              | 0.9912                   | 0.9739                  |
+        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
+        |                | ``large``  | 0.1954                  | 0.9232              | 0.9902                   | 0.9714                  |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
         |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``eyeglasses`` | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
-        +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
-        |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``sunglasses`` | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        | ``shadows``    | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
         |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
@@ -60,15 +66,15 @@ class GlassesClassifier(BaseGlassesModel):
         :animate: fade-in-slide-down
         :name: Size Information of the Pre-trained Classifiers
 
-        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
-        | Size           | Architecture                                                                         | Params :math:`\downarrow` | GFLOPs :math:`\downarrow` | Memory :math:`\downarrow` | Filesize :math:`\downarrow` |
-        +================+======================================================================================+===========================+===========================+===========================+=============================+
-        | ``small``      | :class:`tinyclsnet_v1<.architectures.tiny_binary_classifier.TinyBinaryClassifier>`   | TODO                      | TODO                      | TODO                      | TODO                        |
-        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
-        | ``medium``     | :func:`~torchvision.models.shufflenet_v2_x1_0` :cite:p:`ma2018shufflenet`            | TODO                      | TODO                      | TODO                      | TODO                        |
-        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
-        | ``large``      | :func:`~torchvision.models.efficientnet_b4` :cite:p:`tan2019efficientnet`            | TODO                      | TODO                      | TODO                      | TODO                        |
-        +----------------+--------------------------------------------------------------------------------------+---------------------------+---------------------------+---------------------------+-----------------------------+
+        +----------------+-----------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | Size           | Architecture                                                                            | Params                    | GFLOPs                    | Memory (MB)                    | Filesize (MB)                    |
+        +================+=========================================================================================+===========================+===========================+================================+==================================+
+        | ``small``      | :class:`Tiny Classifier <.architectures.tiny_binary_classifier.TinyBinaryClassifier>`   | 0.03M                     | 0.001                     | 23.38                          | 0.12                             |
+        +----------------+-----------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | ``medium``     | :func:`ShuffleNet <torchvision.models.shufflenet_v2_x1_0>` :cite:p:`ma2018shufflenet`   | 1.25M                     | 0.19                      | 84.03                          | 4.95                             |
+        +----------------+-----------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | ``large``      | :func:`EfficientNet <torchvision.models.efficientnet_b4>` :cite:p:`tan2019efficientnet` | 17.55M                    | 2.01                      | 763.69                         | 67.66                            |
+        +----------------+-----------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
 
     Examples
     --------
@@ -110,8 +116,8 @@ class GlassesClassifier(BaseGlassesModel):
 
         >>> clf.process_dir("path/to/dir", "path/to/preds.csv", format="str")
         >>> subprocess.run(["cat", "path/to/preds.csv"])
-        path/to/dir/img1.jpg,present
-        path/to/dir/img2.jpg,absent
+        img1.jpg,present
+        img2.jpg,absent
         ...
         >>> clf.process_dir("path/to/dir", "path/to/pred_dir", ext=".txt")
         >>> subprocess.run(["ls", "path/to/pred_dir"])
@@ -121,32 +127,35 @@ class GlassesClassifier(BaseGlassesModel):
         kind (str, optional): The kind of glasses to perform binary
             classification for. Available options are:
 
-            +-------------------+-------------------------------------+
-            |                   |                                     |
-            +-------------------+-------------------------------------+
-            | ``"anyglasses"``  | Any kind glasses/googles/spectacles |
-            +-------------------+-------------------------------------+
-            | ``"eyeglasses"``  | Transparent eyeglasses              |
-            +-------------------+-------------------------------------+
-            | ``"sunglasses"``  | Opaque and semi-transparent glasses |
-            +-------------------+-------------------------------------+
+            +-------------------+----------------------------------------+
+            |                   |                                        |
+            +-------------------+----------------------------------------+
+            | ``"anyglasses"``  | Any kind glasses/googles/spectacles    |
+            +-------------------+----------------------------------------+
+            | ``"eyeglasses"``  | Transparent eyeglasses                 |
+            +-------------------+----------------------------------------+
+            | ``"sunglasses"``  | Opaque and semi-transparent glasses    |
+            +-------------------+----------------------------------------+
+            | ``"shadows"``     | Visible cast shadows of glasses frames |
+            +-------------------+----------------------------------------+
 
             Each kind is only responsible for its category, e.g., if
             ``kind`` is set to ``"sunglasses"``, then images with
             transparent eyeglasses will not be identified as positive.
             Defaults to ``"anyglasses"``.
-        size (str, optional): The size of the model to use. Available
+        size (str, optional): The size of the model to use (check
+            :attr:`.ALLOWED_SIZE_ALIASES` for size aliases). Available
             options are:
 
-            +--------------+-------------------------------------------------------------+
-            |              |                                                             |
-            +--------------+-------------------------------------------------------------+
-            | ``"small"``  | Very few parameters but lower accuracy                      |
-            +--------------+-------------------------------------------------------------+
-            | ``"medium"`` | A balance between the number of parameters and the accuracy |
-            +--------------+-------------------------------------------------------------+
-            | ``"large"``  | Large number of parameters but higher accuracy              |
-            +--------------+-------------------------------------------------------------+
+            +-------------------------+-------------------------------------------------------------+
+            |                         |                                                             |
+            +-------------------------+-------------------------------------------------------------+
+            | ``"small"`` or ``"s"``  | Very few parameters but lower accuracy                      |
+            +-------------------------+-------------------------------------------------------------+
+            | ``"medium"`` or ``"m"`` | A balance between the number of parameters and the accuracy |
+            +-------------------------+-------------------------------------------------------------+
+            | ``"large"`` or ``"l"``  | Large number of parameters but higher accuracy              |
+            +-------------------------+-------------------------------------------------------------+
 
             Please check:
 
@@ -165,13 +174,17 @@ class GlassesClassifier(BaseGlassesModel):
             will be used as a custom path or a URL (determined
             automatically) to the model weights. Defaults to
             :data:`True`.
-        device (str | torch.device, optional): Device to cast the model
-            (once it is loaded) to. Defaults to ``"cpu"``.
+        device (str | torch.device | None, optional): Device to cast the
+            model to (once it is loaded). If specified as :data:`None`,
+            it will be automatically checked if
+            `CUDA <https://developer.nvidia.com/cuda-toolkit>`_ or
+            `MPS <https://developer.apple.com/documentation/metalperformanceshaders>`_
+            is supported. Defaults to :data:`None`.
     """
 
     kind: str = "anyglasses"
     size: str = "medium"
-    weights: bool | str | None = field(default=True, repr=False)
+    weights: bool | str | None = True
     task: str = field(default="classification", init=False)
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
@@ -184,6 +197,7 @@ class GlassesClassifier(BaseGlassesModel):
         "anyglasses": DEFAULT_SIZE_MAP,
         "eyeglasses": DEFAULT_SIZE_MAP,
         "sunglasses": DEFAULT_SIZE_MAP,
+        "shadows": DEFAULT_SIZE_MAP,
     }
 
     @staticmethod

@@ -5,8 +5,9 @@
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mantasu/glasses-detector/blob/main/notebooks/demo.ipynb)
 [![Docs](https://github.com/mantasu/glasses-detector/actions/workflows/sphinx.yaml/badge.svg)](https://mantasu.github.io/glasses-detector/)
 [![PyPI](https://img.shields.io/pypi/v/glasses-detector?color=orange)](https://pypi.org/project/glasses-detector/)
-[![Python](https://img.shields.io/badge/python-3.12%20|%203.13-yellow)](https://docs.python.org/3/)
-[![CUDA: yes](https://img.shields.io/badge/cuda-yes-green)](https://developer.nvidia.com/cuda-toolkit)
+[![Python](https://img.shields.io/badge/python-≥%203.12-yellow)](https://docs.python.org/3/)
+[![CUDA: yes](https://img.shields.io/badge/cuda-yes-darkcyan)](https://developer.nvidia.com/cuda-toolkit)
+[![MPS: yes](https://img.shields.io/badge/mps-yes-darkcyan)](https://developer.apple.com/documentation/metalperformanceshaders)
 [![DOI](https://raw.githubusercontent.com/mantasu/glasses-detector/main/docs/_static/svg/doi.svg)](https://zenodo.org/badge/latestdoi/610509640)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
@@ -29,9 +30,9 @@ Package for processing images with different types of glasses and their parts. I
 <div align="center">
 
 <table align="center"><tbody>
-    <tr><td><strong>Classification</string></td> <td> :eyeglasses: <em>transparent</em> :dark_sunglasses: <em>opaque</em> :goggles: <em>any</em> </td></tr>
-    <tr><td><strong>Detection</string></td> <td> :nerd_face: <em>worn</em> :eyeglasses:  <em>standalone</em> :eyes: <em>eye-area</em></td></tr>
-    <tr><td><strong>Segmentation</string></td> <td> :eyeglasses: <em>full</em> :framed_picture: <em>frames</em> :mechanical_leg: <em>legs</em> :mag: <em>lenses</em> :bust_in_silhouette: <em>shadows</em></td></tr>
+    <tr><td><strong>Classification</string></td> <td> 👓 <em>transparent</em> 🕶️ <em>opaque</em> 🥽 <em>any</em> ➿<em>shadows</em></td></tr>
+    <tr><td><strong>Detection</string></td> <td> 🤓 <em>worn</em> 👓  <em>standalone</em> 👀 <em>eye-area</em></td></tr>
+    <tr><td><strong>Segmentation</string></td> <td> 😎 <em>full</em> 🖼️ <em>frames</em> 🦿 <em>legs</em> 🔍 <em>lenses</em> 👥 <em>shadows</em></td></tr>
 </tbody></table>
 
 $\color{gray}{\textit{Note: }\text{refer to}}$ [Glasses Detector Features](https://mantasu.github.io/glasses-detector/docs/features.html) $\color{gray}{\text{for visual examples.}}$
@@ -97,7 +98,7 @@ You can import the package and its models via the python script for more flexibi
 ```python
 from glasses_detector import GlassesClassifier
 
-# Generates a CSV with each line "<path/to/dir/img.jpg>,<bool>"
+# Generates a CSV with each line "<img_name.jpg>,<True|False>"
 classifier = GlassesClassifier(size="small", kind="sunglasses")
 classifier.process_dir("path/to/dir", "path/to/preds.csv", format="bool")
 ```
@@ -156,6 +157,7 @@ After processing all the datasets, your `data` directory should have the followi
     ├── classification
     │   ├── anyglasses      <- Datasets with any glasses as positives
     │   ├── eyeglasses      <- Datasets with transparent glasses as positives
+    │   ├── shadows         <- Datasets with visible glasses frames shadows as positives
     │   └── sunglasses      <- Datasets with semi-transparent/opaque glasses as positives 
     │
     ├── detection
@@ -194,34 +196,35 @@ Download the following files and _place them all_ inside the cloned project unde
 7. From [Glasses No Glasses](https://www.kaggle.com/datasets/jorgebuenoperez/datacleaningglassesnoglasses) download `archive.zip` and _rename_ to `glasses-no-glasses.zip`
 8. From [Indian Facial Database](https://drive.google.com/file/d/1DPQQ2omEYPJDLFP3YG2h1SeXbh2ePpOq/view) download `An Indian facial database highlighting the Spectacle.zip`
 9. From [Face Attribute 2](https://universe.roboflow.com/heheteam-g9fnm/faceattribute-2) download `FaceAttribute 2.v2i.multiclass.zip` (choose `v2` and `Multi Label Classification` format)
+10. From [Glasses Shadows Synthetic](https://www.kaggle.com/datasets/mantasu/glasses-shadows-synthetic) download `archive.zip` and _rename_ to `glasses-shadows-synthetic.zip`
 
 **Detection** datasets:
 
-10. From [AI Pass](https://universe.roboflow.com/shinysky5166/ai-pass) download `AI-Pass.v6i.coco.zip` (choose `v6` and `COCO` format)
-11. From [PEX5](https://universe.roboflow.com/pex-5-ylpua/pex5-gxq3t) download `PEX5.v4i.coco.zip` (choose `v4` and `COCO` format)
-12. From [Sunglasses Glasses Detect](https://universe.roboflow.com/burhan-6fhqx/sunglasses_glasses_detect) download `sunglasses_glasses_detect.v1i.coco.zip` (choose `v1` and `COCO` format)
-13. From [Glasses Detection](https://universe.roboflow.com/su-yee/glasses-detection-qotpz) download `Glasses Detection.v2i.coco.zip` (choose `v2` and `COCO` format)
-14. From [Glasses Image Dataset](https://universe.roboflow.com/new-workspace-ld3vn/glasses-ffgqb) download `glasses.v1-glasses_2022-04-01-8-12pm.coco.zip` (choose `v1` and `COCO` format)
-15. From [EX07](https://universe.roboflow.com/cam-vrmlm/ex07-o8d6m) download `Ex07.v1i.coco.zip` (choose `v1` and `COCO` format)
-16. From [No Eyeglass](https://universe.roboflow.com/doms/no-eyeglass) download `no eyeglass.v3i.coco.zip` (choose `v3` and `COCO` format)
-17. From [Kacamata-Membaca](https://universe.roboflow.com/uas-kelas-machine-learning-blended/kacamata-membaca) download `Kacamata-Membaca.v1i.coco.zip` (choose `v1` and `COCO` format)
-18. From [Only Glasses](https://universe.roboflow.com/woodin-ixal8/onlyglasses) download `onlyglasses.v1i.coco.zip` (choose `v1` and `COCO` format)
+11. From [AI Pass](https://universe.roboflow.com/shinysky5166/ai-pass) download `AI-Pass.v6i.coco.zip` (choose `v6` and `COCO` format)
+12. From [PEX5](https://universe.roboflow.com/pex-5-ylpua/pex5-gxq3t) download `PEX5.v4i.coco.zip` (choose `v4` and `COCO` format)
+13. From [Sunglasses Glasses Detect](https://universe.roboflow.com/burhan-6fhqx/sunglasses_glasses_detect) download `sunglasses_glasses_detect.v1i.coco.zip` (choose `v1` and `COCO` format)
+14. From [Glasses Detection](https://universe.roboflow.com/su-yee/glasses-detection-qotpz) download `Glasses Detection.v2i.coco.zip` (choose `v2` and `COCO` format)
+15. From [Glasses Image Dataset](https://universe.roboflow.com/new-workspace-ld3vn/glasses-ffgqb) download `glasses.v1-glasses_2022-04-01-8-12pm.coco.zip` (choose `v1` and `COCO` format)
+16. From [EX07](https://universe.roboflow.com/cam-vrmlm/ex07-o8d6m) download `Ex07.v1i.coco.zip` (choose `v1` and `COCO` format)
+17. From [No Eyeglass](https://universe.roboflow.com/doms/no-eyeglass) download `no eyeglass.v3i.coco.zip` (choose `v3` and `COCO` format)
+18. From [Kacamata-Membaca](https://universe.roboflow.com/uas-kelas-machine-learning-blended/kacamata-membaca) download `Kacamata-Membaca.v1i.coco.zip` (choose `v1` and `COCO` format)
+19. From [Only Glasses](https://universe.roboflow.com/woodin-ixal8/onlyglasses) download `onlyglasses.v1i.coco.zip` (choose `v1` and `COCO` format)
 
 **Segmentation** datasets:
 
-19. From [CelebA Mask HQ](https://drive.google.com/file/d/1badu11NqxGf6qM3PTTooQDJvQbejgbTv/view) download `CelebAMask-HQ.zip` and from [CelebA Annotations](https://drive.google.com/file/d/1xd-d1WRnbt3yJnwh5ORGZI3g-YS-fKM9/view) download `annotations.zip`
-20. From [Glasses Segmentation Synthetic Dataset](https://www.kaggle.com/datasets/mantasu/glasses-segmentation-synthetic-dataset) download `archive.zip` and _rename_ to `glasses-segmentation-synthetic.zip`
-21. From [Face Synthetics Glasses](https://www.kaggle.com/datasets/mantasu/face-synthetics-glasses) download `archive.zip` and _rename_ to `face-synthetics-glasses.zip`
-22. From [Eyeglass](https://universe.roboflow.com/azaduni/eyeglass-6wu5y) download `eyeglass.v10i.coco-segmentation.zip` (choose `v10` and `COCO Segmentation` format)
-23. From [Glasses Lenses Segmentation](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-lenses-segmentation) download `glasses lenses segmentation.v7-sh-improvments-version.coco.zip` (choose `v7` and `COCO` format)
-24. From [Glasses Lens](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-lens) download `glasses lens.v6i.coco-segmentation.zip` (choose `v6` and `COCO Segmentation` format)
-25. From [Glasses Segmentation Cropped Faces](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-segmentation-cropped-faces) download `glasses segmentation cropped faces.v2-segmentation_models_pytorch-s_1st_version.coco-segmentation.zip` (choose `v2` and `COCO Segmentation` format)
-26. From [Spects Segmentation](https://universe.roboflow.com/teamai-wuk2z/spects-segementation) download `Spects Segementation.v3i.coco-segmentation.zip` (choose `v3` and `COCO Segmentation`)
-27. From [KINH](https://universe.roboflow.com/fpt-university-1tkhk/kinh) download `kinh.v1i.coco.zip` (choose `v1` and `COCO` format)
-28. From [Capstone Mini 2](https://universe.roboflow.com/christ-university-ey6ms/capstone_mini_2-vtxs3) download `CAPSTONE_MINI_2.v1i.coco-segmentation.zip` (choose `v1` and `COCO Segmentation` format)
-29. From [Sunglasses Color Detection](https://universe.roboflow.com/andrea-giuseppe-parial/sunglasses-color-detection-roboflow) download `Sunglasses Color detection roboflow.v2i.coco-segmentation.zip` (choose `v2` and `COCO Segmentation` format)
-30. From [Sunglasses Color Detection 2](https://universe.roboflow.com/andrea-giuseppe-parial/sunglasses-color-detection-2) download `Sunglasses Color detection 2.v3i.coco-segmentation.zip` (choose `v3` and `COCO Segmentation` format)
-31. From [Glass Color](https://universe.roboflow.com/snap-ml/glass-color) download `Glass-Color.v1i.coco-segmentation.zip` (choose `v1` and `COCO Segmentation` format)
+20. From [CelebA Mask HQ](https://drive.google.com/file/d/1badu11NqxGf6qM3PTTooQDJvQbejgbTv/view) download `CelebAMask-HQ.zip` and from [CelebA Annotations](https://drive.google.com/file/d/1xd-d1WRnbt3yJnwh5ORGZI3g-YS-fKM9/view) download `annotations.zip`
+21. From [Glasses Segmentation Synthetic Dataset](https://www.kaggle.com/datasets/mantasu/glasses-segmentation-synthetic-dataset) download `archive.zip` and _rename_ to `glasses-segmentation-synthetic.zip`
+22. From [Face Synthetics Glasses](https://www.kaggle.com/datasets/mantasu/face-synthetics-glasses) download `archive.zip` and _rename_ to `face-synthetics-glasses.zip`
+23. From [Eyeglass](https://universe.roboflow.com/azaduni/eyeglass-6wu5y) download `eyeglass.v10i.coco-segmentation.zip` (choose `v10` and `COCO Segmentation` format)
+24. From [Glasses Lenses Segmentation](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-lenses-segmentation) download `glasses lenses segmentation.v7-sh-improvments-version.coco.zip` (choose `v7` and `COCO` format)
+25. From [Glasses Lens](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-lens) download `glasses lens.v6i.coco-segmentation.zip` (choose `v6` and `COCO Segmentation` format)
+26. From [Glasses Segmentation Cropped Faces](https://universe.roboflow.com/yair-etkes-iy1bq/glasses-segmentation-cropped-faces) download `glasses segmentation cropped faces.v2-segmentation_models_pytorch-s_1st_version.coco-segmentation.zip` (choose `v2` and `COCO Segmentation` format)
+27. From [Spects Segmentation](https://universe.roboflow.com/teamai-wuk2z/spects-segementation) download `Spects Segementation.v3i.coco-segmentation.zip` (choose `v3` and `COCO Segmentation`)
+28. From [KINH](https://universe.roboflow.com/fpt-university-1tkhk/kinh) download `kinh.v1i.coco.zip` (choose `v1` and `COCO` format)
+29. From [Capstone Mini 2](https://universe.roboflow.com/christ-university-ey6ms/capstone_mini_2-vtxs3) download `CAPSTONE_MINI_2.v1i.coco-segmentation.zip` (choose `v1` and `COCO Segmentation` format)
+30. From [Sunglasses Color Detection](https://universe.roboflow.com/andrea-giuseppe-parial/sunglasses-color-detection-roboflow) download `Sunglasses Color detection roboflow.v2i.coco-segmentation.zip` (choose `v2` and `COCO Segmentation` format)
+31. From [Sunglasses Color Detection 2](https://universe.roboflow.com/andrea-giuseppe-parial/sunglasses-color-detection-2) download `Sunglasses Color detection 2.v3i.coco-segmentation.zip` (choose `v3` and `COCO Segmentation` format)
+32. From [Glass Color](https://universe.roboflow.com/snap-ml/glass-color) download `Glass-Color.v1i.coco-segmentation.zip` (choose `v1` and `COCO Segmentation` format)
 
 The table below shows which datasets are used for which tasks and their categories. Feel free to pick only the ones that interest you.
 
@@ -229,18 +232,19 @@ The table below shows which datasets are used for which tasks and their categori
 
 | Task           | Category     | Dataset IDs                                                |
 | -------------- | ------------ | ---------------------------------------------------------- |
-| Classification | `anyglasses` | `1`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `13`, `14`, `15`   |
-| Classification | `eyeglasses` | `2`, `4`, `5`, `6`, `10`, `11`, `12`, `13`, `14`           |
-| Classification | `sunglasses` | `1`, `2`, `3`, `4`, `5`, `6`, `10`, `11`, `12`, `13`, `14` |
-| Detection      | `eyes`       | `13`, `14`, `15`, `16`                                     |
-| Detection      | `solo`       | `17`, `18`                                                 |
-| Detection      | `worn`       | `10`, `11`, `12`, `13`, `14`, `15`                         |
-| Segmentation   | `frames`     | `20`, `22`                                                 |
-| Segmentation   | `full`       | `19`, `26`, `27`                                           |
-| Segmentation   | `legs`       | `28`, `29`, `30`                                           |
-| Segmentation   | `lenses`     | `22`, `23`, `24`, `25`, `29`, `30`, `31`                   |
-| Segmentation   | `shadows`    | `20`                                                       |
-| Segmentation   | `smart`      | `21`                                                       |
+| Classification | `anyglasses` | `1`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `14`, `15`, `16`   |
+| Classification | `eyeglasses` | `2`, `4`, `5`, `6`, `11`, `12`, `13`, `14`, `15`           |
+| Classification | `sunglasses` | `1`, `2`, `3`, `4`, `5`, `6`, `11`, `12`, `13`, `14`, `15` |
+| Classification | `shadows`    | `10`                                                       |
+| Detection      | `eyes`       | `14`, `15`, `16`, `17`                                     |
+| Detection      | `solo`       | `18`, `19`                                                 |
+| Detection      | `worn`       | `11`, `12`, `13`, `14`, `15`, `16`                         |
+| Segmentation   | `frames`     | `21`, `23`                                                 |
+| Segmentation   | `full`       | `20`, `27`, `28`                                           |
+| Segmentation   | `legs`       | `29`, `30`, `31`                                           |
+| Segmentation   | `lenses`     | `23`, `24`, `25`, `26`, `30`, `31`, `32`                   |
+| Segmentation   | `shadows`    | `21`                                                       |
+| Segmentation   | `smart`      | `22`                                                       |
 
 </div>
 

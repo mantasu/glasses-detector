@@ -806,6 +806,24 @@ def prepare_face_attribute_2(**kwargs):
     categorize_binary(**kwargs)
 
 
+def prepare_glasses_shadows_synthetic(**kwargs):
+    # Dataset name and files
+    kwargs = deepcopy(kwargs)
+    kwargs["save_name"] = "glasses-shadows-synthetic"
+    kwargs["data_files"] = ["glasses-shadows-synthetic.zip"]
+
+    # Create helper functions to check the folder name the file is in
+    folder_name = lambda path: os.path.basename(os.path.dirname(path))
+    ffn = lambda path: folder_name(os.path.dirname(path))
+
+    # Add category map and split fn
+    kwargs["cat_map"] = {"shadows": lambda path: folder_name(path) == "shadows"}
+    kwargs["split_fn"] = lambda path: ffn(path)
+
+    # Prepare for classification
+    categorize_binary(**kwargs)
+
+
 ########################################################################
 #########################                    ###########################
 #########################    SEGMENTATION    ###########################
@@ -1518,6 +1536,7 @@ if __name__ == "__main__":
         prepare_glasses_no_glasses(**kwargs)
         prepare_indian_facial_database(**kwargs)
         prepare_face_attribute_2(**kwargs)
+        prepare_glasses_shadows_synthetic(**kwargs)
 
     if "segmentation" in kwargs["tasks"]:
         # Main target: segmentation

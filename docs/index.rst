@@ -11,15 +11,21 @@ About
 
 Package for processing images with different types of glasses and their parts. It provides a quick way to use the pre-trained models for **3** kinds of tasks, each being divided to multiple categories, for instance, *classification of sunglasses* or *segmentation of glasses frames* (see :doc:`docs/features` for more details):
 
-* **Classification**: transparent, sunglasses, any glasses
-* **Detection**: solo, worn, eye-area
-* **Segmentation**: frames, lenses, legs, shadows, full, smart
+.. list-table::
+    :align: center
 
-+--------------------------+----------------------------+---------------------------------------------+
-| Classification           | Detection                  | Segmentation                                |
-+==========================+============================+=============================================+
-| Transparent, opaque, any | Worn, standalone, eye-area | Full, frames, hybrid, legs, lenses, shadows |
-+--------------------------+----------------------------+---------------------------------------------+
+    * -
+      -
+    * - **Classification**
+      - 👓 *transparent* 🕶️ *opaque* 🥽 *any* ➿ *shadows*
+    * - **Detection**
+      - 🤓 *worn* 👓 *standalone* 👀 *eye-area*
+    * - **Segmentation**
+      - 😎 *full* 🖼️ *frames* 🦿 *legs* 🔍 *lenses* 👥 *shadows*
+
+.. raw:: html
+
+   <br>
 
 The processing can be launched via the command line or written in a *Python* script. Based on the selected task, an image or a directory of images will be processed and corresponding predictions, e.g., labels or masks, will be generated.
 

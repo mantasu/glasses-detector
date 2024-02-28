@@ -31,8 +31,8 @@ class BaseGlassesModel(PredInterface):
 
     Base class with common functionality, i.e., prediction and weight
     loading methods, that should be inherited by all glasses models.
-    Child classes must implement :meth:`create_model` method which
-    should return the model architecture based on :attr:`model_info`
+    Child classes must implement :meth:`.create_model` method which
+    should return the model architecture based on :attr:`.model_info`
     which is a dictionary containing the model name and the release
     version. The dictionary depends on the model's :attr:`kind` and
     :attr:`size`, both of which are used when creating an instance.
@@ -40,7 +40,7 @@ class BaseGlassesModel(PredInterface):
     creating a predefined one, see :meth:`from_model`.
 
     Note:
-        When ``pretrained`` is :data:`True`, the URL of the weights to
+        When ``weights`` is :data:`True`, the URL of the weights to
         be downloaded from will be constructed automatically based on
         :attr:`model_info`. According to
         :func:`~torch.hub.load_state_dict_from_url`, first,
@@ -58,32 +58,60 @@ class BaseGlassesModel(PredInterface):
         task (str): The task the model is built for. Used when
             automatically constructing URL to download the weights from.
         kind (str): The kind of the model. Used to access
-            :meth:`model_info`.
+            :attr:`.model_info`.
         size (str): The size of the model. Used to access
-            :meth:`model_info`.
-        weights (bool | str | None, optional): Whether to load weights
-            from a custom URL (or local file if they're already
-            downloaded) which will be inferred based on model's
-            :attr:`task`, :attr:`kind`, and :attr:`size`. If a string
-            is provided, it will be used as a path or a URL (determined
-            automatically) to the model weights. Defaults to pretrained
+            :attr:`.model_info`.
+        weights (bool | str | None, optional): Whether to load the
+            pre-trained weights from a custom URL (or a local file if
+            they're already downloaded) which will be inferred based on
+            model's :attr:`task`, :attr:`kind`, and :attr:`size`. If a
+            string is provided, it will be used as a path or a URL
+            (determined automatically) to the model weights. Defaults to
             :data:`False`.
-        device (str | torch.device, optional): Device to cast the model
-            (once it is loaded) to. Defaults to ``"cpu"``.
+        device (str | torch.device | None, optional): Device to cast the
+            model to (once it is loaded). If specified as :data:`None`,
+            it will be automatically checked if
+            `CUDA <https://developer.nvidia.com/cuda-toolkit>`_ or
+            `MPS <https://developer.apple.com/documentation/metalperformanceshaders>`_
+            is supported. Defaults to :data:`None`.
     """
 
     task: str
     kind: str
     size: str
-    weights: bool | str | None = field(default=False, repr=False)
-    device: str | torch.device = field(default="cpu", repr=False)
-    model: nn.Module = field(default_factory=lambda: None, init=False, repr=False)
+    weights: bool | str | None = False
+    device: str | torch.device | None = None
+    model: nn.Module = field(init=False, repr=False)
 
     BASE_WEIGHTS_URL: ClassVar[str] = (
         "https://github.com/mantasu/glasses-detector/releases/download"
     )
     """
     typing.ClassVar[str]: The base URL to download the weights from.
+    """
+
+    ALLOWED_SIZE_ALIASES: ClassVar[set[str]] = {
+        "small": {"small", "little", "s"},
+        "medium": {"medium", "normal", "m"},
+        "large": {"large", "big", "l"},
+    }
+    """
+    typing.ClassVar[set[str]]: The set of allowed sizes and their
+    aliases for the model. These are used to convert an alias to a
+    standard size when accessing :attr:`.model_info` . Available aliases
+    are:
+
+    +------------------------------+---------------------------------+---------------------------+
+    |  Small                       |  Medium                         | Large                     |
+    +==============================+=================================+===========================+
+    | ``small``, ``little``, ``s`` | ``medium``, ``normal``, ``m``,  | ``large``, ``big``, ``l`` |
+    +------------------------------+---------------------------------+---------------------------+
+
+    Note:
+        Any case is acceptable, for example, **Small** can be specified
+        as ``"small"``, ``"S"``, ``"SMALL"``, ``"Little"``, etc.
+
+    :meta hide-value:
     """
 
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
@@ -146,6 +174,16 @@ class BaseGlassesModel(PredInterface):
             message = f"Model structure named {model_name} does not exist. "
             self._model_init_warning(message=message)
 
+        if self.device is None and torch.cuda.is_available():
+            # Set device to CUDA if available
+            self.device = torch.device("cuda")
+        elif self.device is None and torch.backends.mps.is_available():
+            # Set device to MPS if available
+            self.device = torch.device("mps")
+        elif self.device is None:
+            # Set device to CPU by default
+            self.device = torch.device("cpu")
+
         if self.weights:
             # Load weights if True or path is specified
             self.load_weights(path_or_url=self.weights)
@@ -176,7 +214,22 @@ class BaseGlassesModel(PredInterface):
             architecture and download the pretrained model weights, if
             present.
         """
-        return self.DEFAULT_KIND_MAP.get(self.kind, {}).get(self.size, {})
+
+        match self.size.lower():
+            case alias if alias in self.ALLOWED_SIZE_ALIASES["small"]:
+                # Set to small
+                size = "small"
+            case alias if alias in self.ALLOWED_SIZE_ALIASES["medium"]:
+                # Set to medium
+                size = "medium"
+            case alias if alias in self.ALLOWED_SIZE_ALIASES["large"]:
+                # Set to large
+                size = "large"
+            case _:
+                # Don't change
+                size = self.size
+
+        return self.DEFAULT_KIND_MAP.get(self.kind, {}).get(size, {})
 
     @staticmethod
     @abstractmethod
@@ -203,11 +256,7 @@ class BaseGlassesModel(PredInterface):
         ...
 
     @classmethod
-    def from_model(
-        cls,
-        model: nn.Module,
-        **kwargs,
-    ) -> Self:
+    def from_model(cls, model: nn.Module, **kwargs) -> Self:
         """Creates a glasses model from a custom :class:`torch.nn.Module`.
 
         Creates a glasses model wrapper for a custom provided
@@ -227,12 +276,12 @@ class BaseGlassesModel(PredInterface):
         Args:
             model (torch.nn.Module): The custom model that will be
                 assigned as :attr:`model`.
-            **kwargs: Keyword arguments to pass to the constructor,
+            **kwargs: Keyword arguments to pass to the constructor;
                 check the documentation of this class for more details.
                 If ``task``, ``kind``, and ``size`` are not provided,
                 they will be set to ``"custom"``. If the model
                 architecture is custom, you may still specify the path
-                to the pretrained wights via ``pretrained`` argument.
+                to the pretrained wights via ``weights`` argument.
                 Finally, if ``device`` is not provided, the model will
                 remain on the same device as is.
 
@@ -367,7 +416,8 @@ class BaseGlassesModel(PredInterface):
         device = next(iter(self.model.parameters())).device
         xs, preds, is_multiple = [], [], True
 
-        # Warning: if the image has shape (3, H, W), it will be interpreted as 3 grayscale images
+        # Warning: if the image has shape (3, H, W),
+        # it will be interpreted as 3 grayscale images
         if (is_path_type(image) or isinstance(image, Image.Image)) or (
             isinstance(image, np.ndarray)
             and (image.ndim == 2 or (image.ndim == 3 and image.shape[-1] in [1, 3]))
@@ -538,3 +588,11 @@ class BaseGlassesModel(PredInterface):
     @copy_signature(predict)
     def __call__(self, *args, **kwargs):
         return self.predict(*args, **kwargs)
+
+
+if __name__ == "__main__":
+    model = BaseGlassesModel(
+        task="binary",
+        kind="detection",
+        size="eyes-large",
+    )

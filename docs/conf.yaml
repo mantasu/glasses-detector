@@ -36,6 +36,8 @@ build-finished:
     - "glasses_detector.architectures.tiny_binary_detector.TinyBinaryDetector.compute_loss"
 
   LONG_PARAMETER_IDS:
+    glasses_detector.components.base_model.BaseGlassesModel.predict:
+      - "format"
     glasses_detector.classifier.GlassesClassifier.predict:
       - "format"
     glasses_detector.detector.GlassesDetector.predict:

@@ -52,11 +52,11 @@ class BaseCategorizedDataset(ABC, Dataset, AugmenterMixin):
         # Sort cats as well
         self.cats = sorted(
             self.cats,
-            key=None
-            if cat2idx_fn is None
-            else cat2idx_fn.get
-            if isinstance(cat2idx_fn, dict)
-            else cat2idx_fn,
+            key=(
+                None
+                if cat2idx_fn is None
+                else cat2idx_fn.get if isinstance(cat2idx_fn, dict) else cat2idx_fn
+            ),
         )
 
         # Create a default transformation
@@ -145,8 +145,7 @@ class BaseCategorizedDataset(ABC, Dataset, AugmenterMixin):
         return len(self.data)
 
     @abstractmethod
-    def __getitem__(self, index: int) -> Any:
-        ...
+    def __getitem__(self, index: int) -> Any: ...
 
     def __post_init__(self):
         pass
