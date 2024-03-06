@@ -24,7 +24,7 @@ Citation
         title = {{Glasses Detector}},
         license = {MIT},
         url = {https://github.com/mantasu/glasses-detector},
-        month = {2},
+        month = {3},
         year = {2024},
         doi = {10.5281/zenodo.8126101}
     }
