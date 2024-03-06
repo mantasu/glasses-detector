@@ -181,8 +181,6 @@ setuptools.setup(
         "torchvision",
     ],
     classifiers=[
-        "Topic :: Multimedia :: Video :: Capture",
-        "Topic :: Multimedia :: Video :: Video Conversion",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Image Processing",
         "Topic :: Scientific/Engineering :: Image Recognition",
