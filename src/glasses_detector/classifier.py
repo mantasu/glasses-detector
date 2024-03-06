@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image, ImageDraw, ImageFont
-from torchvision.models import efficientnet_b4, shufflenet_v2_x1_0
+from torchvision.models import regnet_x_3_2gf, shufflenet_v2_x1_0
 from torchvision.transforms.v2.functional import to_pil_image
 
 from .architectures import TinyBinaryClassifier
@@ -39,25 +39,25 @@ class GlassesClassifier(BaseGlassesModel):
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
         | ``anyglasses`` | ``medium`` | 0.1539                  | 0.9693              | 0.9933                   | 0.9895                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | 0.1623                  | 0.9652              | 0.9941                   | 0.9922                  |
+        |                | ``large``  | TBA                     | TBA                 | TBA                      | TBA                     |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
         |                | ``small``  | 0.2210                  | 0.9082              | 0.9808                   | 0.9590                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
         | ``eyeglasses`` | ``medium`` | 0.1342                  | 0.9502              | 0.9922                   | 0.9810                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | 0.1472                  | 0.9490              | 0.9905                   | 0.9804                  |
+        |                | ``large``  | TBA                     | 0.9490              | TBA                      | TBA                     |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
         |                | ``small``  | 0.2331                  | 0.8827              | 0.9852                   | 0.9551                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
         | ``sunglasses`` | ``medium`` | 0.1794                  | 0.9311              | 0.9912                   | 0.9739                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | 0.1954                  | 0.9232              | 0.9902                   | 0.9714                  |
+        |                | ``large``  | TBA                     | TBA                 | TBA                      | TBA                     |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                | ``small``  | 0.3956                  | 0.8158              | 0.9326                   | 0.9075                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        | ``shadows``    | ``medium`` | TODO                    | TODO                | TODO                     | TODO                    |
+        | ``shadows``    | ``medium`` | 0.3314                  | 0.8468              | 0.9537                   | 0.9354                  |
         |                +------------+-------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                | TODO                     | TODO                    |
+        |                | ``large``  | TBA                     | TBA                 | TBA                      | TBA                     |
         +----------------+------------+-------------------------+---------------------+--------------------------+-------------------------+
 
     .. dropdown:: Size Information of the Pre-trained Classifiers
@@ -73,7 +73,7 @@ class GlassesClassifier(BaseGlassesModel):
         +----------------+-----------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
         | ``medium``     | :func:`ShuffleNet <torchvision.models.shufflenet_v2_x1_0>` :cite:p:`ma2018shufflenet`   | 1.25M                     | 0.19                      | 84.03                          | 4.95                             |
         +----------------+-----------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
-        | ``large``      | :func:`EfficientNet <torchvision.models.efficientnet_b4>` :cite:p:`tan2019efficientnet` | 17.55M                    | 2.01                      | 763.69                         | 67.66                            |
+        | ``large``      | TBA                                                                                     | TBA                       | TBA                       | TBA                            | TBA                              |
         +----------------+-----------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
 
     Examples
@@ -190,7 +190,7 @@ class GlassesClassifier(BaseGlassesModel):
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinyclsnet_v1", "version": "v1.0.0"},
         "medium": {"name": "shufflenet_v2_x1_0", "version": "v1.0.0"},
-        "large": {"name": "efficientnet_b4", "version": "v1.0.0"},
+        "large": {"name": "regnet_x_3_2gf", "version": "v1.1.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
@@ -209,8 +209,8 @@ class GlassesClassifier(BaseGlassesModel):
             case "shufflenet_v2_x1_0":
                 m = shufflenet_v2_x1_0()
                 m.fc = nn.Linear(1024, 1)
-            case "efficientnet_b4":
-                m = efficientnet_b4(num_classes=1)
+            case "regnet_x_3_2gf":
+                m = regnet_x_3_2gf(num_classes=1)
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 
@@ -223,6 +223,36 @@ class GlassesClassifier(BaseGlassesModel):
         font: str | None = None,
         font_size: int = 15,
     ) -> Image.Image:
+        """Draws a label on the image.
+
+        This method takes an image and a label and draws a caption box
+        with the given text which is appended to the bottom of the
+        image.
+
+        Args:
+            image (PIL.Image.Image | numpy.ndarray | torch.Tensor): The
+                original image. It can be either a *PIL*
+                :class:`~PIL.Image.Image`, a *numpy*
+                :class:`~numpy.ndarray` of shape ``(H, W, 3)`` or
+                ``(H, W)`` and type :attr:`~numpy.uint8` or a *torch*
+                :class:`~torch.Tensor` of shape ``(3, H, W)`` or
+                ``(H, W)`` and type :attr:`~torch.uint8`.
+            label (str): The label to write in the caption box that is
+                appended to the bottom of the image.
+            font (str | None, optional): A filename containing a
+                *TrueType* font. If the file is not found in this
+                filename, the loader may also search in other
+                directories, such as the ``fonts/`` directory on Windows
+                or ``/Library/Fonts/``, ``/System/Library/Fonts/`` and
+                ``~/Library/Fonts/`` on macOS. Defaults to :data:`None`.
+            font_size (int, optional): The requested font size in
+                points used when calling
+                :meth:`~PIL.ImageFont.truetype`. Defaults to ``15``.
+
+        Returns:
+            PIL.Image.Image: The extended original image in height with
+            the caption box appended to the bottom.
+        """
         if isinstance(image, torch.Tensor):
             # Convert tensor to PIL image
             image = to_pil_image(image)
@@ -311,23 +341,24 @@ class GlassesClassifier(BaseGlassesModel):
                 The string specifying the way to map the predictions to
                 labels. These are the following options (if ``image`` is
                 a :class:`~typing.Collection`, then the output will be a
-                :class:`lis` of corresponding items of **output type**):
+                :class:`list` of corresponding items of **output
+                type**):
 
-                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
-                | **format**  | **output type**          | **prediction mapping**                                                                                                            |
-                +=============+==========================+===================================================================================================================================+
-                | ``"bool"``  | :class:`bool`            | :data:`True` if positive, :data:`False` if negative                                                                               |
-                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
-                | ``"int"``   | :class:`int`             | ``1`` if positive, ``0`` if negative                                                                                              |
-                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
-                | ``"str"``   | :class:`str`             | ``"present"`` if positive, ``"absent"`` if negative                                                                               |
-                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
-                | ``"logit"`` | :class:`float`           | Raw score (real number) of a positive class                                                                                       |
-                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
-                | ``"proba"`` | :class:`float`           | Probability (a number between 0 and 1) of a positive class                                                                        |
-                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
-                | ``"img"``   | :class:`PIL.Image.Image` | The original image with an inserted title using default values in :meth:`draw_label` (title text corresponds to ``"str"`` format) |
-                +-------------+--------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+                +-------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+                | **format**  | **output type**          | **prediction mapping**                                                                                                               |
+                +=============+==========================+======================================================================================================================================+
+                | ``"bool"``  | :class:`bool`            | :data:`True` if positive, :data:`False` if negative                                                                                  |
+                +-------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+                | ``"int"``   | :class:`int`             | ``1`` if positive, ``0`` if negative                                                                                                 |
+                +-------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+                | ``"str"``   | :class:`str`             | ``"present"`` if positive, ``"absent"`` if negative                                                                                  |
+                +-------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+                | ``"logit"`` | :class:`float`           | Raw score (real number) of a positive class                                                                                          |
+                +-------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+                | ``"proba"`` | :class:`float`           | Probability (a number between 0 and 1) of a positive class                                                                           |
+                +-------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+                | ``"img"``   | :class:`PIL.Image.Image` | The original image with an inserted title using default values in :meth:`.draw_label` (caption text corresponds to ``"str"`` format) |
+                +-------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
 
                 It is also possible to provide a dictionary with 2 keys:
                 :data:`True` and :data:`False`, each mapping to values

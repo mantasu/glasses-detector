@@ -36,41 +36,41 @@ class GlassesSegmenter(BaseGlassesModel):
         +----------------+------------+-------------------------+----------------------+--------------------------+-------------------------+
         | Kind           | Size       | BCE :math:`\downarrow`  | MCC :math:`\uparrow` | Dice :math:`\uparrow`    | IoU :math:`\uparrow`    |
         +================+============+=========================+======================+==========================+=========================+
-        |                | ``small``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``small``  | 0.0604                  | 0.8109               | 0.8025                   | 0.6702                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        | ``frames``     | ``medium`` | TODO                    | TODO                 | TODO                     | TODO                    |
+        | ``frames``     | ``medium`` | 0.0955                  | 0.7593               | 0.7438                   | 0.5921                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``large``  | TBA                     | TBA                  | TBA                      | TBA                     |
         +----------------+------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``small``  | 0.0898                  | 0.8676               | 0.8720                   | 0.7731                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        | ``full``       | ``medium`` | TODO                    | TODO                 | TODO                     | TODO                    |
+        | ``full``       | ``medium`` | 0.0662                  | 0.8913               | 0.8955                   | 0.8108                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``large``  | TBA                     | TBA                  | TBA                      | TBA                     |
         +----------------+------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``small``  | 0.0872                  | 0.7455               | 0.7271                   | 0.5712                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        | ``legs``       | ``medium`` | TODO                    | TODO                 | TODO                     | TODO                    |
+        | ``legs``       | ``medium`` | 0.0743                  | 0.7810               | 0.7681                   | 0.6236                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``large``  | TBA                     | TBA                  | TBA                      | TBA                     |
         +----------------+------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``small``  | 0.0696                  | 0.9014               | 0.9076                   | 0.8309                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        | ``lenses``     | ``medium`` | TODO                    | TODO                 | TODO                     | TODO                    |
+        | ``lenses``     | ``medium`` | 0.0413                  | 0.9455               | 0.9496                   | 0.9041                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``large``  | TBA                     | TBA                  | TBA                      | TBA                     |
         +----------------+------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``small``  | 0.2130                  | 0.3672               | 0.2566                   | 0.1472                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        | ``shadows``    | ``medium`` | TODO                    | TODO                 | TODO                     | TODO                    |
+        | ``shadows``    | ``medium`` | 0.1811                  | 0.4227               | 0.3199                   | 0.1904                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``large``  | TBA                     | TBA                  | TBA                      | TBA                     |
         +----------------+------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``small``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``small``  | 0.0983                  | 0.8072               | 0.8030                   | 0.6709                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        | ``smart``      | ``medium`` | TODO                    | TODO                 | TODO                     | TODO                    |
+        | ``smart``      | ``medium`` | 0.0914                  | 0.8233               | 0.8199                   | 0.6947                  |
         |                +------------+-------------------------+----------------------+--------------------------+-------------------------+
-        |                | ``large``  | TODO                    | TODO                 | TODO                     | TODO                    |
+        |                | ``large``  | TBA                     | TBA                  | TBA                      | TBA                     |
         +----------------+------------+-------------------------+----------------------+--------------------------+-------------------------+
 
     .. dropdown:: Size Information of the Pre-trained Segmenters
@@ -130,8 +130,8 @@ class GlassesSegmenter(BaseGlassesModel):
 
         >>> seg.process_dir("path/to/dir", "path/to/preds.csv", format="logit")
         >>> subprocess.run(["cat", "path/to/preds.csv"])
-        path/to/dir/img1.jpg,-0.234,-1.23,0.123,0.123,1.435,...
-        path/to/dir/img2.jpg,0.034,-0.23,2.123,-1.123,0.435,...
+        img1.jpg,-0.234,-1.23,0.123,0.123,1.435,...
+        img2.jpg,0.034,-0.23,2.123,-1.123,0.435,...
         ...
         >>> seg.process_dir("path/to/dir", "path/to/pred_dir", ext=".jpg", format="mask")
         >>> subprocess.run(["ls", "path/to/pred_dir"])
@@ -205,7 +205,7 @@ class GlassesSegmenter(BaseGlassesModel):
     DEFAULT_SIZE_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "small": {"name": "tinysegnet_v1", "version": "v1.0.0"},
         "medium": {"name": "lraspp_mobilenet_v3_large", "version": "v1.0.0"},
-        "large": {"name": "fcn_resnet101", "version": "v1.0.0"},
+        "large": {"name": "fcn_resnet101", "version": "v1.1.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, dict[str, dict[str, str]]]] = {
@@ -289,14 +289,6 @@ class GlassesSegmenter(BaseGlassesModel):
         Returns:
             PIL.Image.Image: The RGB image with the mask drawn over it.
         """
-        if isinstance(image, np.ndarray):
-            # TODO: https://github.com/pytorch/vision/issues/8255
-            image = np.atleast_3d(image)
-
-        if (image := to_image(image)).ndim == 2:
-            # Add a channel dimension
-            image = image.unsqueeze(0)
-
         if isinstance(masks, list) and isinstance(masks[0], Image.Image):
             # Ensure each image is commonly in grayscale
             masks = [mask.convert("L") for mask in masks]
@@ -314,7 +306,7 @@ class GlassesSegmenter(BaseGlassesModel):
 
         # Draw the masks on top of the image
         new_image = draw_segmentation_masks(
-            image=image,
+            image=to_image(image),
             masks=masks,
             alpha=alpha,
             colors=colors,
@@ -399,26 +391,27 @@ class GlassesSegmenter(BaseGlassesModel):
                 (pixel scores) to outputs (masks) of specific format.
                 These are the following options (if ``image`` is a
                 :class:`~typing.Collection`, then the output will be a
-                :class:`list` of corresponding items of **output type**):
+                :class:`list` of corresponding items of **output
+                type**):
 
                 .. table::
                     :widths: 10 30 60
 
-                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                    | **format**    | **output type**                                                         | **prediction mapping**                                                                    |
-                    +===============+=========================================================================+===========================================================================================+
-                    | ``"bool"``    | :class:`torch.Tensor` of type :data:`torch.bool` of shape ``(H, W)``    | :data:`True` for positive pixels, :data:`False` for negative pixels                       |
-                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                    | ``"int"``     | :class:`torch.Tensor` of type :data:`torch.int64` of shape ``(H, W)``   | ``1`` for positive pixels, ``0`` for negative pixels                                      |
-                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                    | ``"logit"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Raw score (real number) of being a positive pixel                                         |
-                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                    | ``"proba"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Probability (a number between 0 and 1) of being a positive pixel                          |
-                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                    | ``"mask"``    | :class:`PIL.Image.Image` of mode ``"L"`` (grayscale)                    | *White* for positive pixels, *black* for negative pixels                                  |
-                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-                    | ``"img"``     | :class:`PIL.Image.Image` of mode ``"RGB"`` (RGB)                        | The original image with the mask overlaid on it using default values in :meth:`draw_mask` |
-                    +---------------+-------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+                    +---------------+-------------------------------------------------------------------------+---------------------------------------------------------------------------------------------+
+                    | **format**    | **output type**                                                         | **prediction mapping**                                                                      |
+                    +===============+=========================================================================+=============================================================================================+
+                    | ``"bool"``    | :class:`torch.Tensor` of type :data:`torch.bool` of shape ``(H, W)``    | :data:`True` for positive pixels, :data:`False` for negative pixels                         |
+                    +---------------+-------------------------------------------------------------------------+---------------------------------------------------------------------------------------------+
+                    | ``"int"``     | :class:`torch.Tensor` of type :data:`torch.int64` of shape ``(H, W)``   | ``1`` for positive pixels, ``0`` for negative pixels                                        |
+                    +---------------+-------------------------------------------------------------------------+---------------------------------------------------------------------------------------------+
+                    | ``"logit"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Raw score (real number) of being a positive pixel                                           |
+                    +---------------+-------------------------------------------------------------------------+---------------------------------------------------------------------------------------------+
+                    | ``"proba"``   | :class:`torch.Tensor` of type :data:`torch.float32` of shape ``(H, W)`` | Probability (a number between 0 and 1) of being a positive pixel                            |
+                    +---------------+-------------------------------------------------------------------------+---------------------------------------------------------------------------------------------+
+                    | ``"mask"``    | :class:`PIL.Image.Image` of mode ``"L"`` (grayscale)                    | *White* for positive pixels, *black* for negative pixels                                    |
+                    +---------------+-------------------------------------------------------------------------+---------------------------------------------------------------------------------------------+
+                    | ``"img"``     | :class:`PIL.Image.Image` of mode ``"RGB"`` (RGB)                        | The original image with the mask overlaid on it using default values in :meth:`.draw_masks` |
+                    +---------------+-------------------------------------------------------------------------+---------------------------------------------------------------------------------------------+
 
                 It is also possible to provide a dictionary with 2 keys:
                 :data:`True` and :data:`False`, each mapping to values

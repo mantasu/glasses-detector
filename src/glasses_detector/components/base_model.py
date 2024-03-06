@@ -474,7 +474,7 @@ class BaseGlassesModel(PredInterface):
             If this method is used during inference, make sure to set
             the model to evaluation mode and enable
             :class:`~torch.inference_mode`, e.g., via
-            :class:`eval_infer_mode` decorator/context manager.
+            :class:`.eval_infer_mode` decorator/context manager.
 
         Note:
             The default :meth:`predict` that uses this method assumes an
@@ -542,6 +542,9 @@ class BaseGlassesModel(PredInterface):
                 message = "Path/URL to weights cannot be constructed. "
                 self._model_info_warning(message)
                 return
+
+            if self.size.lower() in self.ALLOWED_SIZE_ALIASES["large"]:
+                raise NotImplementedError("Large models are not supported yet")
 
             # Construct weights URL from base URL and model info
             weights_name = f"{self.task}_{self.kind}_{name}.pth"

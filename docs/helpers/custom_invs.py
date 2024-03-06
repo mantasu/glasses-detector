@@ -70,6 +70,9 @@ class CustomInvs:
         custom_invs = {}
 
         for method_name in dir(self):
+            if method_name == "create_builtin_constants_inv":
+                continue
+
             if method_name.startswith("create_"):
                 # Update custom invs dictionary with the new one
                 custom_invs.update(getattr(self, method_name)())

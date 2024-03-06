@@ -19,6 +19,7 @@ build-finished:
     - "glasses_detector.components.base_model.BaseGlassesModel.process_dir"
     - "glasses_detector.components.base_model.BaseGlassesModel.process_file"
     - "glasses_detector.classifier.GlassesClassifier"
+    - "glasses_detector.classifier.GlassesClassifier.draw_label"
     - "glasses_detector.classifier.GlassesClassifier.predict"
     - "glasses_detector.classifier.GlassesClassifier.process_dir"
     - "glasses_detector.classifier.GlassesClassifier.process_file"

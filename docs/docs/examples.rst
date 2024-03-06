@@ -76,7 +76,7 @@ A more useful method is :meth:`~glasses_detector.components.pred_interface.PredI
         input_path="path/to/dir",         # failed files will raise a warning
         output_path="path/to/output.csv", # img_name1.jpg,<pred>...
         format="proba",                   # <pred> is a probability of sunglasses
-        pbar="Processing",                # Set to None to disable
+        pbar="Processing",                # set to None to disable
     )
 
     # Generates a directory with masks
@@ -86,7 +86,7 @@ A more useful method is :meth:`~glasses_detector.components.pred_interface.PredI
         ext=".jpg",                       # saves each mask in JPG format
         format="mask",                    # output type will be a grayscale PIL image
         batch_size=32,                    # to speed up the processing
-        output_size=(512, 512),           # Set to None to keep the same size as image
+        output_size=(512, 512),           # set to None to keep the same size as image
     )
 
 

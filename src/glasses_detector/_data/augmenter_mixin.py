@@ -10,48 +10,112 @@ from PIL import Image
 
 class ToTensor(ToTensorV2):
     def apply_to_mask(self, mask, **params):
-        return torch.from_numpy((mask > 0).astype(np.float32))
+        return torch.from_numpy((mask > 127).astype(np.float32))
 
 
 class AugmenterMixin:
     @staticmethod
     def default_augmentations() -> list[A.BasicTransform]:
         return [
-            A.VerticalFlip(),
-            A.HorizontalFlip(),
-            A.RandomRotate90(),
-            A.ShiftScaleRotate(),
             A.OneOf(
                 [
-                    A.RandomResizedCrop(256, 256, p=0.5),
-                    A.OpticalDistortion(distort_limit=0.1, shift_limit=0.1),
+                    A.VerticalFlip(),
+                    A.HorizontalFlip(),
+                    A.RandomRotate90(),
+                    A.Transpose(),
+                ],
+                p=0.75,
+            ),
+            A.OneOf(
+                [
                     A.PiecewiseAffine(),
-                    A.Perspective(),
-                    A.GridDistortion(),
+                    A.ShiftScaleRotate(),
+                    A.ElasticTransform(),
+                    A.OpticalDistortion(distort_limit=0.1, shift_limit=0.1),
+                    A.GridDistortion(distort_limit=0.5),
                 ]
             ),
             A.OneOf(
                 [
-                    A.RandomBrightnessContrast(
-                        brightness_limit=0.3, contrast_limit=0.3
-                    ),
+                    A.RandomBrightnessContrast(),
+                    A.ColorJitter(),
+                    A.HueSaturationValue(),
                     A.RandomGamma(),
                     A.CLAHE(),
-                    A.ColorJitter(
-                        brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1
-                    ),
-                    A.HueSaturationValue(),
+                    A.RGBShift(),
                 ]
             ),
             A.OneOf(
                 [
-                    A.Blur(blur_limit=3),
+                    A.Blur(),
                     A.GaussianBlur(),
                     A.MedianBlur(),
                     A.GaussNoise(),
                 ]
             ),
-            A.CoarseDropout(max_holes=5, p=0.3),
+            A.OneOf(
+                [
+                    A.RandomResizedCrop(256, 256, p=0.4),
+                    A.RandomSizedCrop((10, 131), 256, 256, p=0.4),
+                    A.RandomCrop(height=200, width=200, p=0.2),
+                ],
+                p=0.25,
+            ),
+            A.PadIfNeeded(min_height=256, min_width=256, always_apply=True),
+            A.CoarseDropout(max_holes=10, max_height=8, max_width=8, p=0.2),
+            A.Normalize(),
+            ToTensor(),
+        ]
+
+    @staticmethod
+    def minimal_augmentations() -> list[A.BasicTransform]:
+        return [
+            A.OneOf(
+                [
+                    A.VerticalFlip(),
+                    A.HorizontalFlip(),
+                    A.RandomRotate90(),
+                    A.Transpose(),
+                ],
+                p=0.1,
+            ),
+            A.OneOf(
+                [
+                    A.PiecewiseAffine((0.02, 0.03)),
+                    A.ShiftScaleRotate((-0.02, 0.02), 0.05),
+                    A.ElasticTransform(sigma=20, alpha_affine=20),
+                    A.OpticalDistortion(distort_limit=0.02, shift_limit=0.02),
+                    A.GridDistortion(num_steps=3, distort_limit=0.1),
+                ],
+                p=0.1,
+            ),
+            A.OneOf(
+                [
+                    A.RandomBrightnessContrast(0.05, 0.05),
+                    A.ColorJitter(0.05, 0.05, 0.05),
+                    A.HueSaturationValue(5, 10, 5),
+                    A.RandomGamma((80, 100)),
+                    A.CLAHE(2, (3, 3)),
+                    A.RGBShift(5, 5, 5),
+                ],
+                p=0.1,
+            ),
+            A.OneOf(
+                [
+                    A.Blur((3, 3)),
+                    A.GaussianBlur((3, 3)),
+                    A.MedianBlur((3, 3)),
+                    A.GaussNoise((5, 10)),
+                ],
+                p=0.1,
+            ),
+            A.OneOf(
+                [
+                    A.RandomResizedCrop(256, 256),
+                    A.RandomSizedCrop((10, 131), 256, 256),
+                ],
+                p=0.1,
+            ),
             A.Normalize(),
             ToTensor(),
         ]

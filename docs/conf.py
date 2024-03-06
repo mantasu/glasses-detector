@@ -3,6 +3,7 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import os
 import sys
 from pathlib import Path
 
@@ -14,6 +15,8 @@ sys.path += [
 ]
 
 from helpers import BuildFinished, CustomInvs
+
+DOCS_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -45,6 +48,7 @@ intersphinx_mapping = {
     "torch": ("https://pytorch.org/docs/stable/", None),
     "torchvision": ("https://pytorch.org/vision/stable/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
+    "tqdm": ("https://tqdm.github.io/docs/", "_static/inv/tqdm.inv"),
 }
 
 # -- Options for napaleon/autosummary/autodoc output -------------------------
@@ -75,6 +79,11 @@ html_theme_options = {
             "icon": "fa-brands fa-github",
         },
         {
+            "name": "Colab",
+            "url": "https://colab.research.google.com/github/mantasu/glasses-detector/blob/main/notebooks/demo.ipynb",
+            "icon": "fa-custom fa-colab",
+        },
+        {
             "name": "PyPI",
             "url": "https://pypi.org/project/glasses-detector",
             "icon": "fa-custom fa-pypi",
@@ -96,7 +105,7 @@ html_context = {
     "doc_path": "docs",
 }
 html_static_path = ["_static"]
-html_js_files = ["js/pypi-icon.js", "js/zenodo-icon.js"]
+html_js_files = ["js/colab-icon.js", "js/pypi-icon.js", "js/zenodo-icon.js"]
 html_css_files = ["css/highlights.css", "css/signatures.css", "css/custom.css"]
 html_title = f"Glasses Detector {release}"
 html_favicon = "_static/img/logo-light.png"
@@ -107,9 +116,9 @@ html_favicon = "_static/img/logo-light.png"
 
 def setup(app: Sphinx):
     # Add local inventories to intersphinx_mapping
-    custom_invs = CustomInvs(static_path="_static")
+    custom_invs = CustomInvs(static_path=DOCS_DIR / "_static")
     app.config.intersphinx_mapping.update(custom_invs())
 
     # Add custom build-finished event
-    build_finished = BuildFinished(static_path="_static", conf_path="conf.yaml")
+    build_finished = BuildFinished(DOCS_DIR / "_static", DOCS_DIR / "conf.yaml")
     app.connect("build-finished", build_finished)

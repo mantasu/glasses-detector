@@ -6,7 +6,8 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision.models.detection import (
-    fasterrcnn_resnet50_fpn_v2,
+    fasterrcnn_mobilenet_v3_large_320_fpn,
+    fasterrcnn_mobilenet_v3_large_fpn,
     ssdlite320_mobilenet_v3_large,
 )
 from torchvision.transforms.v2.functional import to_image, to_pil_image
@@ -64,19 +65,19 @@ class GlassesDetector(BaseGlassesModel):
         |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
         | ``eyes``       | ``medium`` | 0.0523                   | 1.0                 | 0.9519                   | 0.6272                  |
         |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | 0.0648                   | 1.0                 | 0.9439                   | 0.6228                  |
+        |                | ``large``  | TBA                      | 1.0                 | TBA                      | TBA                     |
         +----------------+------------+--------------------------+---------------------+--------------------------+-------------------------+
         |                | ``small``  | 0.4787                   | 1.0                 | 0.8328                   | 0.6485                  |
         |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
         | ``solo``       | ``medium`` | 0.8282                   | 1.0                 | 0.9267                   | 0.7731                  |
         |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | 0.8157                   | 1.0                 | 0.8083                   | 0.6612                  |
+        |                | ``large``  | TBA                      | 1.0                 | TBA                      | TBA                     |
         +----------------+------------+--------------------------+---------------------+--------------------------+-------------------------+
         |                | ``small``  | 0.2585                   | 1.0                 | 0.8128                   | 0.5427                  |
         |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
         | ``worn``       | ``medium`` | 0.1352                   | 1.0                 | 0.9432                   | 0.7568                  |
         |                +------------+--------------------------+---------------------+--------------------------+-------------------------+
-        |                | ``large``  | 0.1626                   | 1.0                 | 0.9264                   | 0.7243                  |
+        |                | ``large``  | TBA                      | 1.0                 | TBA                      | TBA                     |
         +----------------+------------+--------------------------+---------------------+--------------------------+-------------------------+
 
         **NB**: **F1 score** is useless because there is only one class,
@@ -89,15 +90,15 @@ class GlassesDetector(BaseGlassesModel):
         :animate: fade-in-slide-down
         :name: Size Information of the Pre-trained Detectors
 
-        +----------------+----------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
-        | Size           | Architecture                                                                                                               | Params                    | GFLOPs                    | Memory (MB)                    | Filesize (MB)                    |
-        +================+============================================================================================================================+===========================+===========================+================================+==================================+
-        | ``small``      | :class:`Tiny Detector <.architectures.tiny_binary_detector.TinyBinaryDetector>`                                            | 0.23M                     | 0.001                     | 33.99                          | 0.91                             |
-        +----------------+----------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
-        | ``medium``     | :func:`SSD Lite <torchvision.models.detection.ssdlite320_mobilenet_v3_large>` :cite:p:`liu2016ssd,howard2019searching`     | 3.71M                     | 0.51                      | 316.84                         | 14.46                            |
-        +----------------+----------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
-        | ``large``      | :func:`Faster R-CNN <torchvision.models.detection.fasterrcnn_resnet50_fpn_v2>` :cite:p:`ren2015faster,li2021benchmarking`  | 43.26M                    | 280.37                    | 7302.05                        | 165.37                           |
-        +----------------+----------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        +----------------+------------------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | Size           | Architecture                                                                                                                       | Params                    | GFLOPs                    | Memory (MB)                    | Filesize (MB)                    |
+        +================+====================================================================================================================================+===========================+===========================+================================+==================================+
+        | ``small``      | :class:`Tiny Detector <.architectures.tiny_binary_detector.TinyBinaryDetector>`                                                    | 0.23M                     | 0.001                     | 33.99                          | 0.91                             |
+        +----------------+------------------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | ``medium``     | :func:`SSD Lite <torchvision.models.detection.ssdlite320_mobilenet_v3_large>` :cite:p:`liu2016ssd,howard2019searching`             | 3.71M                     | 0.51                      | 316.84                         | 14.46                            |
+        +----------------+------------------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
+        | ``large``      | :func:`Faster R-CNN <torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn>` :cite:p:`ren2015faster,howard2019searching`  | TBA                       | TBA                       | TBA                            | TBA                              |
+        +----------------+------------------------------------------------------------------------------------------------------------------------------------+---------------------------+---------------------------+--------------------------------+----------------------------------+
 
     Examples
     --------
@@ -140,8 +141,8 @@ class GlassesDetector(BaseGlassesModel):
         >>> det.process_dir("path/to/dir", "path/to/preds.json", format="float")
         >>> subprocess.run(["cat", "path/to/preds.json"])
         {
-            "path/to/dir/img1.jpg": [[0.1, 0.2, 0.3, 0.4]],
-            "path/to/dir/img2.jpg": [[0.5, 0.6, 0.7, 0.8], [0.2, 0.8, 0.4, 0.9]],
+            "img1.jpg": [[0.1, 0.2, 0.3, 0.4]],
+            "img2.jpg": [[0.5, 0.6, 0.7, 0.8], [0.2, 0.8, 0.4, 0.9]],
             ...
         }
         >>> det.process_dir("path/to/dir", "path/to/pred_dir", ext=".jpg")
@@ -211,7 +212,7 @@ class GlassesDetector(BaseGlassesModel):
     DEFAULT_SIZE_MAP: ClassVar[dict[str, int]] = {
         "small": {"name": "tinydetnet_v1", "version": "v1.0.0"},
         "medium": {"name": "ssdlite320_mobilenet_v3_large", "version": "v1.0.0"},
-        "large": {"name": "fasterrcnn_resnet50_fpn_v2", "version": "v1.0.0"},
+        "large": {"name": "fasterrcnn_mobilenet_v3_large_fpn", "version": "v1.1.0"},
     }
 
     DEFAULT_KIND_MAP: ClassVar[dict[str, str]] = {
@@ -232,13 +233,12 @@ class GlassesDetector(BaseGlassesModel):
                     detections_per_img=1,
                     topk_candidates=10,
                 )
-            case "fasterrcnn_resnet50_fpn_v2":
-                m = fasterrcnn_resnet50_fpn_v2(
+            case "fasterrcnn_mobilenet_v3_large_fpn":
+                m = fasterrcnn_mobilenet_v3_large_fpn(
                     num_classes=2,
                     box_detections_per_img=1,
                     box_batch_size_per_image=10,
                 )
-
             case _:
                 raise ValueError(f"{model_name} is not a valid choice!")
 
@@ -315,21 +315,13 @@ class GlassesDetector(BaseGlassesModel):
         Returns:
             PIL.Image.Image: The image with bounding boxes drawn on it.
         """
-        if isinstance(image, np.ndarray):
-            # TODO: https://github.com/pytorch/vision/issues/8255
-            image = np.atleast_3d(image)
-
-        if (image := to_image(image)).ndim == 2:
-            # Add a channel dimension
-            image = image.unsqueeze(0)
-
         if not isinstance(boxes, torch.Tensor):
             # Convert bboxes to torch Tensor
             boxes = torch.tensor(boxes, dtype=torch.float32)
 
         # Draw the bounding boxes on the image
         new_image = draw_bounding_boxes(
-            image=image,
+            image=to_image(image),
             boxes=boxes,
             labels=labels,
             colors=colors,

@@ -338,9 +338,9 @@ class PredInterface(ABC):
                 :meth:`.predict` returns) For available options, refer
                 to :meth:`.save`. Defaults to :data:`None`.
             show (bool, optional): Whether to show the predictions.
-                Images will be shown using
-                :func:`matplotlib.pyplot.show` and other predictions
-                will be printed to stdout. Defaults to :data:`False`.
+                Images will be shown using :meth:`PIL.Image.Image.show`
+                and other predictions will be printed to stdout.
+                Defaults to :data:`False`.
             **pred_kwargs: Additional keyword arguments to pass to
                 :meth:`.predict`.
 
@@ -523,9 +523,9 @@ class PredInterface(ABC):
         Args:
             input_path (FilePath): The path to a directory of images to
                 generate predictions for.
-            output_path (FilePath | None, optional): The path to save the
-                prediction(-s) to. If :data:`None`, the predictions are
-                returned as a dictionary, if a single file, the
+            output_path (FilePath | None, optional): The path to save
+                the prediction(-s) to. If :data:`None`, the predictions
+                are returned as a dictionary, if a single file, the
                 predictions are aggregated to a single file, and if a
                 directory, the predictions are saved to that directory
                 with the names copied from inputs. Defaults to
@@ -534,7 +534,7 @@ class PredInterface(ABC):
                 output file(-s). Only used when ``output_path`` is a
                 directory. The extension should include a leading dot,
                 e.g., ``".txt"``, ``".npy"``, ``".jpg"`` etc
-                (see :meth:`save`). If :data:`None`, the behavior
+                (see :meth:`.save`). If :data:`None`, the behavior
                 follows :meth:`.process_file`. Defaults to :data:`None`.
             batch_size (int, optional): The batch size to use when
                 processing the images. This groups the files in the
@@ -543,11 +543,10 @@ class PredInterface(ABC):
                 sizes can speed up the processing at the cost of more
                 memory usage. Defaults to ``1``.
             show (bool, optional): Whether to show the predictions.
-                Images will be shown using
-                :func:`matplotlib.pyplot.show` and other predictions
-                will be printed to stdout. It is not recommended to set
-                this to :data:`True` as it might spam your stdout.
-                Defaults to :data:`False`.
+                Images will be shown using :meth:`PIL.Image.Image.show`
+                and other predictions will be printed to stdout. It is
+                not recommended to set this to :data:`True` as it might
+                spam your stdout. Defaults to :data:`False`.
             pbar (bool | str | tqdm.tqdm, optional): Whether to show a
                 progress bar. If :data:`True`, a progress bar with no
                 description is shown. If :class:`str`, a progress bar
