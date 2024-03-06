@@ -35,6 +35,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
           pip install .
+          pip install --upgrade setuptools
           pip install -r docs/requirements.txt
       - name: Build HTML
         run: | 
