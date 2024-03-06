@@ -274,7 +274,7 @@ class GlassesClassifier(BaseGlassesModel):
 
         # Draw the title
         draw = ImageDraw.Draw(new_image)
-        _, _, text_width, text_height = font.getbbox(label, font=font)
+        _, _, text_width, text_height = font.getbbox(label)
 
         x = (new_image.width - text_width) / 2
         y = image.height + (font_size * 2 - text_height) / 2

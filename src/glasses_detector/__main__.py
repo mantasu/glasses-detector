@@ -177,6 +177,10 @@ def prepare_kwargs(kwargs: dict[str, str | int | None]):
         # No progress bar
         kwargs["pbar"] = None
     
+    if kwargs["weights"] is None:
+        # Use default weights
+        kwargs["weights"] = True
+    
     if len(splits := kwargs["task"].split(":")) == 2:
         # Task is specified as "task:kind"
         kwargs["task"] = splits[0]
