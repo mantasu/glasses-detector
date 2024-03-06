@@ -13,3 +13,4 @@ pytorch_lightning
 tensorboard
 torch-tb-profiler
 jsonargparse[signatures]
+setuptools
