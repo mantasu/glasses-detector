@@ -24,7 +24,7 @@ DOCS_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 project = "Glasses Detector"
 copyright = "2024, Mantas Birškus"
 author = "Mantas Birškus"
-release = "v1.0.1"
+release = "v1.0.2"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -80,7 +80,9 @@ html_theme_options = {
         },
         {
             "name": "Colab",
-            "url": "https://colab.research.google.com/github/mantasu/glasses-detector/blob/main/notebooks/demo.ipynb",
+            "url": (
+                "https://colab.research.google.com/github/mantasu/glasses-detector/blob/main/notebooks/demo.ipynb"
+            ),
             "icon": "fa-custom fa-colab",
         },
         {

@@ -12,13 +12,13 @@
 """
 
 import functools
-import imghdr
 import os
 import typing
 from typing import Any, Callable, Iterable, TypeGuard, overload
 from urllib.parse import urlparse
 
 import torch
+from PIL import Image
 
 type FilePath = str | bytes | os.PathLike
 
@@ -201,8 +201,8 @@ def is_image_file(path: FilePath) -> bool:
     """Check if a file is an image.
 
     This function takes a file path and checks if it is an image file.
-    This is done by checking if the file exists and if it has a valid
-    image extension.
+    This is done by checking if the file exists and if it can be
+    identified as an image
 
     Args:
         path: The path to the file.
@@ -210,4 +210,12 @@ def is_image_file(path: FilePath) -> bool:
     Returns:
         :data:`True` if the file is an image, :data:`False` otherwise.
     """
-    return os.path.isfile(path) and imghdr.what(path) is not None
+    if not os.path.isfile(path):
+        return False
+
+    try:
+        with Image.open(path) as img:
+            img.verify()
+        return True
+    except (IOError, SyntaxError):
+        return False

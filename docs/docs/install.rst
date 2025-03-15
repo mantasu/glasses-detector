@@ -16,7 +16,7 @@ Or, to install it from source, run:
 
 .. tip::
 
-    You may want to set up `PyTorch <https://pytorch.org/get-started/locally/>`_ (use *Nightly* version for compatibility with *Python* :math:`\ge` *3.12*) in advance to enable **GPU** support for your device. Note that *CUDA* is backwards compatible, thus even if you have the newest version of `CUDA Toolkit <https://developer.nvidia.com/cuda-toolkit>`_, *PyTorch* **GPU** acceleration should work just fine.
+    You may want to set up `PyTorch <https://pytorch.org/get-started/locally/>`_ in advance to enable **GPU** support for your device. Note that *CUDA* is backwards compatible, thus even if you have the newest version of `CUDA Toolkit <https://developer.nvidia.com/cuda-toolkit>`_, *PyTorch* **GPU** acceleration should work just fine.
 
 .. note::
 

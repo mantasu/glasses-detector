@@ -36,7 +36,7 @@ $\color{gray}{\textit{Note: }\text{refer to}}$ [Glasses Detector Features](https
 ## Installation
 
 > [!IMPORTANT]
-> Minimum version of [Python 3.12](https://www.python.org/downloads/release/python-3120/) is required. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) (select *Nightly* for compatibility) in advance to select specific configuration for your device and environment.
+> Minimum version of [Python 3.12](https://www.python.org/downloads/release/python-3120/) is **REQUIRED**. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) in advance to select specific configuration for your device and environment.
 
 ### Pip Package
 

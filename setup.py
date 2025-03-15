@@ -38,7 +38,7 @@ $\color{gray}{\textit{Note: }\text{refer to}}$ [Glasses Detector Features](https
 ## Installation
 
 > [!IMPORTANT]
-> Minimum version of [Python 3.12](https://www.python.org/downloads/release/python-3120/) is required. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) (select *Nightly* for compatibility) in advance to select specific configuration for your device and environment.
+> Minimum version of [Python 3.12](https://www.python.org/downloads/release/python-3120/) is **REQUIRED**. Also, you may want to install [Pytorch](https://pytorch.org/get-started/locally/) in advance to select specific configuration for your device and environment.
 
 ### Pip Package
 
@@ -130,7 +130,7 @@ For references and citation, please see [Glasses Detector Credits](https://manta
 
 setuptools.setup(
     name="glasses-detector",
-    version="1.0.1",
+    version="1.0.2",
     author="Mantas Birškus",
     author_email="mantix7@gmail.com",
     license="MIT",
