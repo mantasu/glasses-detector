@@ -69,10 +69,10 @@ class eval_infer_mode:
     This class can be used as a context manager or a decorator to set a
     PyTorch :class:`~torch.nn.Module` to evaluation mode via
     :meth:`~torch.nn.Module.eval` and enable
-    :class:`~torch.inference_mode` for the duration of a function
+    :class:`~torch.no_grad` for the duration of a function
     or a ``with`` statement. After the function or the ``with``
     statement, the model's mode, i.e., :attr:`~torch.nn.Module.training`
-    property, and :class:`~torch.inference_mode` are restored to their
+    property, and :class:`~torch.no_grad` are restored to their
     original states.
 
     Example
@@ -112,11 +112,11 @@ class eval_infer_mode:
 
     def __enter__(self):
         self.model.eval()
-        self._inference_mode = torch.inference_mode(True)
-        self._inference_mode.__enter__()
+        self._no_grad = torch.no_grad()
+        self._no_grad.__enter__()
 
     def __exit__(self, type: Any, value: Any, traceback: Any):
-        self._inference_mode.__exit__(type, value, traceback)
+        self._no_grad.__exit__(type, value, traceback)
         self.model.train(self.was_training)
 
 

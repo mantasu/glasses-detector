@@ -130,7 +130,7 @@ For references and citation, please see [Glasses Detector Credits](https://manta
 
 setuptools.setup(
     name="glasses-detector",
-    version="1.0.2",
+    version="1.0.3",
     author="Mantas Birškus",
     author_email="mantix7@gmail.com",
     license="MIT",
